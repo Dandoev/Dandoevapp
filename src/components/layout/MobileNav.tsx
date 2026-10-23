@@ -7,8 +7,8 @@ import { Home, Bike, Wallet, User, BatteryCharging } from 'lucide-react';
 export default function MobileNav() {
   const pathname = usePathname();
 
-  // Hide on Auth pages or Admin
-  if (pathname.startsWith('/auth') || pathname.startsWith('/admin')) return null;
+  // Hide on Auth pages or Admin, or during fallback SSR/not-found where pathname is null
+  if (!pathname || pathname.startsWith('/auth') || pathname.startsWith('/admin')) return null;
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home, match: (p: string) => p === '/' },
@@ -21,7 +21,7 @@ export default function MobileNav() {
   return (
     <div className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-2 pb-safe bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_16px_rgba(2,16,100,0.06)]">
       {navItems.map((item) => {
-        const isActive = item.match(pathname);
+        const isActive = pathname ? item.match(pathname) : false;
         const Icon = item.icon;
         return (
           <Link

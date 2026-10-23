@@ -55,7 +55,7 @@ async function syncTokenWithBackend(token: string) {
   if (!session) return;
 
   try {
-    const API_BASE = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+    const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://dandoev.com/api').replace(/\/api$/, '');
     
     await fetch(`${API_BASE}/api/user/push-token`, {
       method: 'POST',

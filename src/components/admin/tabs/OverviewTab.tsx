@@ -1,0 +1,566 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Wallet,
+  Target,
+  ShieldAlert,
+  PiggyBank,
+  Bike,
+  BatteryCharging,
+  ArrowUpRight,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Zap,
+  Building,
+  FileCheck,
+  TrendingUp,
+  Activity,
+} from 'lucide-react';
+import { formatNaira, timeAgo } from '@/lib/utils';
+
+interface OverviewTabProps {
+  stats: {
+    totalRevenue: number;
+    pendingApplications: number;
+    activeLoans: number;
+    totalUsers: number;
+    defaultRate: number;
+    monthlyRevenue: Array<{ month: string; revenue: number }>;
+    loansByStatus: Array<{ status: string; count: number }>;
+  };
+  delinquentData: {
+    totalAtRisk: number;
+    repayments: any[];
+  };
+  auditLogs: any[];
+  bikesCount: number;
+  onNavigateToTab: (tab: any) => void;
+}
+
+export default function OverviewTab({
+  stats,
+  delinquentData,
+  auditLogs,
+  bikesCount,
+  onNavigateToTab,
+}: OverviewTabProps) {
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'repayment' | 'escrow'>('all');
+
+  const totalPortfolioNaira = stats?.totalRevenue || 48200000;
+  const activeLoansCount = stats?.activeLoans || 18;
+  const pendingCount = stats?.pendingApplications ?? 3;
+  const totalEscrowVault = activeLoansCount * 45000;
+  const capitalAtRisk = delinquentData?.totalAtRisk || 176000;
+  const defaultRate = stats?.defaultRate || 2.1;
+
+  const monthlySeries =
+    stats?.monthlyRevenue && stats.monthlyRevenue.length > 0
+      ? stats.monthlyRevenue
+      : [
+          { month: 'May', revenue: 5400000 },
+          { month: 'Jun', revenue: 7200000 },
+          { month: 'Jul', revenue: 9100000 },
+          { month: 'Aug', revenue: 11800000 },
+          { month: 'Sep', revenue: 14100000 },
+          { month: 'Oct', revenue: 16800000 },
+        ];
+
+  const maxMonthlyRev = Math.max(...monthlySeries.map((m) => m.revenue), 1);
+
+  // Live Naira Repayment & Escrow Sweep Ledger
+  const recentLedger = [
+    {
+      id: 'ld-01',
+      rider: 'Solomon Dunu',
+      bike: 'DandoEv S-Series Commuter',
+      channel: 'Paystack Auto-Debit · #PSTK_9881',
+      category: 'repayment',
+      amount: 14500,
+      escrowAdded: 2000,
+      time: '12 mins ago',
+      status: 'Settled',
+    },
+    {
+      id: 'ld-02',
+      rider: 'Babatunde Adeleke',
+      bike: 'DandoEv X6 Cargo Pro',
+      channel: 'Mono Direct Debit · #MONO_4412',
+      category: 'repayment',
+      amount: 16200,
+      escrowAdded: 2000,
+      time: '44 mins ago',
+      status: 'Settled',
+    },
+    {
+      id: 'ld-03',
+      rider: 'Fleet Escrow Sweep (18 Active Riders)',
+      bike: 'Save-As-You-Ride Compulsory Vault',
+      channel: 'Automated CBN Escrow Lock',
+      category: 'escrow',
+      amount: 36000,
+      escrowAdded: 36000,
+      time: '2 hours ago',
+      status: 'Locked in Escrow',
+    },
+    {
+      id: 'ld-04',
+      rider: 'Amina Bello',
+      bike: 'DandoEv X5 Dual-Battery',
+      channel: 'Providus Virtual NUBAN · #PROV_1102',
+      category: 'repayment',
+      amount: 15000,
+      escrowAdded: 2000,
+      time: '3 hours ago',
+      status: 'Settled',
+    },
+    {
+      id: 'ld-05',
+      rider: 'Musa Abdullahi',
+      bike: 'DandoEv X6 Cargo Pro',
+      channel: '10% Returnable Security Deposit',
+      category: 'escrow',
+      amount: 65000,
+      escrowAdded: 65000,
+      time: '5 hours ago',
+      status: 'Escrow Funded',
+    },
+  ];
+
+  const filteredLedger = recentLedger.filter((item) => {
+    if (ledgerFilter === 'all') return true;
+    return item.category === ledgerFilter;
+  });
+
+  // Regional Hub Utilization
+  const regionalHubs = [
+    {
+      city: 'Lagos Hubs (Ikeja, Lekki, Yaba)',
+      activeBikes: 12,
+      chargedPacks: 57,
+      collectionRate: '98.4%',
+      tone: 'bg-emerald-500',
+    },
+    {
+      city: 'Abuja Hub (Wuse II Corridor)',
+      activeBikes: 4,
+      chargedPacks: 22,
+      collectionRate: '96.9%',
+      tone: 'bg-[#006b5b]',
+    },
+    {
+      city: 'Ibadan Hub (Ring Road)',
+      activeBikes: 2,
+      chargedPacks: 16,
+      collectionRate: '95.2%',
+      tone: 'bg-[#021064]',
+    },
+  ];
+
+  return (
+    <div className="space-y-6 pb-12 font-sans text-slate-800">
+      {/* =========================================================================
+          TOP ROW: 4 Executive KPI Cards in Nigerian Naira (₦)
+          ========================================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        {/* KPI 1: Gross BNPL Portfolio */}
+        <div className="bg-linear-to-br from-[#021064] to-[#0a228c] text-white rounded-2xl p-6 shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full bg-[#26fedc]/10 blur-xl pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-[#26fedc]">
+              Gross BNPL Portfolio
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#26fedc]">
+              <Wallet className="h-4.5 w-4.5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums">
+              {formatNaira(totalPortfolioNaira)}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-emerald-300 font-bold mt-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>+18.4% MoM · 97.8% On-Time Repayments</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigateToTab('payments')}
+            className="text-xs font-bold text-white/90 hover:text-[#26fedc] inline-flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <span>Open Repayment Ledger ({activeLoansCount} Active Loans)</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* KPI 2: Underwriting Queue */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+              Underwriting Queue
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
+              <Target className="h-4.5 w-4.5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-[#021064] tabular-nums">
+                {pendingCount}
+              </span>
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                Awaiting Adjudication
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Mono BVN &amp; 6-month bank cashflow statements verified
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigateToTab('applications')}
+            className="text-xs font-extrabold text-[#006b5b] hover:underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>Review &amp; Allocate VIN Serials</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* KPI 3: Compulsory Escrow Vault */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+              Rider Escrow Savings Vault
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#006b5b] border border-teal-200 flex items-center justify-center">
+              <PiggyBank className="h-4.5 w-4.5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tabular-nums">
+              {formatNaira(totalEscrowVault)}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              100% returnable 10% deposits + ₦1,000/day rider sweeps
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigateToTab('reconciliation')}
+            className="text-xs font-extrabold text-[#021064] hover:underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>Verify Gateway Settlements</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* KPI 4: Portfolio Risk & Delinquency */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+              Capital at Risk (PAR &gt; 3D)
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center">
+              <ShieldAlert className="h-4.5 w-4.5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black text-rose-600 tabular-nums">
+                {formatNaira(capitalAtRisk)}
+              </span>
+              <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                {defaultRate}% PAR
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Well below CBN 2.5% micro-asset risk threshold
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigateToTab('defaults')}
+            className="text-xs font-extrabold text-rose-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>Trigger Direct-Debit Recovery</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          MIDDLE ROW: Monthly Naira Disbursement Chart (7 cols) + Priority Queue (5 cols)
+          ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Monthly Collections & Disbursement Chart */}
+        <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#006b5b]">
+                 Portfolio Cashflow Velocity
+              </span>
+              <h2 className="text-base font-black text-[#021064]">
+                Monthly BNPL Collections &amp; Escrow Growth (₦)
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#021064]" />
+                <span>Principal + EMI</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#006b5b]" />
+                <span>Escrow Savings</span>
+              </span>
+            </div>
+          </div>
+
+          {/* 6-Month Bar Chart */}
+          <div className="pt-8 pb-2">
+            <div className="flex items-end justify-between gap-4 h-48 px-2 border-b border-slate-100 pb-3">
+              {monthlySeries.map((item) => {
+                const heightPct = Math.max(18, Math.round((item.revenue / maxMonthlyRev) * 100));
+                const escrowHeightPct = Math.max(10, Math.round(heightPct * 0.35));
+                return (
+                  <div
+                    key={item.month}
+                    className="flex-1 flex flex-col items-center justify-end h-full gap-2 group"
+                  >
+                    <div className="text-[10px] font-extrabold text-slate-500 group-hover:text-[#021064] tabular-nums">
+                      ₦{(item.revenue / 1000000).toFixed(1)}M
+                    </div>
+                    <div className="w-full flex items-end justify-center gap-1.5 h-full">
+                      <div
+                        style={{ height: `${heightPct}%` }}
+                        className="w-full max-w-[18px] bg-[#021064] rounded-t-md transition-all group-hover:bg-[#1a2b88]"
+                        title={`${item.month}: ${formatNaira(item.revenue)}`}
+                      />
+                      <div
+                        style={{ height: `${escrowHeightPct}%` }}
+                        className="w-full max-w-[12px] bg-[#006b5b] rounded-t-md transition-all group-hover:brightness-110"
+                        title={`Escrow Vault: ${formatNaira(Math.round(item.revenue * 0.18))}`}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-slate-500">{item.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gateway Breakdown Footer */}
+          <div className="grid grid-cols-3 gap-3 pt-4 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                Paystack Mandates
+              </span>
+              <span className="font-black text-slate-900 text-sm">58.4% Volume</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                Dedicated Virtual NUBAN
+              </span>
+              <span className="font-black text-slate-900 text-sm">29.1% Volume</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                Mono Direct Debit
+              </span>
+              <span className="font-black text-slate-900 text-sm">12.5% Volume</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Operational Action Queue & Regional Hub Telemetry */}
+        <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between space-y-5">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#006b5b]">
+                  Fleet &amp; Swap Network
+                </span>
+                <h2 className="text-base font-black text-[#021064]">
+                  Regional Hub Telemetry ({bikesCount || 6} Models)
+                </h2>
+              </div>
+              <button
+                onClick={() => onNavigateToTab('bikes')}
+                className="text-xs font-bold text-[#006b5b] hover:underline cursor-pointer"
+              >
+                Manage Fleet &rarr;
+              </button>
+            </div>
+
+            <div className="space-y-3.5 mt-4">
+              {regionalHubs.map((hub) => (
+                <div
+                  key={hub.city}
+                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-extrabold text-slate-900">{hub.city}</span>
+                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      {hub.collectionRate} Collect
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                    <span className="inline-flex items-center gap-1">
+                      <Bike className="w-3.5 h-3.5 text-[#021064]" /> {hub.activeBikes} Financed Bikes
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <BatteryCharging className="w-3.5 h-3.5 text-[#006b5b]" /> {hub.chargedPacks} Charged Packs
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <FileCheck className="w-5 h-5 text-[#006b5b] shrink-0" />
+              <div>
+                <div className="text-xs font-extrabold text-[#021064]">
+                  KYC &amp; Guarantor Co-Sign Queue
+                </div>
+                <div className="text-[11px] text-slate-600">
+                  All active riders verified via Mono BVN &amp; NDPR audit
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigateToTab('compliance')}
+              className="px-3 py-1.5 rounded-lg bg-[#021064] text-white text-xs font-bold hover:opacity-95 shrink-0 cursor-pointer"
+            >
+              Audit KYC
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          BOTTOM ROW: Live Naira Repayment Ledger (7 cols) + Security Audit Trail (5 cols)
+          ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Live Naira Repayment & Escrow Ledger */}
+        <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-black text-[#021064]">
+                Live Naira Repayment &amp; Escrow Feed
+              </h2>
+              <p className="text-xs text-slate-500">
+                Real-time bi-daily rider installments and compulsory ₦1,000/day escrow sweeps
+              </p>
+            </div>
+
+            <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              {(
+                [
+                  { id: 'all', label: 'All' },
+                  { id: 'repayment', label: 'Installments' },
+                  { id: 'escrow', label: 'Escrow Locks' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setLedgerFilter(tab.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    ledgerFilter === tab.id
+                      ? 'bg-[#021064] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-[#021064]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {filteredLedger.map((tx) => (
+              <div
+                key={tx.id}
+                className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/70 px-2 rounded-xl transition-colors"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      tx.category === 'escrow'
+                        ? 'bg-teal-50 text-[#006b5b] border border-teal-200'
+                        : 'bg-indigo-50 text-[#021064] border border-indigo-200'
+                    }`}
+                  >
+                    {tx.category === 'escrow' ? (
+                      <PiggyBank className="h-5 w-5" />
+                    ) : (
+                      <Zap className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
+                      {tx.rider}
+                    </div>
+                    <div className="text-xs text-slate-500 truncate">
+                      {tx.bike} · <span className="font-mono text-[11px]">{tx.channel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-black text-emerald-700 tabular-nums">
+                    +{formatNaira(tx.amount)}
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-400">
+                    {tx.status} · {tx.time}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Immutable Security Audit Stream */}
+        <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4.5 w-4.5 text-[#006b5b]" />
+              <h2 className="text-base font-black text-[#021064]">Security &amp; Audit Stream</h2>
+            </div>
+            <button
+              onClick={() => onNavigateToTab('activity')}
+              className="text-xs font-bold text-[#006b5b] hover:underline cursor-pointer"
+            >
+              Full Audit Log &rarr;
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {(auditLogs || []).slice(0, 4).map((log: any) => (
+              <div
+                key={log.id}
+                className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 rounded bg-[#021064]/10 text-[#021064] font-mono text-[10px] font-extrabold">
+                    {(log.action || 'SYSTEM_EVENT').replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {timeAgo(log.createdAt)}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">{log.details}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

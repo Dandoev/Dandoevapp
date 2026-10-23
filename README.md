@@ -16,6 +16,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Quality checks
+
+Run `npm test`, `npm run lint`, and `npm run build` for unit tests, lint, and the production build. The Playwright checkout tests run against a production build and require Google Chrome:
+
+```bash
+npm run build
+npm run test:e2e
+```
+
+The browser tests mock order creation and gateway responses; they do not charge a card or verify real gateway credentials. On a memory-constrained machine, set `EBIKE_LOW_RESOURCE_BUILD=1` for the build to use one worker.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

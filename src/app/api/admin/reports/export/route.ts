@@ -16,7 +16,7 @@ export const GET = withRoles(
 
     try {
       let data: any[] = [];
-      let filename = `export-${type}-${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `export-${type}-${new Date().toISOString().split('T')[0]}.csv`;
 
       switch (type) {
         case 'loans':

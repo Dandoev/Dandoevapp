@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, type ApiContext } from '@/lib/api-handler';
-import prisma from '@/lib/prisma';
+import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
 
 /**
- * GET /api/admin/config
- * View global variables
+ * GET /api/admin/config — View global platform parameters
  */
 export const GET = withRoles(
-  ['super_admin', 'finance_admin'],
+  ['super_admin', 'finance_admin', 'compliance_officer'],
   async (req: NextRequest, ctx: ApiContext) => {
     try {
-      const configs = await prisma.systemConfig.findMany();
-      // format as dictionary for easy access
-      const configMap = configs.reduce((acc: Record<string, string>, c: { key: string; value: string }) => {
-        acc[c.key] = c.value;
-        return acc;
-      }, {} as Record<string, string>);
-
+      const configMap = await dbService.getSystemConfig();
       return NextResponse.json({ success: true, data: configMap });
     } catch (error) {
       logger.error({ error }, 'Failed to fetch config');
@@ -27,38 +20,28 @@ export const GET = withRoles(
 );
 
 /**
- * POST /api/admin/config
- * Update or set a configuration variable (e.g., Savings_Percentage)
+ * POST /api/admin/config — Update platform parameters
  */
 export const POST = withRoles(
   ['super_admin', 'finance_admin'],
   async (req: NextRequest, ctx: ApiContext) => {
     try {
       const body = await req.json();
-      const { key, value } = body;
 
-      if (!key || value === undefined) {
-        return NextResponse.json({ error: 'Key and value are required' }, { status: 400 });
+      let updates: Record<string, string> = {};
+      if (body.key && body.value !== undefined) {
+        updates[body.key] = String(body.value);
+      } else if (typeof body === 'object') {
+        updates = body;
       }
 
-      const config = await prisma.systemConfig.upsert({
-        where: { key },
-        create: { key, value: String(value) },
-        update: { value: String(value) },
-      });
+      const updated = await dbService.updateSystemConfig(updates);
 
-      // Audit Log (Phase 4.4)
-      await prisma.auditLog.create({
-        data: {
-          userId: ctx.user.sub,
-          action: 'update_config',
-          resource: 'system_config',
-          resourceId: key,
-          details: `Updated ${key} to ${value}`,
-        },
+      return NextResponse.json({
+        success: true,
+        message: 'System parameters updated and persisted successfully',
+        data: updated,
       });
-
-      return NextResponse.json({ success: true, data: config });
     } catch (error) {
       logger.error({ error }, 'Failed to update config');
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

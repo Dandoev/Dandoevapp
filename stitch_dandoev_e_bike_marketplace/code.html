@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DandoEv - Nigeria's Premier EV Marketplace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#000d60",
+                        "surface-container": "#e5eeff",
+                        "tertiary": "#002315",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-dim": "#cbdbf5",
+                        "on-primary-fixed-variant": "#343f8d",
+                        "secondary-fixed-dim": "#00dfc1",
+                        "on-error": "#ffffff",
+                        "secondary": "#006b5b",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#454651",
+                        "surface": "#f8f9ff",
+                        "primary-container": "#1e2a78",
+                        "secondary-container": "#26fedc",
+                        "on-primary-container": "#8a95e9",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#dfe0ff",
+                        "secondary-fixed": "#26fedc",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-background": "#0b1c30",
+                        "primary-fixed-dim": "#bcc3ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "primary": "#021064",
+                        "on-secondary-fixed-variant": "#005144",
+                        "on-surface": "#0b1c30",
+                        "surface-container-low": "#eff4ff",
+                        "on-secondary-container": "#007261",
+                        "surface-tint": "#4c58a6",
+                        "outline-variant": "#c6c5d3",
+                        "tertiary-container": "#003b26",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "on-secondary-fixed": "#00201a",
+                        "surface-variant": "#d3e4fe",
+                        "background": "#f8f9ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-bright": "#f8f9ff",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-primary": "#bcc3ff",
+                        "on-primary": "#ffffff",
+                        "outline": "#767682",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-tertiary-container": "#00b17a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "margin-desktop": "80px",
+                        "md": "24px",
+                        "sm": "12px",
+                        "xl": "64px",
+                        "lg": "40px",
+                        "gutter": "20px",
+                        "margin-mobile": "16px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f8f9ff;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Top Navigation Bar -->
+<header class="bg-white sticky top-0 z-50 border-b border-slate-200 shadow-sm">
+<nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+<div class="flex items-center gap-8">
+<div class="text-2xl font-black text-[#1e2a78] tracking-tight">DandoEv</div>
+<div class="hidden md:flex gap-6 items-center">
+<a class="font-['Inter'] font-bold text-[#1e2a78] border-b-2 border-[#1e2a78] pb-1" href="#">Marketplace</a>
+<a class="font-['Inter'] font-medium text-slate-600 hover:text-[#1e2a78] transition-colors" href="#">BNPL Plans</a>
+<a class="font-['Inter'] font-medium text-slate-600 hover:text-[#1e2a78] transition-colors" href="#">Dealers</a>
+<a class="font-['Inter'] font-medium text-slate-600 hover:text-[#1e2a78] transition-colors" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-50 transition-colors rounded-full">
+<span class="material-symbols-outlined text-[#1e2a78]">account_circle</span>
+</button>
+<button class="p-2 hover:bg-slate-50 transition-colors rounded-full relative">
+<span class="material-symbols-outlined text-[#1e2a78]">shopping_cart</span>
+<span class="absolute top-1 right-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</span>
+</button>
+</div>
+</nav>
+</header>
+<main>
+<!-- Hero Section -->
+<section class="relative overflow-hidden bg-white py-20 md:py-32">
+<div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+<div class="z-10 order-2 lg:order-1">
+<img alt="DandoEv Logo" class="h-12 w-auto mb-10" src="https://lh3.googleusercontent.com/aida/ADBb0ug1H4musQHVIaFGVy9_AYonYThp0NE3zJKN0nPOvAazzk3D6JAmpFl8JCqTD8TyKtA2tdJTkwCbb1HstG1_wm2yM-8_UJusgQV1jzc6WkImpB0FkuiGGy3KDqKJA2MSm9ydixOanc4sP4prbsx2vnkLE43xDiCf2MVaKRnfNFwztTDfZ-0RD1NdtIdYlHl2JzdVwl8mK4mbwW8K9X_80ZPUSbB1xsuJChwx75wcakEjffe-C_t9EePesPE5jcQ7ty_U4pEgpK2DjQ"/>
+<h1 class="font-headline-xl text-primary mb-6 text-balance leading-tight">Affordable Green Mobility for Nigeria.</h1>
+<p class="font-body-lg text-on-surface-variant mb-10 max-w-xl">
+                        Switch to electric today with our Buy Now, Pay Later plans. Own a high-performance electric bike for as low as ₦25,000 per month.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="bg-secondary text-white font-label-md px-10 py-4 rounded-lg shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                            Browse Marketplace
+                            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<button class="border-2 border-primary text-primary font-label-md px-10 py-4 rounded-lg hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2 font-bold">
+                            Check BNPL Eligibility
+                        </button>
+</div>
+</div>
+<div class="relative order-1 lg:order-2">
+<div class="absolute -top-12 -right-12 w-80 h-80 bg-secondary-container/30 rounded-full blur-3xl"></div>
+<div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/5">
+<img class="w-full aspect-[4/3] object-cover" data-alt="A sleek, high-end electric motorcycle standing elegantly on a modern Nigerian urban street during the golden hour. The bike features a matte charcoal finish with vibrant electric teal lighting elements reflecting off the clean pavement. The atmosphere is sophisticated and futuristic, illuminated by warm sunlight that highlights the clean lines and advanced technology of the vehicle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjbe2I8AAFX8HbkEa3Obler5ngbHnJ8Hew7v4m3AeD4c3rIc3RFherkiKdwKB72pKrynBx94bsKs1DyDiAK1V0R6W7LnNDZE4QwwJMU8-msmXpOv0HmniwbVf7ux-R4Cte2p4aMOZ-aaN50ULzjWcuq09gcQ35HHNOrsxXXsv3Kv3BNFeJTUMTNsPYXBINL8v1B0Nd9Zdnbe5UsWHmxPhYvzToFDwj1BhAwjqwZY7dFLdHTsbjqobYEN9SpBObLOIn9Gajici4Cngv"/>
+<div class="absolute bottom-8 left-8 right-8 bg-white p-6 rounded-lg flex justify-between items-center border border-slate-200 shadow-2xl">
+<div>
+<p class="text-[11px] font-extrabold text-secondary uppercase tracking-[0.15em] mb-1">Starting From</p>
+<p class="text-3xl font-black text-primary">₦25,000<span class="text-sm font-medium text-slate-500 ml-1">/mo</span></p>
+</div>
+<div class="flex -space-x-3">
+<div class="w-12 h-12 rounded-full border-4 border-white bg-slate-200 overflow-hidden shadow-sm">
+<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDA3Bgemrc7HW-uOVpXeEAkEqdfoXbtzlB7-byJvafX5owrov_nRfv50M5knHn60tpkWFzwiPKKNPjkpZ-5lodvQ-8k-aO-xVRJzjViRXAsJ6c_YHf6jFzuFsb9MTKNROh2vCrJF9hRkEfN7A9SA4ih-e0cImVQtKzwPScggKkKNf4TQLQNpcHoNe6H4WudPXyLya9LQxzvo0hk_Mi4JAWbUyReksRkuVaYzntGuhoBoKJYEiJgd45JgVv0mkAbTnlwmCReGWfUnsFp"/>
+</div>
+<div class="w-12 h-12 rounded-full border-4 border-white bg-slate-200 overflow-hidden shadow-sm">
+<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBM8Vr8AOZqSPP812O3fvQlZLm5v8A6lNNTqlj2H8_RJ_e6BjO60CKxEuOTeVhtFmXXDKV-K-BeqZLjjmHZfyh4Uafvn2FKYxd8owszJVF00F4G8mqkwo_cLKa9uIF5-dhxY_puaXHixK0VbMOL0rCjfzWFQsdkhECCvIcsIC7oXToS5BG6DBOfSR5KsdFuK37B7cbsRwgChWgNEX82n9I6F7Ywn-sO4ClWVfEuYlQj-y6tnzsPR0p52nva6uNnKWPz8ONClzKTIA43"/>
+</div>
+<div class="w-12 h-12 rounded-full border-4 border-white bg-primary flex items-center justify-center text-[10px] text-white font-bold shadow-sm">+500</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust Signals -->
+<section class="bg-surface-container-low py-20 border-y border-slate-200">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-12 items-center text-center">
+<div class="flex flex-col items-center gap-3">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-3xl">local_shipping</span>
+</div>
+<span class="font-label-sm text-primary uppercase tracking-widest">Fast Delivery</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-3xl">verified_user</span>
+</div>
+<span class="font-label-sm text-primary uppercase tracking-widest">Secure Financing</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-3xl">eco</span>
+</div>
+<span class="font-label-sm text-primary uppercase tracking-widest">Zero Emissions</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-3xl">support_agent</span>
+</div>
+<span class="font-label-sm text-primary uppercase tracking-widest">24/7 Support</span>
+</div>
+</div>
+</div>
+</section>
+<!-- How It Works -->
+<section class="py-32 bg-white">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-20">
+<h2 class="font-headline-lg text-primary mb-4 text-4xl">Ride Home in 3 Simple Steps</h2>
+<p class="text-on-surface-variant max-w-2xl mx-auto text-lg">Our transparent Buy Now, Pay Later process is designed to get you moving without the financial stress.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 relative">
+<div class="relative z-10 flex flex-col items-center text-center bg-white p-10 rounded-lg border border-slate-100 shadow-sm">
+<div class="w-16 h-16 bg-primary text-white rounded-lg flex items-center justify-center mb-8 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-3xl">search</span>
+</div>
+<h3 class="font-headline-md text-primary mb-4">1. Browse</h3>
+<p class="text-on-surface-variant font-body-md leading-relaxed">Explore our curated marketplace of premium electric bikes from verified dealers across Nigeria.</p>
+</div>
+<div class="relative z-10 flex flex-col items-center text-center bg-white p-10 rounded-lg border border-slate-100 shadow-sm">
+<div class="w-16 h-16 bg-secondary text-white rounded-lg flex items-center justify-center mb-8 shadow-lg shadow-secondary/10">
+<span class="material-symbols-outlined text-3xl">assignment_add</span>
+</div>
+<h3 class="font-headline-md text-primary mb-4">2. Apply</h3>
+<p class="text-on-surface-variant font-body-md leading-relaxed">Submit your basic details for a quick credit check. Get instant approval for your BNPL plan.</p>
+</div>
+<div class="relative z-10 flex flex-col items-center text-center bg-white p-10 rounded-lg border border-slate-100 shadow-sm">
+<div class="w-16 h-16 bg-primary-container text-white rounded-lg flex items-center justify-center mb-8 shadow-lg shadow-primary-container/10">
+<span class="material-symbols-outlined text-3xl">electric_moped</span>
+</div>
+<h3 class="font-headline-md text-primary mb-4">3. Ride</h3>
+<p class="text-on-surface-variant font-body-md leading-relaxed">Complete your down payment and pick up your bike or have it delivered to your doorstep.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Featured E-Bikes -->
+<section class="py-32 bg-surface-container-lowest">
+<div class="max-w-7xl mx-auto px-6">
+<div class="flex justify-between items-end mb-16">
+<div>
+<h2 class="font-headline-lg text-primary mb-4 text-4xl">Top-Selling E-Bikes</h2>
+<p class="text-on-surface-variant text-lg">Selected for performance, range, and Nigerian road durability.</p>
+</div>
+<button class="hidden md:flex items-center gap-2 text-primary font-bold hover:underline transition-all">
+                        View Marketplace <span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Bike Card 1 -->
+<div class="group bg-white rounded-lg overflow-hidden border border-slate-200 hover:shadow-2xl transition-all duration-300">
+<div class="relative h-72 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvgQKhUXhxQUyQz6Dc-0El4yGdCUEYAyuhVqyAHT0__C4V7TEeJIWIRWtQErJ1Zi6RfRRHPzTIjlNU-0aTFqvtZtyTqz4RyBnB3xfYF8iayS3Uc92v4WEkT1n_ChvHxWSvy74_3-ii5anPKhxgbhJ_-ceylzsp6tYrD4fNgcifYGg7usQlBWwn9dLNgIbRRsggoQr4rqvJCWXoSTmM7_vzUMBYBHZAVHLjZX8K38ujjay92ON1CkY7gHRA1_2lh8dBU3c2dj3R3KyP"/>
+<div class="absolute top-5 left-5 bg-secondary text-white text-[11px] font-bold px-4 py-1.5 rounded-lg uppercase tracking-widest shadow-lg">In Stock</div>
+</div>
+<div class="p-8">
+<h3 class="font-headline-md text-primary mb-2">VoltX Commuter Pro</h3>
+<p class="text-on-surface-variant text-sm mb-6">80km Range | 45km/h Top Speed</p>
+<div class="flex justify-between items-center py-5 border-t border-slate-100">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Price</p>
+<p class="text-xl font-bold text-primary">₦850,000</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-secondary font-bold uppercase tracking-wider">BNPL Start</p>
+<p class="text-2xl font-black text-secondary">₦28,500<span class="text-sm font-normal">/mo</span></p>
+</div>
+</div>
+<button class="w-full mt-6 bg-primary text-white font-label-md py-4 rounded-lg hover:brightness-110 transition-all font-bold">View Details</button>
+</div>
+</div>
+<!-- Bike Card 2 -->
+<div class="group bg-white rounded-lg overflow-hidden border border-slate-200 hover:shadow-2xl transition-all duration-300">
+<div class="relative h-72 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPGeTlI0dVl-GwWhX3-YQ0nNykQQKVBxblAliuqYfIe6oZlvYkT1fVuvHlpTA7Ju26JWXsOggndXJgXkH5NfZ07lbQdP0tRCDfbeLK0GtI6b6xwGl5QJNUoQc3QlfSF5Jik1Rp-3vhauSA9dvk2OZNnadXWCkSoNrXqVDWS9QvF81ZBRiS6ONdP85VwdCgPCFLntGr0PQWR_4xKnnXChVTaa1elNoV6Kt15iOXTlTubfW5k0MyJMAY-W8qqnQwaJLG3o9Ugmrpyl_G"/>
+<div class="absolute top-5 left-5 bg-primary text-white text-[11px] font-bold px-4 py-1.5 rounded-lg uppercase tracking-widest shadow-lg">Eco Choice</div>
+</div>
+<div class="p-8">
+<h3 class="font-headline-md text-primary mb-2">Terra Moto S1</h3>
+<p class="text-on-surface-variant text-sm mb-6">120km Range | Off-road Ready</p>
+<div class="flex justify-between items-center py-5 border-t border-slate-100">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Price</p>
+<p class="text-xl font-bold text-primary">₦1,200,000</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-secondary font-bold uppercase tracking-wider">BNPL Start</p>
+<p class="text-2xl font-black text-secondary">₦42,000<span class="text-sm font-normal">/mo</span></p>
+</div>
+</div>
+<button class="w-full mt-6 bg-primary text-white font-label-md py-4 rounded-lg hover:brightness-110 transition-all font-bold">View Details</button>
+</div>
+</div>
+<!-- Bike Card 3 -->
+<div class="group bg-white rounded-lg overflow-hidden border border-slate-200 hover:shadow-2xl transition-all duration-300">
+<div class="relative h-72 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZV1B_euzSuy6s3Z8JF8BHvPh3vqCBiApw_LPkdzwICacwIt-9QTWWoaYxQcjZrS7ryUFJUvg0hHd12KXXV9yp6GQ8rbPJJUPudewva4nRdLaS1ELTX1rLeYZpWbMrUeQqjJRskRw-tXdFduhcH-d-KOFUpq2N6Zpo_KW29s21-Xc1fdeft2cO0OFroi41LTrAvr5lUGeijPKUPKciOtsESPOg1zVcvhpZao4ep5MRFpQd2lN-TasjFCiaq8krK9JwK2eey-JIZie_"/>
+<div class="absolute top-5 left-5 bg-secondary-container text-on-secondary-container text-[11px] font-bold px-4 py-1.5 rounded-lg uppercase tracking-widest shadow-lg">Best Value</div>
+</div>
+<div class="p-8">
+<h3 class="font-headline-md text-primary mb-2">Swift Lite E-Scooter</h3>
+<p class="text-on-surface-variant text-sm mb-6">60km Range | Ultra-Lightweight</p>
+<div class="flex justify-between items-center py-5 border-t border-slate-100">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Price</p>
+<p class="text-xl font-bold text-primary">₦650,000</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-secondary font-bold uppercase tracking-wider">BNPL Start</p>
+<p class="text-2xl font-black text-secondary">₦22,000<span class="text-sm font-normal">/mo</span></p>
+</div>
+</div>
+<button class="w-full mt-6 bg-primary text-white font-label-md py-4 rounded-lg hover:brightness-110 transition-all font-bold">View Details</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Section -->
+<section class="py-24 bg-[#1e2a78] text-white overflow-hidden relative">
+<div class="absolute top-0 right-0 w-1/3 h-full bg-teal-400/10 skew-x-12 translate-x-1/2"></div>
+<div class="max-w-7xl mx-auto px-6 relative z-10 text-center">
+<h2 class="font-headline-xl text-white mb-6">Ready to lead the EV revolution?</h2>
+<p class="text-teal-100/80 font-body-lg mb-12 max-w-2xl mx-auto">Join thousands of Nigerians already saving money and protecting the environment with DandoEv.</p>
+<div class="flex flex-col sm:flex-row gap-6 justify-center">
+<button class="bg-secondary text-white font-headline-md px-12 py-5 rounded-lg hover:scale-105 transition-transform shadow-xl">
+                        Browse Marketplace
+                    </button>
+<button class="border-2 border-white/40 hover:border-white text-white font-headline-md px-12 py-5 rounded-lg transition-all font-bold">
+                        Check Eligibility
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-[#1e2a78] dark:bg-slate-950 border-t border-slate-800 w-full mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8 px-8 py-12 max-w-7xl mx-auto">
+<div class="col-span-1 md:col-span-1">
+<div class="text-xl font-bold text-white mb-6">DandoEv</div>
+<p class="text-slate-300 font-['Inter'] text-sm leading-relaxed mb-6">Nigeria's premier gateway to affordable, reliable electric mobility. Bridging technology and finance.</p>
+<div class="flex gap-4">
+<a class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-secondary-container hover:text-on-secondary-container transition-all" href="#">
+<span class="material-symbols-outlined text-sm">public</span>
+</a>
+<a class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-secondary-container hover:text-on-secondary-container transition-all" href="#">
+<span class="material-symbols-outlined text-sm">alternate_email</span>
+</a>
+</div>
+</div>
+<div>
+<h4 class="text-white font-bold mb-6">Company</h4>
+<ul class="space-y-4">
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">About DandoEv</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Our Mission</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Careers</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Contact Us</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-6">Financials</h4>
+<ul class="space-y-4">
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">BNPL Terms</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Eligibility Check</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Partner Dealers</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Repayment Plans</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-6">Support</h4>
+<ul class="space-y-4">
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Support Center</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Privacy Policy</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Delivery Info</a></li>
+<li><a class="text-slate-300 hover:text-white transition-colors text-sm" href="#">Warranty Policy</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-8 py-6 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-slate-400 text-xs">© 2024 DandoEv Mobility. Nigeria's Premier EV Gateway.</p>
+<div class="flex gap-6">
+<span class="text-slate-400 text-xs">RC 123456789</span>
+<span class="text-slate-400 text-xs">SEC Regulated Financing</span>
+</div>
+</div>
+</footer>
+<!-- Mobile Bottom Navigation Shell -->
+<div class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_12px_rgba(30,42,120,0.05)]">
+<div class="flex flex-col items-center justify-center text-[#1e2a78] bg-teal-50/50 rounded-xl px-3 py-1">
+<span class="material-symbols-outlined" data-weight="fill">home</span>
+<span class="text-[10px] font-semibold font-['Inter']">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">electric_moped</span>
+<span class="text-[10px] font-semibold font-['Inter']">Shop</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-[10px] font-semibold font-['Inter']">Finance</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-semibold font-['Inter']">Account</span>
+</div>
+</div>
+</body></html>

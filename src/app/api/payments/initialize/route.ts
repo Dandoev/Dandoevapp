@@ -3,12 +3,19 @@ import { withAuth, withValidation, withIdempotency, type ApiContext } from '@/li
 import { initializePaymentSchema, type InitializePaymentInput } from '@/lib/schemas';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { initiateMonoPayment } from '@/lib/mono';
+import { PaymentIntentError, resolvePaymentIntent } from '@/lib/payment-intent';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
 /**
  * POST /api/payments/initialize
- * Initialize a payment with Paystack and return the authorization URL.
+ * Initialize a secure payment session via Mono DirectPay (with Paystack fallback).
+ * Powers:
+ *  1. Outright bike purchases
+ *  2. Standalone battery & charger purchases
+ *  3. BNPL Down payments
+ *  4. Manual ad-hoc installment top-ups
  */
 export const POST = withAuth(
   withIdempotency(
@@ -16,42 +23,116 @@ export const POST = withAuth(
       initializePaymentSchema,
       async (req: NextRequest, ctx: ApiContext & { validatedBody: InitializePaymentInput }) => {
         const log = logger.child({ requestId: ctx.requestId, route: 'payments/initialize' });
-        const { amount, orderId, loanId, repaymentId, callbackUrl, metadata } = ctx.validatedBody;
+        const { amount, orderId, loanId, repaymentId, callbackUrl, metadata, provider = 'mono' } = ctx.validatedBody;
 
         try {
+          await resolvePaymentIntent(prisma, {
+            userId: ctx.user.sub, amount, orderId, loanId, repaymentId,
+          });
+          const transactionId = `TX-${provider.toUpperCase()}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
           // ---- Create local transaction record ----
           const transaction = await prisma.paymentTransaction.create({
             data: {
+              id: transactionId,
               userId: ctx.user.sub,
               orderId: orderId || null,
               loanId: loanId || null,
               repaymentId: repaymentId || null,
-              provider: 'paystack',
+              provider: provider || 'mono',
               amount,
               currency: 'NGN',
               status: 'initiated',
               idempotencyKey: req.headers.get('idempotency-key') || null,
-              metadata: metadata as object || {},
+              metadata: (metadata as object) || {},
             },
           });
 
-          // ---- Call Paystack Initialize ----
+          // Build descriptive payment title for Mono/Paystack gateway screen
+          let paymentDescription = `DandoEv Payment ₦${amount.toLocaleString()}`;
+          if (orderId) {
+            paymentDescription = `DandoEv Order #${orderId} (Outright Purchase)`;
+          } else if (repaymentId) {
+            paymentDescription = `DandoEv BNPL Installment #${repaymentId.slice(0, 8)}`;
+          } else if (loanId) {
+            paymentDescription = `DandoEv BNPL Down Payment (Loan #${loanId.slice(0, 8)})`;
+          }
+
+          const customerEmail = ctx.user.email || 'customer@dandoev.com';
+          const customerName = `${ctx.user.email?.split('@')[0] || 'DandoEv'} Rider`;
+          const resolvedCallbackUrl =
+            callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://dashboard.dandoev.com'}/checkout/callback`;
+
+          // ========================================================
+          // 1. Mono DirectPay (Pay with Bank, Transfer, Card, USSD)
+          // ========================================================
+          if (provider === 'mono') {
+            try {
+              const monoPayment = await initiateMonoPayment({
+                amount,
+                type: 'onetime-debit',
+                description: paymentDescription,
+                reference: transaction.id,
+                customer: {
+                  name: customerName,
+                  email: customerEmail,
+                },
+                redirect_url: resolvedCallbackUrl,
+              });
+
+              await prisma.paymentTransaction.update({
+                where: { id: transaction.id },
+                data: {
+                  providerRef: monoPayment.reference,
+                  status: 'pending',
+                },
+              });
+
+              log.info(
+                { transactionId: transaction.id, monoRef: monoPayment.reference },
+                'Mono DirectPay session created successfully'
+              );
+
+              return NextResponse.json({
+                success: true,
+                data: {
+                  authorizationUrl: monoPayment.payment_link,
+                  reference: monoPayment.reference,
+                  transactionId: transaction.id,
+                  provider: 'mono',
+                  channels: ['direct_debit', 'pay_with_bank', 'bank_transfer', 'card', 'ussd'],
+                },
+              });
+            } catch (monoErr: unknown) {
+              log.error({ err: monoErr instanceof Error ? monoErr.message : String(monoErr) }, 'Mono DirectPay initialization failed');
+              await prisma.paymentTransaction.update({
+                where: { id: transaction.id },
+                data: { status: 'failed' },
+              });
+              return NextResponse.json({ error: 'Payment initialization failed' }, { status: 502 });
+            }
+          }
+
+          // ========================================================
+          // 2. Paystack Fallback (when provider is explicitly paystack)
+          // ========================================================
           const paystackResponse = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+              Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              email: ctx.user.email,
-              amount: Math.round(amount * 100), // Paystack uses kobo (1 NGN = 100 kobo)
+              email: customerEmail,
+              amount: Math.round(amount * 100), // kobo
               reference: transaction.id,
-              callback_url: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/callback`,
+              callback_url: resolvedCallbackUrl,
               metadata: {
                 transaction_id: transaction.id,
                 user_id: ctx.user.sub,
                 order_id: orderId,
                 loan_id: loanId,
+                repayment_id: repaymentId,
                 ...metadata,
               },
             }),
@@ -71,7 +152,6 @@ export const POST = withAuth(
             );
           }
 
-          // ---- Update transaction with Paystack reference ----
           await prisma.paymentTransaction.update({
             where: { id: transaction.id },
             data: {
@@ -80,7 +160,7 @@ export const POST = withAuth(
             },
           });
 
-          log.info({ transactionId: transaction.id }, 'Payment initialized');
+          log.info({ transactionId: transaction.id }, 'Paystack payment initialized');
 
           return NextResponse.json({
             success: true,
@@ -89,9 +169,13 @@ export const POST = withAuth(
               accessCode: paystackData.data.access_code,
               reference: paystackData.data.reference,
               transactionId: transaction.id,
+              provider: 'paystack',
             },
           });
         } catch (error) {
+          if (error instanceof PaymentIntentError) {
+            return NextResponse.json({ error: error.message }, { status: error.status });
+          }
           log.error({ error }, 'Payment initialization error');
           return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
         }

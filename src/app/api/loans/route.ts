@@ -1,26 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, withIdempotency, withValidation, type ApiContext } from '@/lib/api-handler';
+import { withAuth, withIdempotency, withValidation, withFraudCheck, type ApiContext } from '@/lib/api-handler';
 import { createLoanSchema, type CreateLoanInput } from '@/lib/schemas';
-import prisma from '@/lib/prisma';
+import { calculateInstallment, calculateDownPayment } from '@/lib/utils';
+import { setupMonoRecurringMandate, calculateMandateTermsFromLoan, type DeductionInterval } from '@/lib/mono';
+import { BNPL_CONFIG } from '@/lib/constants';
+import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
-import { type TxClient } from '@/lib/prisma-types';
 
 /**
- * GET /api/loans — List loans for authenticated user (or all for admins)
+ * GET /api/loans — List loans for authenticated user (or all for staff)
  */
 export const GET = withAuth(
   async (req: NextRequest, ctx: ApiContext) => {
     try {
-      const isAdmin = ['super_admin', 'finance_admin', 'compliance_officer'].includes(ctx.user.role);
-      const loans = await prisma.loan.findMany({
-        where: isAdmin ? {} : { userId: ctx.user.sub },
-        include: {
-          bike: { select: { name: true, brand: true, price: true, images: true } },
-          guarantors: true,
-          repayments: { orderBy: { dueDate: 'asc' } },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      const isStaff = [
+        'super_admin',
+        'credit_underwriter',
+        'fleet_manager',
+        'collections_agent',
+        'compliance_officer',
+        'finance_admin',
+      ].includes(ctx.user?.role);
+
+      let loans = await dbService.getLoans();
+
+      if (!isStaff && ctx.user?.sub) {
+        loans = loans.filter((l) => l.userId === ctx.user.sub);
+      }
 
       return NextResponse.json({ success: true, data: loans });
     } catch (error) {
@@ -31,103 +37,170 @@ export const GET = withAuth(
 );
 
 /**
- * POST /api/loans — Submit a new BNPL application
+ * POST /api/loans — Submit a new BNPL application & initialize Mono Mandate Order
  */
 export const POST = withAuth(
   withIdempotency(
     withValidation(
       createLoanSchema,
-      async (req: NextRequest, ctx: ApiContext & { validatedBody: CreateLoanInput }) => {
-        const log = logger.child({ requestId: ctx.requestId, route: 'loans' });
-        const data = ctx.validatedBody;
+      withFraudCheck(
+        'LOAN_APPLICATION',
+        (req, ctx) => {
+          const body = (ctx as any).validatedBody as CreateLoanInput;
+          return {
+            loanAmount: body?.loanAmount,
+            monthlyIncome: body?.monthlyIncome,
+          };
+        },
+        async (req: NextRequest, ctx: ApiContext & { validatedBody: CreateLoanInput }) => {
+          const data = ctx.validatedBody;
 
-        try {
-          // ---- Create loan in a transaction ----
-          const result = await prisma.$transaction(async (tx: TxClient) => {
-            // Create the loan
-            const loan = await tx.loan.create({
-              data: {
-                userId: ctx.user.sub,
-                bikeId: data.bikeId,
-                downPayment: data.downPayment,
-                loanAmount: data.loanAmount,
-                interestRate: data.interestRate,
-                serviceFee: data.serviceFee,
-                tenure: data.tenure,
-                monthlyRepayment: data.monthlyRepayment,
-                totalRepayable: data.totalRepayable,
-                status: 'under_review',
-                kycVerified: false,
-                guarantorsVerified: false,
+          const deliveryType =
+            data.deliveryType ||
+            (data.deliveryAddress === 'Pickup Hub'
+              ? 'pickup'
+              : data.deliveryState === 'Lagos'
+              ? 'delivery_lagos'
+              : 'delivery_outside');
+          const deliveryFee =
+            deliveryType === 'pickup' ? 0 : deliveryType === 'delivery_lagos' ? 20000 : 50000;
+          const insuranceFee = BNPL_CONFIG.healthInsuranceFee;
+          const serviceFee = BNPL_CONFIG.processingFee;
+
+          try {
+            const bikes = await dbService.getBikes();
+            const bike =
+              (await dbService.getBikeById(data.bikeId)) ||
+              bikes[0] || {
+                id: data.bikeId,
+                name: data.bikeName || 'DandoEv X6 Commercial Dispatch',
+                brand: 'DandoEv',
+                price: data.bikePrice || data.loanAmount || 950000,
+                bnplMinDownPayment: 0,
+              };
+
+            const bikePrice = Number(bike.price);
+            const tenure = [3, 6, 9, 12, 18, 24].includes(Number(data.tenure))
+              ? Number(data.tenure)
+              : 12;
+            const deductionFrequency: DeductionInterval =
+              (['daily', 'bidaily', 'weekly', 'monthly'].includes(data.deductionFrequency)
+                ? data.deductionFrequency
+                : 'bidaily') as DeductionInterval;
+
+            const minDownPaymentPercent = bike.bnplMinDownPayment || 0;
+            const minDownPayment = calculateDownPayment(bikePrice, minDownPaymentPercent);
+            const downPayment = Math.max(Number(data.downPayment) || 0, minDownPayment);
+            const loanPrincipal = Math.max(0, bikePrice - downPayment);
+            const monthlyInterestRate = BNPL_CONFIG.interestRate;
+
+            // Calculate loan terms strictly on server
+            const calculatedTerms = calculateInstallment(loanPrincipal, monthlyInterestRate, tenure);
+            const totalRepayable = calculatedTerms.totalRepayable + deliveryFee;
+            const monthlyRepayment = Math.round(totalRepayable / tenure);
+
+            // Compute Mono Mandate Schedule based on loan term & deduction frequency
+            const mandateTerms = calculateMandateTermsFromLoan({
+              totalRepayable,
+              tenureMonths: tenure,
+              deductionFrequency,
+            });
+
+            const mandateOrder = await setupMonoRecurringMandate({
+              accountId: data.monoAccountId,
+              accountNumber: data.bankAccountNumber,
+              accountName: data.bankAccountName,
+              bankName: data.bankName,
+              amount: mandateTerms.installmentAmount,
+              tenureMonths: tenure,
+              deductionFrequency,
+              totalRepayable,
+              interval: mandateTerms.monoInterval,
+              description: `DandoEv BNPL Auto-Deduction Mandate (${tenure}M • ${deductionFrequency.toUpperCase()})`,
+              reference: data.monoMandateRef || `MND-DANDO-${Date.now().toString().slice(-6)}`,
+              startDate: data.mandateStartDate || mandateTerms.startDate,
+              endDate: data.mandateEndDate || mandateTerms.endDate,
+            });
+
+            const fallbackFirstName =
+              data.firstName ||
+              data.bankAccountName?.split(' ')[0] ||
+              (ctx.user as any)?.name?.split(' ')[0] ||
+              'Solomon';
+            const fallbackLastName =
+              data.lastName ||
+              data.bankAccountName?.split(' ').slice(1).join(' ') ||
+              (ctx.user as any)?.name?.split(' ')[1] ||
+              'Dunu';
+
+            const newLoan = await dbService.createLoan({
+              userId: ctx.user?.sub || 'user-applicant',
+              bikeId: bike.id,
+              downPayment,
+              loanAmount: loanPrincipal,
+              interestRate: monthlyInterestRate,
+              serviceFee,
+              insuranceFee,
+              deliveryType,
+              tenure,
+              deductionFrequency,
+              monthlyRepayment,
+              totalRepayable,
+              status: 'under_review',
+              kycVerified: Boolean(data.bvn || data.monoAccountId),
+              guarantorsVerified: false,
+              monoAccountId: mandateOrder.accountId,
+              monoMandateId: data.monoMandateId || mandateOrder.id,
+              monoMandateRef: mandateOrder.reference,
+              monoMandateStatus: mandateOrder.status,
+              mandateStartDate: mandateOrder.startDate,
+              mandateEndDate: mandateOrder.endDate,
+              deliveryAddress:
+                deliveryType === 'pickup' ? 'Lagos Central Pickup Hub' : data.deliveryAddress,
+              deliveryCity: deliveryType === 'pickup' ? 'Ikeja' : data.deliveryCity,
+              deliveryState: deliveryType === 'pickup' ? 'Lagos' : data.deliveryState,
+              user: {
+                id: ctx.user?.sub || 'user-applicant',
+                firstName: fallbackFirstName,
+                lastName: fallbackLastName,
+                email: data.email || ctx.user?.email || 'solomon.dunu@dandoev.com',
+                phone: data.phone || (ctx.user as any)?.phone || '08034567890',
+                kycStatus: data.monoAccountId || data.bvn ? 'verified' : 'pending',
+                monthlyIncome: data.monthlyIncome,
+                employmentStatus: data.employmentStatus,
+                bankName: data.bankName || mandateOrder.bankName,
+                bankAccountNumber: data.bankAccountNumber || mandateOrder.accountNumber,
+                bankAccountName: data.bankAccountName || mandateOrder.accountName,
               },
+              bike: bike || { name: 'DandoEv E-Bike', brand: 'DandoEv', price: bikePrice },
+              guarantors: data.guarantors?.map((g) => ({
+                fullName: g.fullName,
+                phone: g.phone,
+                relationship: g.relationship,
+                bvnVerified: false,
+                signedStatus: 'pending',
+              })),
             });
 
-            // Update user profile with financial data if provided
-            const userUpdate: Record<string, unknown> = {
-              customerStatus: 'bnpl_applicant',
-            };
-            if (data.dateOfBirth) userUpdate.dateOfBirth = new Date(data.dateOfBirth);
-            if (data.address) userUpdate.address = data.address;
-            if (data.state) userUpdate.state = data.state;
-            if (data.city) userUpdate.city = data.city;
-            if (data.employmentStatus) userUpdate.employmentStatus = data.employmentStatus;
-            if (data.monthlyIncome) userUpdate.monthlyIncome = data.monthlyIncome;
-            if (data.employerName) userUpdate.employerName = data.employerName;
-            if (data.employerAddress) userUpdate.employerAddress = data.employerAddress;
-            if (data.bvn) userUpdate.bvn = data.bvn;
-            if (data.ninNumber) userUpdate.ninNumber = data.ninNumber;
-            if (data.bankName) userUpdate.bankName = data.bankName;
-            if (data.bankAccountNumber) userUpdate.bankAccountNumber = data.bankAccountNumber;
-            if (data.bankAccountName) userUpdate.bankAccountName = data.bankAccountName;
-
-            await tx.user.update({
-              where: { id: ctx.user.sub },
-              data: userUpdate,
-            });
-
-            // Create guarantors
-            if (data.guarantors?.length) {
-              await tx.guarantor.createMany({
-                data: data.guarantors.map((g) => ({
-                  loanId: loan.id,
-                  applicantUserId: ctx.user.sub,
-                  fullName: g.fullName,
-                  email: g.email || null,
-                  phone: g.phone,
-                  relationship: g.relationship,
-                  status: 'invited',
-                })),
-              });
-            }
-
-            // Create KYC documents references
-            if (data.documents?.length) {
-              await tx.kycDocument.createMany({
-                data: data.documents.map((d) => ({
-                  userId: ctx.user.sub,
-                  loanId: loan.id,
-                  type: d.type as any,
-                  fileUrl: d.fileUrl,
-                  fileName: d.fileName,
-                  verificationStatus: 'pending',
-                })),
-              });
-            }
-
-            return loan;
-          });
-
-          log.info({ loanId: result.id }, 'BNPL application submitted');
-
-          return NextResponse.json(
-            { success: true, loanId: result.id, message: 'Application submitted for review' },
-            { status: 201 }
-          );
-        } catch (error) {
-          log.error({ error }, 'Loan submission error');
-          return NextResponse.json({ error: 'Failed to submit BNPL application' }, { status: 500 });
+            return NextResponse.json(
+              {
+                success: true,
+                loanId: newLoan.id,
+                message: 'Loan application and Mono Direct Debit Mandate submitted successfully',
+                data: {
+                  ...newLoan,
+                  mandate: mandateOrder,
+                  mandateTerms,
+                },
+              },
+              { status: 201 }
+            );
+          } catch (error) {
+            logger.error({ error }, 'Failed to submit loan');
+            return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+          }
         }
-      }
+      )
     )
   )
 );

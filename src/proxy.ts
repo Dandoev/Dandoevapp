@@ -1,13 +1,73 @@
 // ============================================================
-// Next.js Edge Middleware
+// Next.js Edge Proxy (replacing middleware)
 // - Security headers on all responses
+// - Auth guards & Route protection
 // - Request ID injection
 // ============================================================
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { isDemoAllowed } from './lib/env';
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID();
+  const { pathname } = request.nextUrl;
+
+  // ---- Read session token ----
+  const token =
+    request.cookies.get('sb-access-token')?.value ||
+    request.cookies.get('token')?.value ||
+    request.headers.get('authorization')?.replace('Bearer ', '');
+
+  // ---- Route Protection Logic ----
+  const PROTECTED_ROUTES = ['/dashboard', '/bnpl', '/checkout', '/logistics'];
+  const ADMIN_ROUTES = ['/admin'];
+
+  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+  const isAdmin = ADMIN_ROUTES.some(route => pathname.startsWith(route));
+
+  if ((isProtected || isAdmin) && !token) {
+    const url = new URL('/auth/signin', request.url);
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // ---- Admin Role Verification ----
+  if (isAdmin && token) {
+    // Demo Token Bypass — only allowed in development/demo mode, NEVER in production
+    if (isDemoAllowed() && (token === 'demo-token-admin' || token.startsWith('demo-token-admin'))) {
+      // Allow demo admin directly for local development demo
+    } else {
+      try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+        );
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+
+        if (error || !user) throw new Error('Invalid session');
+
+        const role = user.app_metadata?.role as string;
+        const adminRoles = [
+          'super_admin',
+          'finance_admin',
+          'compliance_officer',
+          'operations_admin',
+          'credit_underwriter',
+          'fleet_manager',
+          'collections_agent',
+        ];
+
+        if (!adminRoles.includes(role)) {
+          return NextResponse.redirect(new URL('/auth/signin', request.url));
+        }
+      } catch {
+        const url = new URL('/auth/signin', request.url);
+        url.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(url);
+      }
+    }
+  }
 
   const response = NextResponse.next({
     request: {
@@ -18,21 +78,6 @@ export function proxy(request: NextRequest) {
     },
   });
 
-  // ---- Route Guarding ----
-  const { pathname } = request.nextUrl;
-  const protectedRoutes = ['/bnpl', '/checkout', '/dashboard', '/admin'];
-  
-  const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
-  const token = request.cookies.get('token')?.value;
-  const refreshToken = request.cookies.get('refreshToken')?.value;
-
-  if (isProtected && !token && !refreshToken) {
-    // Redirect to signin with return URL
-    const url = new URL('/auth/signin', request.url);
-    url.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(url);
-  }
-
   // ---- Security Headers ----
   response.headers.set('X-Request-ID', requestId);
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
@@ -42,7 +87,7 @@ export function proxy(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.paystack.co"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.withmono.com https://*.mono.co https://js.paystack.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' https://connect.withmono.com https://*.mono.co https://checkout.paystack.com; connect-src 'self' https://api.mono.co https://api.withmono.com https://*.mono.co https://api.paystack.co https://*.supabase.co https://*.sentry.io;"
   );
   response.headers.set(
     'Permissions-Policy',
@@ -54,7 +99,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all API routes and pages, skip static files and Next.js internals
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

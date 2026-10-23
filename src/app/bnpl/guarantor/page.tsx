@@ -25,25 +25,28 @@ function Stepper({ current }: { current: number }) {
 
 export default function GuarantorPage() {
     const router = useRouter();
-    const [guarantors, setGuarantors] = useState([
+    const defaultGuarantors = [
         { fullName: '', email: '', phone: '', relationship: 'Civil Servant', invited: false, type: 'civil_servant' },
         { fullName: '', email: '', phone: '', relationship: '', invited: false, type: 'family_member' }
-    ]);
+    ];
 
-    useEffect(() => {
-        const saved = sessionStorage.getItem('bnpl_data');
-        if (saved) {
+    const [guarantors, setGuarantors] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
             try {
-                const parsed = JSON.parse(saved);
-                if (parsed.guarantors && Array.isArray(parsed.guarantors) && parsed.guarantors.length === 2) {
-                    setGuarantors(parsed.guarantors);
+                const saved = sessionStorage.getItem('bnpl_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.guarantors && Array.isArray(parsed.guarantors) && parsed.guarantors.length === 2) {
+                        return parsed.guarantors;
+                    }
                 }
-            } catch (e) {}
+            } catch {}
         }
-    }, []);
+        return defaultGuarantors;
+    });
 
     const updateGuarantor = (index: number, field: string, value: string | boolean) => {
-        setGuarantors(prev => {
+        setGuarantors((prev: any[]) => {
             const next = [...prev];
             next[index] = { ...next[index], [field]: value };
             return next;
@@ -76,7 +79,7 @@ export default function GuarantorPage() {
                     You must provide two guarantors: one <strong>Civil Servant</strong> and one <strong>Family Member</strong>. They will verify their identity using their Work ID or formal identification.
                 </p>
 
-                {guarantors.map((g, index) => (
+                {guarantors.map((g: any, index: number) => (
                     <div key={index} className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem', borderLeft: index === 0 ? '4px solid var(--primary)' : '4px solid var(--secondary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
                             <div style={{ background: index === 0 ? 'rgba(52, 152, 219, 0.1)' : 'rgba(155, 89, 182, 0.1)', padding: '0.5rem', borderRadius: '50%' }}>

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter_Tight } from 'next/font/google';
+import { Poppins } from "next/font/google";
 import "./globals.css";
 
-const interTight = Inter_Tight({
-  subsets: ['latin'],
-  variable: '--font-inter-tight',
-  display: 'swap',
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-poppins",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -22,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${interTight.variable}`}>
-      <body style={{ paddingBottom: '80px' }}> {/* Padding for mobile nav */}
+    <html lang="en" className={poppins.variable}>
+      <body className={poppins.className} style={{ paddingBottom: '80px' }}> {/* Padding for mobile nav */}
         {children}
         <MobileNav />
       </body>

@@ -1,0 +1,18 @@
+{
+  "short_name": "DandoEv",
+  "name": "DandoEv - Electric Mobility Platform",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/"
+}

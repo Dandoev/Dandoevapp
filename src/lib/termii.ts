@@ -2,6 +2,7 @@ import logger from './logger';
 
 const TERMII_API_KEY = process.env.TERMII_API_KEY;
 const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'DandoEv';
+const TERMII_BASE_URL = (process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/+$/, '');
 
 /**
  * Send an SMS using Termii API.
@@ -16,7 +17,7 @@ export async function sendSms(to: string, message: string) {
   const formattedPhone = to.startsWith('+') ? to.slice(1) : to;
 
   try {
-    const response = await fetch('https://api.ng.termii.com/api/sms/send', {
+    const response = await fetch(`${TERMII_BASE_URL}/api/sms/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +58,7 @@ export async function sendWhatsApp(to: string, message: string) {
   const formattedPhone = to.startsWith('+') ? to.slice(1) : to;
 
   try {
-    const response = await fetch('https://api.ng.termii.com/api/sms/send', {
+    const response = await fetch(`${TERMII_BASE_URL}/api/sms/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

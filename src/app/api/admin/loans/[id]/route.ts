@@ -1,39 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, withValidation, type ApiContext } from '@/lib/api-handler';
 import { loanActionSchema, type LoanActionInput } from '@/lib/schemas';
-import { enqueueNotification } from '@/lib/queue';
-import prisma from '@/lib/prisma';
+import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
-import { calculateInstallment } from '@/lib/utils';
-import { generateSchedule } from '@/lib/loan-engine';
-import { type TxClient } from '@/lib/prisma-types';
-
-// ---- Valid state transitions ----
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  pending: ['under_review', 'rejected'],
-  under_review: ['approved', 'rejected'],
-  approved: ['active', 'rejected'],
-  active: ['completed', 'defaulted'],
-};
 
 /**
  * GET /api/admin/loans/[id] — Get single loan details
  */
 export const GET = withRoles(
-  ['super_admin', 'finance_admin', 'compliance_officer'],
+  ['super_admin', 'credit_underwriter', 'finance_admin', 'compliance_officer'],
   async (req: NextRequest, ctx: ApiContext) => {
     const id = req.nextUrl.pathname.split('/').pop()!;
-
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      include: {
-        user: true,
-        bike: true,
-        guarantors: true,
-        repayments: { orderBy: { dueDate: 'asc' } },
-        documents: true,
-      },
-    });
+    const loan = await dbService.getLoanById(id);
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
@@ -44,108 +22,65 @@ export const GET = withRoles(
 );
 
 /**
- * PATCH /api/admin/loans/[id] — Approve or reject a loan application
- * Enforces state machine transitions.
+ * PATCH /api/admin/loans/[id] — 1-Click Asset Allocation & Credit Approval or Rejection
  */
 export const PATCH = withRoles(
-  ['super_admin', 'finance_admin'],
+  ['super_admin', 'credit_underwriter', 'finance_admin'],
   withValidation(
     loanActionSchema,
     async (req: NextRequest, ctx: ApiContext & { validatedBody: LoanActionInput }) => {
-      const log = logger.child({ requestId: ctx.requestId, route: 'admin/loans/[id]' });
       const id = req.nextUrl.pathname.split('/').pop()!;
-      const { action, adminNotes, rejectionReason } = ctx.validatedBody;
+      const {
+        action,
+        adminNotes,
+        rejectionReason,
+        bikeSerialNumber,
+        chassisNumber,
+        batteryNumber1,
+        batteryNumber2,
+        chargerNumber,
+      } = ctx.validatedBody;
 
       try {
-        const loan = await prisma.loan.findUnique({
-          where: { id },
-          include: { user: true },
-        });
-
-        if (!loan) {
+        const existingLoan = await dbService.getLoanById(id);
+        if (!existingLoan) {
           return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
         }
 
-        // ---- Enforce state transitions ----
-        const targetStatus = action === 'approve' ? 'approved' : 'rejected';
-        const allowed = ALLOWED_TRANSITIONS[loan.status];
+        const staffIdentity = ctx.user.email || ctx.user.sub;
 
-        if (!allowed || !allowed.includes(targetStatus)) {
-          return NextResponse.json(
-            {
-              error: `Invalid state transition: ${loan.status} → ${targetStatus}`,
-              allowedTransitions: allowed || [],
-            },
-            { status: 409 }
-          );
-        }
-
-        // ---- Update loan and generate schedule in transaction ----
-        const updatedLoan = await prisma.$transaction(async (tx: TxClient) => {
-          const uLoan = await tx.loan.update({
-            where: { id },
-            data: {
-              status: targetStatus,
-              adminNotes,
-              rejectionReason: action === 'reject' ? rejectionReason : null,
-              approvedBy: action === 'approve' ? ctx.user.sub : null,
-              approvedAt: action === 'approve' ? new Date() : null,
-            },
+        if (action === 'approve') {
+          const updated = await dbService.allocateAndApproveLoan(id, {
+            bikeSerialNumber,
+            chassisNumber,
+            batteryNumber1,
+            batteryNumber2,
+            chargerNumber,
+            adminNotes,
+            approvedBy: staffIdentity,
           });
 
-          if (action === 'approve') {
-            // Generate full schedule (Repayments + Daily Savings)
-            const { totalInstallments, totalDays } = await generateSchedule(
-              tx,
-              id,
-              loan.userId,
-              Number(loan.loanAmount),
-              Number(loan.interestRate),
-              loan.tenure
-            );
+          return NextResponse.json({
+            success: true,
+            message: 'Loan approved and physical hardware asset allocated successfully',
+            data: updated,
+          });
+        } else {
+          const updated = await dbService.rejectLoan(
+            id,
+            rejectionReason || 'Adverse action based on underwriting threshold',
+            staffIdentity
+          );
 
-            log.info({ loanId: id, totalInstallments, totalDays }, 'Loan schedule and savings plan generated');
-          }
-
-          return uLoan;
-        });
-
-        // ---- Audit log ----
-        await prisma.auditLog.create({
-          data: {
-            userId: ctx.user.sub,
-            action: `loan_${action}`,
-            resource: 'loan',
-            resourceId: id,
-            details: `Loan ${action}ed. ${adminNotes || ''}`.trim(),
-          },
-        });
-
-        // ---- Notify applicant ----
-        const notificationType = action === 'approve' ? 'loan_approved' : 'loan_rejected';
-        const notificationTitle = action === 'approve' ? 'Loan Approved! 🎉' : 'Loan Application Update';
-        const notificationMessage = action === 'approve'
-          ? 'Your BNPL application has been approved. Your bike will be processed for delivery.'
-          : `Your BNPL application was not approved. ${rejectionReason || 'Please contact support for details.'}`;
-
-        await enqueueNotification({
-          userId: loan.userId,
-          type: notificationType,
-          title: notificationTitle,
-          message: notificationMessage,
-          channels: ['email', 'push'],
-        });
-
-        log.info({ loanId: id, action, by: ctx.user.sub }, `Loan ${action}ed`);
-
-        return NextResponse.json({
-          success: true,
-          message: `Loan ${action}ed successfully`,
-          data: updatedLoan,
-        });
+          return NextResponse.json({
+            success: true,
+            message: 'Loan application rejected',
+            data: updated,
+          });
+        }
       } catch (error) {
-        log.error({ error, loanId: id }, 'Loan action error');
-        return NextResponse.json({ error: 'Failed to process loan action' }, { status: 500 });
+        logger.error({ error }, 'Failed to update loan state');
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
       }
     }
   )

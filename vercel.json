@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "env": {
+    "DATABASE_URL": "@dandoev-database-url",
+    "REDIS_URL": "@dandoev-redis-url",
+    "NEXT_PUBLIC_SUPABASE_URL": "@dandoev-supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@dandoev-supabase-anon-key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@dandoev-supabase-service-role",
+    "PAYSTACK_SECRET_KEY": "@dandoev-paystack-secret",
+    "NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY": "@dandoev-paystack-public",
+    "PAYSTACK_WEBHOOK_SECRET": "@dandoev-paystack-webhook-secret",
+    "MONO_SECRET_KEY": "@dandoev-mono-secret",
+    "MONO_WEBHOOK_SECRET": "@dandoev-mono-webhook-secret",
+    "NEXT_PUBLIC_MONO_PUBLIC_KEY": "@dandoev-mono-public",
+    "RESEND_API_KEY": "@dandoev-resend-key",
+    "RESEND_FROM_EMAIL": "@dandoev-resend-from",
+    "TERMII_API_KEY": "@dandoev-termii-key",
+    "TERMII_SENDER_ID": "@dandoev-termii-sender",
+    "SENTRY_DSN": "@dandoev-sentry-dsn",
+    "SENTRY_AUTH_TOKEN": "@dandoev-sentry-auth",
+    "NEXT_PUBLIC_APP_URL": "@dandoev-app-url"
+  },
+  "crons": [
+    {
+      "path": "/api/admin/system/cron",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

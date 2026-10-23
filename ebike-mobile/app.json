@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ebike-mobile",
-    "slug": "ebike-mobile",
+    "name": "DandoEv",
+    "slug": "dandoev",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,22 +9,48 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A154F"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dandoev.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "DandoEv requires camera access to capture KYC identity documents and selfie verification.",
+        "NSPhotoLibraryUsageDescription": "DandoEv requires photo library access to upload identity and utility documents."
+      }
     },
     "android": {
+      "package": "com.dandoev.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#26FEDC",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "DandoEv - Commercial E-Bike Mobility & BNPL",
+      "shortName": "DandoEv",
+      "display": "standalone",
+      "backgroundColor": "#0A154F",
+      "themeColor": "#2E3192",
+      "orientation": "portrait"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9427d0a4-004d-4f04-8378-3f16a336dbaf"
+      }
     }
   }
 }

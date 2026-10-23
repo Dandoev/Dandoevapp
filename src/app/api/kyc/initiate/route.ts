@@ -13,6 +13,8 @@ export const POST = withAuth(
     const log = logger.child({ requestId: ctx.requestId, route: 'kyc/initiate' });
 
     try {
+      const { bvn, nin, documents } = await req.json();
+
       // ---- Rate Limiting ----
       const ip = getClientIp(req);
       const rlResult = await checkRateLimit(`kyc-initiate:${ip}`, RATE_LIMITS.API_AUTHENTICATED);
@@ -32,36 +34,36 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'User is already verified' }, { status: 400 });
       }
 
-      // --- Mocking a Third-party KYC Provider Request (e.g., SmileID/Onfido) ---
-      const mockVerificationSessionId = `kyc_sess_${crypto.randomUUID()}`;
-      const mockProviderUrl = `https://verify.mock-identity-provider.com/session/${mockVerificationSessionId}`;
-
-      // Create an intermediate document request tracker
-      await prisma.kycDocument.create({
-         data: {
-            userId: ctx.user.sub,
-            type: 'national_id',
-            fileUrl: mockProviderUrl,
-            verificationStatus: 'pending',
-         }
-      });
-
-      // Update user status
+      // 1. Update User with Identification numbers
       await prisma.user.update({
-         where: { id: ctx.user.sub },
-         data: { kycStatus: 'pending' },
+        where: { id: ctx.user.sub },
+        data: {
+          bvn: bvn || user.bvn,
+          kycStatus: 'pending',
+          // Optional: NIN can be stored in a separate profile table or extended user table
+        }
       });
 
-      log.info({ userId: ctx.user.sub, kycSessionId: mockVerificationSessionId }, 'KYC session initiated');
+      // 2. Create KYC Documents
+      if (documents && Array.isArray(documents)) {
+        await Promise.all(documents.map((doc: any) => 
+          prisma.kycDocument.create({
+            data: {
+              userId: ctx.user.sub,
+              type: doc.type || 'national_id',
+              fileUrl: doc.fileUrl,
+              verificationStatus: 'pending',
+              provider: 'SupabaseStorage'
+            }
+          })
+        ));
+      }
+
+      log.info({ userId: ctx.user.sub }, 'KYC data and documents stored');
 
       return NextResponse.json({
         success: true,
-        message: 'KYC Verification initiated successfully',
-        data: {
-           sessionId: mockVerificationSessionId,
-           verificationUrl: mockProviderUrl,
-           provider: 'MockIdentity',
-        },
+        message: 'KYC Verification data submitted successfully',
       });
 
     } catch (error) {

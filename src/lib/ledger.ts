@@ -1,4 +1,3 @@
-import prisma from './prisma';
 import logger from './logger';
 import { type TxClient } from './prisma-types';
 

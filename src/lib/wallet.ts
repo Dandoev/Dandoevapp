@@ -190,3 +190,67 @@ export async function debitWalletForRepayment(
 
   return groupId;
 }
+
+/**
+ * Process a withdrawal from user's main wallet.
+ * Atomically checks balance, decrements funds, and creates balanced double-entry ledger records.
+ */
+export async function withdrawFromWallet(
+  tx: TxClient,
+  userId: string,
+  amount: number,
+  reference: string,
+  details?: string
+) {
+  const wallet = await ensureWallet(tx, userId);
+
+  if (Number(wallet.mainBalance) < amount) {
+    throw new Error('Insufficient funds in main wallet');
+  }
+
+  // Atomically update wallet
+  await tx.wallet.update({
+    where: { id: wallet.id },
+    data: {
+      mainBalance: { decrement: amount },
+    },
+  });
+
+  // Post balanced ledger entries
+  const groupId = crypto.randomUUID();
+  await postLedgerEntries(
+    tx,
+    [
+      {
+        account: `wallet_main:${userId}`,
+        debit: amount,
+        credit: 0,
+        reference,
+        details: details || 'Wallet withdrawal to bank account',
+      },
+      {
+        account: `payout_clearing:${userId}`,
+        debit: 0,
+        credit: amount,
+        reference,
+        details: details || 'Wallet withdrawal clearing liability',
+      },
+    ],
+    groupId
+  );
+
+  // Record payment transaction record
+  await tx.paymentTransaction.create({
+    data: {
+      userId,
+      amount,
+      currency: 'NGN',
+      provider: 'wallet_payout',
+      providerRef: reference,
+      status: 'success',
+      metadata: { type: 'withdrawal', details: details || 'Wallet payout' },
+    },
+  });
+
+  return { groupId, walletId: wallet.id };
+}

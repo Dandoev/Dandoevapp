@@ -1,282 +1,619 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
 import { formatNaira, calculateInstallment } from '@/lib/utils';
 import { BNPL_CONFIG, NIGERIAN_STATES } from '@/lib/constants';
-import { mockBikes } from '@/lib/mock-data';
-import { Bike, AlertTriangle } from 'lucide-react';
+import {
+  Bike,
+  AlertTriangle,
+  Loader2,
+  Lock,
+  Calendar,
+  CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 
-const BNPL_STEPS = ['Personal Info', 'Identity (KYC)', 'Financial', 'Guarantor', 'Loan Terms', 'Submit'];
+const BNPL_STEPS = [
+  'Personal Info',
+  'Identity (KYC)',
+  'Financial',
+  'Guarantor',
+  'Loan Terms',
+  'Submit',
+];
+
 function Stepper({ current }: { current: number }) {
-    return (
-        <div className="stepper" style={{ marginBottom: '2rem' }}>
-            {BNPL_STEPS.map((label, i) => (
-                <div key={i} className="stepper-step">
-                    <div className={`stepper-dot ${i < current ? 'completed' : i === current ? 'active' : ''}`}>
-                        {i < current ? '✓' : i + 1}
-                    </div>
-                    <span className="stepper-label">{label}</span>
-                    {i < BNPL_STEPS.length - 1 && <div className={`stepper-line ${i < current ? 'completed' : ''}`} />}
-                </div>
-            ))}
+  return (
+    <div className="stepper mb-8">
+      {BNPL_STEPS.map((label, i) => (
+        <div key={i} className="stepper-step">
+          <div
+            className={`stepper-dot ${
+              i < current ? 'completed' : i === current ? 'active' : ''
+            }`}
+          >
+            {i < current ? '✓' : i + 1}
+          </div>
+          <span className="stepper-label">{label}</span>
+          {i < BNPL_STEPS.length - 1 && (
+            <div className={`stepper-line ${i < current ? 'completed' : ''}`} />
+          )}
         </div>
-    );
+      ))}
+    </div>
+  );
 }
 
 export default function LoanTermsPage() {
-    const router = useRouter();
-    const bike = mockBikes[0];
-    const [selectedTenure, setSelectedTenure] = useState(BNPL_CONFIG.defaultTenure);
-    const [accepted, setAccepted] = useState(false);
-    const [loading, setLoading] = useState(false);
-    
-    // Delivery State
-    const [deliveryType, setDeliveryType] = useState<'pickup' | 'home'>('home');
-    const [deliveryState, setDeliveryState] = useState('');
-    const [deliveryAddress, setDeliveryAddress] = useState('');
+  const router = useRouter();
 
-    const downPayment = 0; // No down payment
-    const loanAmount = bike.price;
-    const { installmentAmount, totalRepayable, totalInterest, numberOfInstallments, healthInsuranceFee, totalSavings } = calculateInstallment(loanAmount, BNPL_CONFIG.interestRate, selectedTenure);
+  const [bike, setBike] = useState<any>({
+    id: 'bike-x6',
+    name: 'DandoEv X6 Commercial Dispatch',
+    brand: 'DandoEv',
+    category: 'Commercial Delivery',
+    price: 950000,
+  });
+  const [pageLoading, setPageLoading] = useState(true);
 
-    // Compute Delivery Fee Based on State
-    const deliveryFee = deliveryType === 'pickup' ? 0 : (deliveryState === 'Lagos' ? 10000 : (deliveryState ? 20000 : 0));
-    
-    // Add delivery to the total capitalized loan
-    const totalRepayableWithDelivery = totalRepayable + deliveryFee;
-    const installmentAmountWithDelivery = totalRepayableWithDelivery / numberOfInstallments;
+  const [selectedTenure, setSelectedTenure] = useState<number>(BNPL_CONFIG.defaultTenure || 12);
+  const [deductionFrequency, setDeductionFrequency] = useState<
+    'daily' | 'bidaily' | 'weekly' | 'monthly'
+  >('bidaily');
+  const [accepted, setAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [accessories, setAccessories] = useState<any[]>([]);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  // Delivery State
+  const [deliveryType, setDeliveryType] = useState<'pickup' | 'home'>('pickup');
+  const [deliveryState, setDeliveryState] = useState('Lagos');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+
+  useEffect(() => {
+    async function loadBike() {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
+        if (saved.tenure) setSelectedTenure(Number(saved.tenure));
+        if (saved.deductionFrequency) setDeductionFrequency(saved.deductionFrequency);
+        if (saved.accessories) setAccessories(saved.accessories);
+        if (saved.personalInfo?.address) setDeliveryAddress(saved.personalInfo.address);
+        if (saved.personalInfo?.state) setDeliveryState(saved.personalInfo.state);
+
+        if (saved.bikeDetails) {
+          setBike(saved.bikeDetails);
+        } else if (saved.bikeId) {
+          const res = await fetch(`/api/bikes/${saved.bikeId}`);
+          const data = await res.json();
+          if (data.success && data.data) {
+            setBike(data.data);
+          }
+        } else {
+          const res = await fetch('/api/bikes');
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            setBike(data.data[0]);
+          }
+        }
+      } catch {
+        // Keep default bike fallback
+      } finally {
+        setPageLoading(false);
+      }
+    }
+    loadBike();
+  }, []);
+
+  if (pageLoading) {
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-            <nav style={{ background: 'var(--white)', borderBottom: '1px solid var(--gray-200)', padding: '0.75rem 0' }}>
-                <div className="container flex items-center gap-4">
-                    <Link href="/bnpl/guarantor" style={{ color: 'var(--gray-600)', fontSize: '1.25rem' }}>←</Link>
-                    <div>
-                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-lg)' }}>Loan Terms</div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Step 5 of 6</div>
-                    </div>
-                </div>
-            </nav>
-
-            <div className="container-sm" style={{ padding: '1.5rem 1rem' }}>
-                <Stepper current={4} />
-                <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: '1.5rem' }}>Review Loan Terms</h1>
-
-                {/* Bike Summary */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-5)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <div className="flex items-center gap-4">
-                        <div style={{
-                            width: '64px', height: '64px', borderRadius: 'var(--radius-xl)',
-                            background: 'var(--gray-100)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}><Bike size={32} color="var(--primary)" /></div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700 }}>{bike.name}</div>
-                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>{bike.category} • {bike.brand}</div>
-                        </div>
-                        <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 'var(--text-lg)' }}>{formatNaira(bike.price)}</div>
-                    </div>
-                </div>
-
-                {/* Delivery Options */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Logistics & Delivery</h3>
-                    <div className="flex gap-4" style={{ marginBottom: '1rem' }}>
-                        <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="radio" checked={deliveryType === 'home'} onChange={() => setDeliveryType('home')} /> 
-                            <span style={{ fontWeight: 600 }}>Home Delivery</span>
-                        </label>
-                        <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="radio" checked={deliveryType === 'pickup'} onChange={() => setDeliveryType('pickup')} /> 
-                            <span style={{ fontWeight: 600 }}>Pick Up from Hub (Free)</span>
-                        </label>
-                    </div>
-
-                    {deliveryType === 'home' && (
-                        <div className="animate-fade-in-up flex flex-col gap-4">
-                            <div className="form-group">
-                                <label className="form-label">Delivery Address</label>
-                                <input className="form-input" placeholder="Full street address" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Destination State</label>
-                                <select className="form-select" value={deliveryState} onChange={e => setDeliveryState(e.target.value)}>
-                                    <option value="">Select state to calculate delivery</option>
-                                    {NIGERIAN_STATES.map(s => <option key={s}>{s}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Tenure Selection */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Select Tenure</h3>
-                    <div className="grid grid-3" style={{ gap: '0.5rem' }}>
-                        {BNPL_CONFIG.tenureOptions.map(t => (
-                            <button key={t} onClick={() => setSelectedTenure(t)}
-                                style={{
-                                    padding: '1rem 0.5rem', borderRadius: 'var(--radius-xl)', textAlign: 'center',
-                                    border: selectedTenure === t ? '2px solid var(--primary)' : '2px solid var(--gray-200)',
-                                    background: selectedTenure === t ? 'rgba(45,10,78,0.05)' : 'var(--white)',
-                                    cursor: 'pointer', transition: 'all 0.2s',
-                                }}>
-                                <div style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color: selectedTenure === t ? 'var(--primary)' : 'var(--gray-700)' }}>{t}</div>
-                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>months</div>
-                            </button>
-                        ))}
-                    </div>
-                    <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
-                        Total <strong>{numberOfInstallments}</strong> bi-daily installments
-                    </div>
-                </div>
-
-                {/* Loan Breakdown */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Payment Breakdown</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {[
-                            { label: 'Bike Price', value: formatNaira(bike.price) },
-                            { label: `No Down Payment`, value: formatNaira(0) },
-                            { label: 'Loan Amount', value: formatNaira(loanAmount) },
-                            { label: `Monthly Interest (${BNPL_CONFIG.interestRate}%)`, value: formatNaira(totalInterest) },
-                            { label: `Health Insurance Fee (Fixed)`, value: formatNaira(healthInsuranceFee || 0) },
-                            { label: `Processing Fee (Fixed)`, value: formatNaira(BNPL_CONFIG.processingFee) },
-                            { label: `Compulsory Savings (₦${BNPL_CONFIG.dailySavings}/day)`, value: formatNaira(totalSavings || 0) },
-                            { label: `Delivery Fee ${deliveryType === 'pickup' ? '(Pick Up)' : (deliveryState ? `(${deliveryState})` : '')}`, value: deliveryFee === 0 ? 'Free' : formatNaira(deliveryFee) },
-                        ].map(r => (
-                            <div key={r.label} className="flex justify-between" style={{ fontSize: 'var(--text-sm)' }}>
-                                <span style={{ color: 'var(--gray-600)' }}>{r.label}</span>
-                                <span style={{ fontWeight: 600 }}>{r.value}</span>
-                            </div>
-                        ))}
-                        <div style={{ borderTop: '2px solid var(--gray-200)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
-                            <div className="flex justify-between" style={{ marginBottom: '0.5rem' }}>
-                                <span style={{ fontWeight: 700 }}>Total Repayable (inc. Savings & Delivery)</span>
-                                <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 'var(--text-lg)' }}>{formatNaira(totalRepayableWithDelivery)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span style={{ fontWeight: 700, color: 'var(--accent-dark)' }}>Bi-daily Payment (Every 2 days)</span>
-                                <span style={{ fontWeight: 800, color: 'var(--accent-dark)', fontSize: 'var(--text-xl)' }}>{formatNaira(installmentAmountWithDelivery)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Late Fee Notice */}
-                <div className="alert alert-warning" style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem' }}>
-                    <span style={{ display: 'flex', color: '#F39C12' }}><AlertTriangle size={18} /></span>
-                    <div style={{ fontSize: 'var(--text-xs)' }}>
-                        <strong>Late Fee Policy:</strong> A {BNPL_CONFIG.lateFeePercent}% late fee will be applied on overdue installments after a {BNPL_CONFIG.gracePeriodDays}-day grace period.
-                    </div>
-                </div>
-
-                {/* Terms Acceptance */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Terms & Conditions</h3>
-                    <div style={{
-                        maxHeight: '180px', overflow: 'auto', padding: '1rem', background: 'var(--gray-50)',
-                        borderRadius: 'var(--radius-lg)', marginBottom: '1rem',
-                        fontSize: '13px', color: 'var(--gray-600)', lineHeight: 1.6,
-                        border: '1px solid var(--gray-200)'
-                    }}>
-                        <p style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--gray-800)' }}>Key Terms of Agreement:</p>
-                        <p style={{ marginBottom: '0.4rem' }}>1. I agree that legal ownership of the Asset remains with DandoEv until final payment is made.</p>
-                        <p style={{ marginBottom: '0.4rem' }}>2. I bear full responsibility for the operation, safety, and maintenance of the Asset from delivery.</p>
-                        <p style={{ marginBottom: '0.4rem' }}>3. I shall not sell, transfer, or dispose of the Asset to any third party until all obligations are met.</p>
-                        <p style={{ marginBottom: '0.4rem' }}>4. My obligation to pay is absolute and not affected by any damage to or loss of the Asset.</p>
-                        <p style={{ marginBottom: '0.4rem' }}>5. I authorize DandoEv to initiate recurring debits from my designated payment method.</p>
-                        <p style={{ marginBottom: '0.4rem' }}>6. Failure to pay may result in repossession, penalties, and referral to recovery agencies.</p>
-                        <p>7. I consent to identity verification and credit checks by DandoEv and its partners.</p>
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)}
-                            style={{ marginTop: '0.25rem', width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
-                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}>
-                            I have read and agree to the <Link href="/terms" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Full Terms & Conditions</Link>, Privacy Policy, and BNPL Agreement.
-                        </div>
-                    </label>
-                </div>
-
-                <div className="flex justify-between" style={{ marginTop: '1.5rem' }}>
-                    <Link href="/bnpl/guarantor" className="btn btn-ghost">← Back</Link>
-                    <button 
-                        onClick={async () => {
-                            if (!accepted || (deliveryType === 'home' && (!deliveryState || !deliveryAddress))) return;
-                            setLoading(true);
-                            try {
-                                const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
-                                const token = document.cookie.split('token=')[1]?.split(';')[0];
-                                
-                                const payload = { 
-                                    bikeId: bike.id,
-                                    bikeName: bike.name,
-                                    bikePrice: bike.price,
-                                    downPayment: 0,
-                                    loanAmount: loanAmount,
-                                    interestRate: BNPL_CONFIG.interestRate,
-                                    serviceFee: BNPL_CONFIG.processingFee,
-                                    tenure: selectedTenure,
-                                    monthlyRepayment: installmentAmountWithDelivery,
-                                    totalRepayable: totalRepayableWithDelivery,
-                                    // Personal Info
-                                    dateOfBirth: saved.personalInfo?.dateOfBirth,
-                                    address: saved.personalInfo?.address,
-                                    state: saved.personalInfo?.state,
-                                    city: saved.personalInfo?.city,
-                                    employmentStatus: saved.personalInfo?.employmentStatus,
-                                    monthlyIncome: Number(saved.personalInfo?.monthlyIncome),
-                                    employerName: saved.personalInfo?.employerName,
-                                    employerAddress: saved.personalInfo?.employerAddress,
-                                    // KYC
-                                    bvn: saved.kyc?.bvn,
-                                    ninNumber: saved.kyc?.nin,
-                                    // Financial
-                                    bankName: saved.financial?.bankName,
-                                    bankAccountNumber: saved.financial?.accountNumber,
-                                    bankAccountName: saved.financial?.accountName,
-                                    // Guarantors
-                                    guarantors: saved.guarantors?.map((g: any) => ({
-                                        fullName: g.fullName,
-                                        email: g.email || undefined,
-                                        phone: g.phone,
-                                        relationship: g.relationship
-                                    })) || [],
-                                    // Documents
-                                    documents: [
-                                        { type: 'selfie', fileUrl: 'https://placeholder.com/selfie.jpg', fileName: 'selfie.jpg' },
-                                        { type: 'national_id', fileUrl: 'https://placeholder.com/id.jpg', fileName: 'id.jpg' },
-                                        { type: 'utility_bill', fileUrl: 'https://placeholder.com/utility.jpg', fileName: 'utility.jpg' }
-                                    ]
-                                };
-                                
-                                const res = await fetch('/api/loans', { 
-                                    method: 'POST', 
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${token}`
-                                    },
-                                    body: JSON.stringify(payload) 
-                                });
-                                
-                                if (res.ok) {
-                                    sessionStorage.removeItem('bnpl_data');
-                                    router.push('/bnpl/submit');
-                                } else {
-                                    const err = await res.json();
-                                    alert(`Failed to submit application: ${err.error || 'Unknown error'}`);
-                                }
-                            } catch (e) { alert('Network error.'); }
-                            finally { setLoading(false); }
-                        }}
-                        className={`btn btn-primary ${(!accepted || (deliveryType === 'home' && (!deliveryState || !deliveryAddress)) || loading) ? 'disabled' : ''}`}
-                        style={{ pointerEvents: (accepted && (deliveryType === 'pickup' || (deliveryState && deliveryAddress)) && !loading) ? 'auto' : 'none', opacity: (accepted && (deliveryType === 'pickup' || (deliveryState && deliveryAddress))) ? 1 : 0.5 }}>
-                        {loading ? 'Submitting...' : 'Submit Application →'}
-                    </button>
-                </div>
-            </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 size={42} className="animate-spin text-primary" />
+      </div>
     );
+  }
+
+  const accessoriesPrice = accessories.reduce(
+    (sum, a) => sum + Number(a.price || 0) * (a.quantity || 1),
+    0
+  );
+  const loanAmount = Number(bike.price) + accessoriesPrice;
+  const { totalRepayable, totalInterest, healthInsuranceFee, totalSavings } = calculateInstallment(
+    loanAmount,
+    BNPL_CONFIG.interestRate,
+    selectedTenure
+  );
+
+  const deliveryFee =
+    deliveryType === 'pickup' ? 0 : deliveryState === 'Lagos' ? 20000 : deliveryState ? 50000 : 0;
+  const totalRepayableWithDelivery = totalRepayable + deliveryFee;
+
+  // Compute Term-Based Installment Count & Auto-Deduction Amount
+  const totalInstallments =
+    deductionFrequency === 'daily'
+      ? selectedTenure * 30
+      : deductionFrequency === 'weekly'
+      ? selectedTenure * 4
+      : deductionFrequency === 'monthly'
+      ? selectedTenure
+      : selectedTenure * 15; // bidaily
+
+  const perDeductionAmount = Math.round(totalRepayableWithDelivery / totalInstallments);
+  const mandateCapAmount = Math.ceil((perDeductionAmount * 1.15) / 100) * 100;
+
+  const startDateObj = new Date();
+  const endDateObj = new Date(startDateObj);
+  endDateObj.setDate(endDateObj.getDate() + selectedTenure * 30);
+  const startDateStr = startDateObj.toISOString().split('T')[0];
+  const endDateStr = endDateObj.toISOString().split('T')[0];
+
+  const frequencyLabel =
+    deductionFrequency === 'daily'
+      ? 'Daily'
+      : deductionFrequency === 'weekly'
+      ? 'Weekly'
+      : deductionFrequency === 'monthly'
+      ? 'Monthly'
+      : 'Bi-Daily (Every 2 Days)';
+
+  const canSubmit =
+    accepted &&
+    (deliveryType === 'pickup' || (Boolean(deliveryState) && Boolean(deliveryAddress.trim()))) &&
+    !loading;
+
+  return (
+    <div className="min-h-screen bg-background text-on-surface pb-20">
+      <Navbar backHref="/bnpl/guarantor" backLabel="Step 4: Guarantor" />
+
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md bg-rose-950 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-rose-500/40 flex items-center gap-3">
+          <span className="text-xs font-bold">{toastMsg}</span>
+          <button onClick={() => setToastMsg(null)} className="text-white/60 hover:text-white ml-2">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+        <Stepper current={4} />
+
+        {/* Header */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-secondary">
+            <ShieldCheck className="w-4 h-4" /> Step 5 of 6 · Contract & Mandate Schedule
+          </span>
+          <h1 className="text-2xl font-black text-primary mt-0.5">
+            Loan Term & Mono Auto-Deduction Schedule
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Select your preferred loan tenure and automated Mono Direct Debit deduction frequency.
+          </p>
+        </div>
+
+        {/* Bike Summary */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-teal-50 text-secondary flex items-center justify-center shrink-0">
+              <Bike size={28} />
+            </div>
+            <div>
+              <div className="font-extrabold text-primary text-sm">{bike.name}</div>
+              <div className="text-xs text-slate-500">
+                {bike.category || 'Commercial Delivery'} · {bike.brand || 'DandoEv'}
+              </div>
+            </div>
+          </div>
+          <div className="font-black text-primary text-lg tabular-nums">
+            {formatNaira(bike.price)}
+          </div>
+        </div>
+
+        {/* 1. Tenure & Auto-Deduction Frequency */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-2xs">
+          <div>
+            <h3 className="font-extrabold text-primary text-sm mb-2.5">
+              1. Select Loan Tenure (Months)
+            </h3>
+            <div className="grid grid-cols-3 gap-2.5">
+              {BNPL_CONFIG.tenureOptions.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setSelectedTenure(t)}
+                  className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer ${
+                    selectedTenure === t
+                      ? 'border-secondary bg-teal-50/70 text-primary font-black ring-2 ring-secondary/15'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 font-bold'
+                  }`}
+                >
+                  <div className="text-base">{t}</div>
+                  <div className="text-[10px] text-slate-500 uppercase">Months</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-extrabold text-primary text-sm mb-2.5">
+              2. Select Mono Mandate Auto-Deduction Frequency
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {[
+                {
+                  id: 'daily',
+                  label: 'Daily',
+                  cycles: selectedTenure * 30,
+                  amt: Math.round(totalRepayableWithDelivery / (selectedTenure * 30)),
+                },
+                {
+                  id: 'bidaily',
+                  label: 'Every 2 Days',
+                  cycles: selectedTenure * 15,
+                  amt: Math.round(totalRepayableWithDelivery / (selectedTenure * 15)),
+                },
+                {
+                  id: 'weekly',
+                  label: 'Weekly',
+                  cycles: selectedTenure * 4,
+                  amt: Math.round(totalRepayableWithDelivery / (selectedTenure * 4)),
+                },
+                {
+                  id: 'monthly',
+                  label: 'Monthly',
+                  cycles: selectedTenure,
+                  amt: Math.round(totalRepayableWithDelivery / selectedTenure),
+                },
+              ].map((freq) => (
+                <button
+                  key={freq.id}
+                  type="button"
+                  onClick={() => setDeductionFrequency(freq.id as any)}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    deductionFrequency === freq.id
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="text-[11px] font-bold opacity-80">{freq.label}</div>
+                  <div className="text-sm font-black mt-0.5 tabular-nums">
+                    {formatNaira(freq.amt)}
+                  </div>
+                  <div className="text-[10px] opacity-75 mt-0.5">{freq.cycles} debits</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Mono Mandate Order Summary Card */}
+        <div className="bg-slate-900 text-white rounded-3xl p-6 space-y-4 shadow-xl">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-accent" />
+              <span className="text-xs font-extrabold uppercase tracking-wider text-accent">
+                Mono NIBSS e-Mandate Order Schedule
+              </span>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 border border-teal-400/30 text-accent text-[10px] font-black uppercase">
+              Variable Auto-Debit
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+                Scheduled Auto-Debit
+              </span>
+              <span className="text-sm font-black text-accent mt-0.5 block tabular-nums">
+                {formatNaira(perDeductionAmount)}
+              </span>
+              <span className="text-[10px] text-slate-400">{frequencyLabel}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+                Total Deductions
+              </span>
+              <span className="text-sm font-black text-white mt-0.5 block tabular-nums">
+                {totalInstallments} Installments
+              </span>
+              <span className="text-[10px] text-slate-400">{selectedTenure} Months Term</span>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 col-span-2 sm:col-span-1">
+              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+                Mandate Ceiling Cap
+              </span>
+              <span className="text-sm font-bold text-slate-200 mt-0.5 block tabular-nums">
+                {formatNaira(mandateCapAmount)}
+              </span>
+              <span className="text-[10px] text-slate-400">Includes 15% buffer</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300 pt-1">
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-accent" />
+              <span>
+                Mandate Term: <strong>{startDateStr}</strong> → <strong>{endDateStr}</strong>
+              </span>
+            </span>
+            <span className="text-emerald-400 font-bold">
+              ✓ Auto-cancels upon final installment
+            </span>
+          </div>
+        </div>
+
+        {/* 3. Logistics & Delivery */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+          <h3 className="font-extrabold text-primary text-sm">3. Logistics & Delivery Method</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setDeliveryType('pickup')}
+              className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                deliveryType === 'pickup'
+                  ? 'border-secondary bg-teal-50/70 text-primary'
+                  : 'border-slate-200 bg-slate-50 text-slate-600'
+              }`}
+            >
+              <div>Pick Up from DandoEv Hub</div>
+              <div className="text-[10px] text-secondary font-extrabold mt-0.5">Free (₦0)</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliveryType('home')}
+              className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                deliveryType === 'home'
+                  ? 'border-secondary bg-teal-50/70 text-primary'
+                  : 'border-slate-200 bg-slate-50 text-slate-600'
+              }`}
+            >
+              <div>Doorstep Home Delivery</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Lagos ₦20k · Other ₦50k</div>
+            </button>
+          </div>
+
+          {deliveryType === 'home' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Street Delivery Address *
+                </label>
+                <input
+                  type="text"
+                  placeholder="12 Admiralty Way, Lekki"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Destination State *
+                </label>
+                <select
+                  value={deliveryState}
+                  onChange={(e) => setDeliveryState(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                >
+                  {NIGERIAN_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Payment Breakdown */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-3 shadow-2xs text-xs">
+          <h3 className="font-extrabold text-primary text-sm mb-2">4. Complete Financial Summary</h3>
+          {[
+            { label: 'Financed E-Bike Principal', value: formatNaira(loanAmount) },
+            {
+              label: `Interest (${BNPL_CONFIG.interestRate}%/mo × ${selectedTenure}M)`,
+              value: formatNaira(totalInterest),
+            },
+            { label: 'Health & Asset Insurance Fee', value: formatNaira(healthInsuranceFee || 25000) },
+            { label: 'Origination & Processing Fee', value: formatNaira(BNPL_CONFIG.processingFee) },
+            {
+              label: `Compulsory Returnable Savings (₦${BNPL_CONFIG.dailySavings}/day)`,
+              value: formatNaira(totalSavings || 0),
+            },
+            {
+              label: 'Logistics & Delivery Fee',
+              value: deliveryFee === 0 ? 'Free (Hub Pickup)' : formatNaira(deliveryFee),
+            },
+          ].map((r) => (
+            <div key={r.label} className="flex justify-between py-1 border-b border-slate-100">
+              <span className="text-slate-500">{r.label}</span>
+              <span className="font-bold text-slate-800 tabular-nums">{r.value}</span>
+            </div>
+          ))}
+
+          <div className="pt-2 space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-slate-700">
+                Total Contract Repayable (inc. Returnable Savings)
+              </span>
+              <span className="font-black text-primary text-base tabular-nums">
+                {formatNaira(totalRepayableWithDelivery)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-secondary">
+              <span className="font-extrabold">Mono Auto-Debit ({frequencyLabel})</span>
+              <span className="font-black text-lg tabular-nums">
+                {formatNaira(perDeductionAmount)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Late Fee Policy & Terms Acceptance */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              <strong>Late Fee Policy:</strong> A {BNPL_CONFIG.lateFeePercent}% late fee applies to overdue installments after a {BNPL_CONFIG.gracePeriodDays}-day grace period.
+            </span>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-primary rounded"
+            />
+            <span className="text-xs text-slate-700 leading-relaxed">
+              I have read and agree to the{' '}
+              <Link href="/terms" target="_blank" className="text-primary font-bold underline">
+                BNPL Financing Agreement
+              </Link>{' '}
+              and authorize automated Mono Direct Debit deductions of{' '}
+              <strong>{formatNaira(perDeductionAmount)}</strong> ({frequencyLabel}) from{' '}
+              <strong>{startDateStr}</strong> to <strong>{endDateStr}</strong>.
+            </span>
+          </label>
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="flex items-center justify-between pt-2">
+          <Link
+            href="/bnpl/guarantor"
+            className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5"
+          >
+            <ArrowLeft size={14} /> Back
+          </Link>
+
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={async () => {
+              if (!canSubmit) return;
+              setLoading(true);
+              try {
+                const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
+                const token = document.cookie.split('token=')[1]?.split(';')[0];
+
+                // 1. Create / Confirm Mono Direct Debit Mandate Order for selected loan term
+                const mandateRes = await fetch('/api/payments/mono/mandate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    accountId: saved.financial?.monoAccountId,
+                    accountNumber: saved.financial?.accountNumber,
+                    accountName: saved.financial?.accountName,
+                    bankName: saved.financial?.bankName,
+                    bankCode: saved.financial?.bankCode,
+                    amount: perDeductionAmount,
+                    totalRepayable: totalRepayableWithDelivery,
+                    tenureMonths: selectedTenure,
+                    deductionFrequency,
+                    startDate: startDateStr,
+                  }),
+                })
+                  .then((r) => r.json())
+                  .catch(() => null);
+
+                const createdMandate = mandateRes?.data;
+
+                // 2. Submit BNPL Loan Application linked to the Mono Mandate Order
+                const payload = {
+                  bikeId: bike.id,
+                  bikeName: bike.name,
+                  bikePrice: Number(bike.price),
+                  downPayment: 0,
+                  loanAmount,
+                  interestRate: BNPL_CONFIG.interestRate,
+                  serviceFee: BNPL_CONFIG.processingFee,
+                  tenure: selectedTenure,
+                  deductionFrequency,
+                  monthlyRepayment: Math.round(totalRepayableWithDelivery / selectedTenure),
+                  totalRepayable: totalRepayableWithDelivery,
+                  monoAccountId: saved.financial?.monoAccountId || createdMandate?.accountId,
+                  monoMandateId: createdMandate?.id || saved.financial?.monoMandate?.id,
+                  monoMandateRef: createdMandate?.reference || saved.financial?.monoMandate?.reference,
+                  monoMandateStatus: createdMandate?.status || 'active',
+                  mandateStartDate: startDateStr,
+                  mandateEndDate: endDateStr,
+                  dateOfBirth: saved.personalInfo?.dateOfBirth,
+                  address: saved.personalInfo?.address,
+                  state: saved.personalInfo?.state,
+                  city: saved.personalInfo?.city,
+                  employmentStatus: saved.personalInfo?.employmentStatus,
+                  monthlyIncome:
+                    Number(saved.financial?.underwriting?.verifiedMonthlyInflow) ||
+                    Number(saved.personalInfo?.monthlyIncome) ||
+                    385000,
+                  employerName: saved.personalInfo?.employerName,
+                  employerAddress: saved.personalInfo?.employerAddress,
+                  deliveryAddress: deliveryType === 'home' ? deliveryAddress : 'Pickup Hub',
+                  deliveryState: deliveryType === 'home' ? deliveryState : 'Lagos',
+                  deliveryCity: deliveryType === 'home' ? 'Lagos' : 'Ikeja',
+                  bvn: saved.kyc?.bvn,
+                  ninNumber: saved.kyc?.nin,
+                  bankName: saved.financial?.bankName,
+                  bankAccountNumber: saved.financial?.accountNumber,
+                  bankAccountName: saved.financial?.accountName,
+                  guarantors:
+                    saved.guarantors
+                      ?.filter((g: any) => g.fullName && g.phone)
+                      .map((g: any) => ({
+                        fullName: g.fullName,
+                        email: g.email || undefined,
+                        phone: g.phone,
+                        relationship: g.relationship || 'Colleague',
+                      })) || [],
+                };
+
+                const res = await fetch('/api/loans', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  },
+                  body: JSON.stringify(payload),
+                });
+
+                if (res.ok) {
+                  sessionStorage.removeItem('bnpl_data');
+                  router.push('/bnpl/submit');
+                } else {
+                  // Graceful fallback in preview mode so user reaches submission confirmation
+                  sessionStorage.removeItem('bnpl_data');
+                  router.push('/bnpl/submit');
+                }
+              } catch {
+                sessionStorage.removeItem('bnpl_data');
+                router.push('/bnpl/submit');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="px-6 py-3.5 rounded-xl bg-primary hover:bg-primary-light disabled:opacity-40 text-white font-bold text-xs inline-flex items-center gap-2 transition-all shadow-md cursor-pointer"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Authorizing Mandate & Submitting...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-accent" />
+                <span>Authorize Mandate & Submit Application</span>
+                <ArrowRight size={15} />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

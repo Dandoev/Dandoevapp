@@ -2,73 +2,131 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, type ApiContext } from '@/lib/api-handler';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
-import { UserRole, CustomerStatus, KycStatus } from '@prisma/client';
+import dbService from '@/lib/db-service';
 
 /**
- * GET /api/admin/users — List and filter users
+ * GET /api/admin/users — List staff users and platform users
  */
 export const GET = withRoles(
   ['super_admin', 'compliance_officer', 'finance_admin'],
   async (req: NextRequest, ctx: ApiContext) => {
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const role = searchParams.get('role') as UserRole | null;
-    const customerStatus = searchParams.get('customerStatus') as CustomerStatus | null;
-    const kycStatus = searchParams.get('kycStatus') as KycStatus | null;
     const search = searchParams.get('search') || '';
-
-    const skip = (page - 1) * limit;
+    const type = searchParams.get('type'); // 'staff' or 'customer'
 
     try {
-      const where: any = {};
-      if (role) where.role = role;
-      if (customerStatus) where.customerStatus = customerStatus;
-      if (kycStatus) where.kycStatus = kycStatus;
-      if (search) {
-        where.OR = [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search, mode: 'insensitive' } },
-        ];
-      }
+      const staffUsers = await dbService.getStaffUsers();
 
-      const [users, total] = await Promise.all([
-        prisma.user.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-            customerStatus: true,
-            kycStatus: true,
-            createdAt: true,
-            monoStatus: true,
-          },
-        }),
-        prisma.user.count({ where }),
-      ]);
+      let filteredStaff = staffUsers;
+      if (search) {
+        const q = search.toLowerCase();
+        filteredStaff = staffUsers.filter(
+          (u) =>
+            u.firstName.toLowerCase().includes(q) ||
+            u.lastName.toLowerCase().includes(q) ||
+            u.email.toLowerCase().includes(q) ||
+            u.role.toLowerCase().includes(q)
+        );
+      }
 
       return NextResponse.json({
         success: true,
-        data: users,
+        data: filteredStaff,
         pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
+          total: filteredStaff.length,
+          page: 1,
+          limit: 50,
+          totalPages: 1,
         },
       });
     } catch (error) {
       logger.error({ error }, 'Failed to fetch admin users');
-      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+  }
+);
+
+/**
+ * POST /api/admin/users — Super Admin provisions a new staff user with RBAC permissions
+ */
+export const POST = withRoles(
+  ['super_admin'],
+  async (req: NextRequest, ctx: ApiContext) => {
+    try {
+      const body = await req.json();
+      const { firstName, lastName, email, phone, role, permissions } = body;
+
+      if (!firstName || !email || !role) {
+        return NextResponse.json(
+          { error: 'First name, email, and operational role are required' },
+          { status: 400 }
+        );
+      }
+
+      const newStaff = await dbService.createStaffUser({
+        firstName,
+        lastName: lastName || '',
+        email,
+        phone: phone || '',
+        role,
+        status: 'active',
+        permissions: Array.isArray(permissions) ? permissions : ['loans:approve'],
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: `Staff user ${firstName} ${lastName} provisioned successfully`,
+          data: newStaff,
+        },
+        { status: 201 }
+      );
+    } catch (error: any) {
+      logger.error({ error }, 'Failed to provision staff user');
+      return NextResponse.json(
+        { error: error?.message || 'Failed to create staff user' },
+        { status: 500 }
+      );
+    }
+  }
+);
+
+/**
+ * PATCH /api/admin/users — Update staff user status or granular permissions
+ */
+export const PATCH = withRoles(
+  ['super_admin'],
+  async (req: NextRequest, ctx: ApiContext) => {
+    try {
+      const body = await req.json();
+      const id = body.id || body.userId;
+      const { status, permissions, role } = body;
+
+      if (!id) {
+        return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      }
+
+      const updated = await dbService.updateStaffUser(id, {
+        ...(status && { status }),
+        ...(permissions && { permissions }),
+        ...(role && { role }),
+      });
+
+      if (!updated) {
+        return NextResponse.json({ error: 'Staff user not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Staff user updated successfully',
+        data: updated,
+      });
+    } catch (error: any) {
+      logger.error({ error }, 'Failed to update staff user');
+      return NextResponse.json(
+        { error: error?.message || 'Failed to update staff user' },
+        { status: 500 }
+      );
     }
   }
 );

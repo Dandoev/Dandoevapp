@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const eventId = `${event.event}:${(event.data.reference as string) || (event.data.id as string) || Date.now()}`;
+    const crypto = await import('crypto');
+    const payloadHash = crypto.createHash('sha256').update(rawBody).digest('hex').slice(0, 16);
+    const refOrId = (event.data?.reference as string) || (event.data?.id as string) || payloadHash;
+    const eventId = `${event.event}:${refOrId}`;
 
     log.info({ eventType: event.event, eventId }, 'Webhook received');
 

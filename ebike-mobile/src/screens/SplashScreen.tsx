@@ -1,34 +1,62 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, SafeAreaView } from 'react-native';
+import BrandMark from '../components/BrandMark';
 
 export default function SplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 900,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 8,
+        friction: 7,
         tension: 40,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
+
+    // Subtle breathing pulse on the logo
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.04, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    pulseLoop.start();
+
+    return () => pulseLoop.stop();
+  }, [fadeAnim, scaleAnim, pulseAnim]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.logoContainer}>
-            <Text style={styles.logoIcon}>⚡</Text>
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: Animated.multiply(scaleAnim, pulseAnim) }],
+          },
+        ]}
+      >
+        <View style={styles.logoCard}>
+          <BrandMark size={94} />
         </View>
-        <Text style={styles.logoText}>Dando<Text style={styles.logoTextHighlight}>Ev</Text></Text>
-        <Text style={styles.subtitle}>Empowering Electric Mobility</Text>
+
+        <Text style={styles.brandTitle}>
+          Dando<Text style={styles.brandHighlight}>EV</Text>
+        </Text>
+        <Text style={styles.subtitle}>MOVE BEYOND ORDINARY</Text>
+
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>ELECTRIC MOBILITY, REIMAGINED</Text>
+        </View>
       </Animated.View>
     </SafeAreaView>
   );
@@ -37,46 +65,54 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2E3192', // Solid premium brand color
+    backgroundColor: '#0A154F',
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 36,
+  logoCard: {
+    width: 112,
+    height: 112,
+    backgroundColor: 'transparent',
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    marginBottom: 20,
   },
-  logoIcon: {
-    fontSize: 60,
-  },
-  logoText: {
-    fontSize: 52,
+  brandTitle: {
+    fontSize: 48,
     fontWeight: '900',
-    fontFamily: 'InterTight_900Black',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
-    letterSpacing: -1,
-    marginBottom: 8,
+    letterSpacing: -0.5,
+    marginBottom: 4,
   },
-  logoTextHighlight: {
-    color: '#10B981', // Premium green accent
+  brandHighlight: {
+    color: '#26FEDC',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#E5E7EB',
+    fontSize: 11,
+    color: '#B6C6DC',
     fontWeight: '500',
-    fontFamily: 'InterTight_500Medium',
-    letterSpacing: 0.5,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 2.4,
+    marginBottom: 25,
+  },
+  badge: {
+    backgroundColor: '#2E3192',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#5459A8',
+  },
+  badgeText: {
+    color: '#26FEDC',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    fontWeight: '600',
   },
 });

@@ -4,6 +4,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
@@ -156,6 +157,9 @@ model User {
   // ---- Mono Integration ----
   monoAccountId     String?        // Mono account ID after Connect
   monoStatus        String?        // 'linked', 'statement_fetched', 'failed'
+  monoMandateId     String?        // Active Mono Recurring Direct Debit Mandate ID
+  monoMandateStatus String?        // 'pending', 'approved', 'active', 'paused', 'cancelled'
+  monoBankCode      String?        // CBN / NIP 3-6 digit bank code
   // ---- Paystack Integration ----
   paystackCustomerCode String?     // Paystack customer code
   paystackAuthCode  String?        // Saved authorization_code for recurring charges
@@ -224,12 +228,16 @@ model Bike {
 model Order {
   id             String        @id @default(uuid())
   userId         String
-  bikeId         String
+  bikeId         String?
   quantity       Int           @default(1)
   unitPrice      Decimal       @db.Decimal(15, 2)
   totalAmount    Decimal       @db.Decimal(15, 2)
   paymentMethod  PaymentMethod
   status         OrderStatus   @default(pending)
+  deliveryType   String?       @default("pickup")
+  deliveryFee    Decimal?      @default(0) @db.Decimal(15, 2)
+  insuranceFee   Decimal?      @default(0) @db.Decimal(15, 2)
+  serviceFee     Decimal?      @default(0) @db.Decimal(15, 2)
   deliveryAddress String?
   deliveryCity   String?
   deliveryState  String?
@@ -242,9 +250,10 @@ model Order {
 
   // Relations
   user         User               @relation(fields: [userId], references: [id])
-  bike         Bike               @relation(fields: [bikeId], references: [id])
+  bike         Bike?              @relation(fields: [bikeId], references: [id])
   loan         Loan?              @relation(fields: [loanId], references: [id])
   transactions PaymentTransaction[]
+  accessories  OrderAccessory[]
 
   @@index([userId])
   @@index([status])
@@ -258,7 +267,11 @@ model Loan {
   downPayment        Decimal?   @db.Decimal(15, 2)
   loanAmount         Decimal    @db.Decimal(15, 2)
   interestRate       Decimal    @db.Decimal(5, 2)
-  serviceFee         Decimal?   @db.Decimal(15, 2)
+  serviceFee         Decimal?   @default(20000) @db.Decimal(15, 2)
+  insuranceFee       Decimal?   @default(25000) @db.Decimal(15, 2)
+  deliveryType       String?    @default("pickup")
+  deliveryFee        Decimal?   @default(0) @db.Decimal(15, 2)
+  deductionFrequency String     @default("bidaily")
   tenure             Int        // months
   monthlyRepayment   Decimal    @db.Decimal(15, 2)
   totalRepayable     Decimal    @db.Decimal(15, 2)
@@ -266,8 +279,23 @@ model Loan {
   riskScore          Int?
   kycVerified        Boolean    @default(false)
   guarantorsVerified Boolean    @default(false)
+  // ---- Mono Mandate & Auto-Deduction ----
+  monoAccountId      String?
+  monoMandateId      String?
+  monoMandateRef     String?
+  monoMandateStatus  String?    @default("pending") // pending, approved, active, paused, completed, cancelled
+  mandateStartDate   DateTime?
+  mandateEndDate     DateTime?
   adminNotes         String?
   rejectionReason    String?
+  bikeSerialNumber   String?
+  chassisNumber      String?
+  batteryNumber1     String?
+  batteryNumber2     String?
+  chargerNumber      String?
+  deliveryAddress    String?
+  deliveryCity       String?
+  deliveryState      String?
   approvedBy         String?
   approvedAt         DateTime?
   disbursedAt        DateTime?
@@ -397,6 +425,7 @@ model KycDocument {
   type               DocumentType
   fileUrl            String
   fileName           String?
+  provider           String?
   verificationStatus VerificationStatus @default(pending)
   verifiedBy         String?
   verifiedAt         DateTime?
@@ -615,4 +644,33 @@ model ReconciliationLog {
   errors         String?
   
   @@map("reconciliation_logs")
+}
+
+model Accessory {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  price         Decimal  @db.Decimal(15, 2)
+  images        String[]
+  category      String   // 'battery', 'charger'
+  stockQuantity Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orderAccessories OrderAccessory[]
+
+  @@map("accessories")
+}
+
+model OrderAccessory {
+  id          String   @id @default(uuid())
+  orderId     String
+  accessoryId String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(15, 2)
+
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  accessory   Accessory @relation(fields: [accessoryId], references: [id])
+
+  @@map("order_accessories")
 }

@@ -26,23 +26,28 @@ function Stepper({ current }: { current: number }) {
 
 export default function PersonalInfoPage() {
     const router = useRouter();
-    const [form, setForm] = useState({
+    const defaultForm = {
         firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '', address: '',
         city: '', state: '', employmentStatus: '', monthlyIncome: '', employerName: '', employerAddress: '',
         addressVerified: false,
-    });
-    
-    useEffect(() => {
-        const saved = sessionStorage.getItem('bnpl_data');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed.personalInfo) setForm(prev => ({ ...prev, ...parsed.personalInfo }));
-            } catch (e) {}
-        }
-    }, []);
+    };
 
-    const u = (field: string, value: string | boolean) => setForm(prev => ({ ...prev, [field]: value }));
+    const [form, setForm] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = sessionStorage.getItem('bnpl_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.personalInfo) {
+                        return { ...defaultForm, ...parsed.personalInfo };
+                    }
+                }
+            } catch {}
+        }
+        return defaultForm;
+    });
+
+    const u = (field: string, value: string | boolean) => setForm((prev: any) => ({ ...prev, [field]: value }));
 
     const isValid = form.firstName && form.lastName && form.email && form.phone && form.dateOfBirth && form.gender && form.address && form.city && form.state && form.employmentStatus && form.monthlyIncome && form.addressVerified;
 
@@ -62,7 +67,12 @@ export default function PersonalInfoPage() {
                 <Stepper current={0} />
 
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: '0.5rem' }}>Personal Information</h1>
+                    <div className="flex items-center justify-between flex-wrap gap-3" style={{ marginBottom: '0.75rem' }}>
+                        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Personal Information</h1>
+                        <Link href="/checkout/bnpl" className="btn btn-accent btn-sm" style={{ fontSize: 'var(--text-xs)' }}>
+                            ⚡ Switch to 3-Min Mono Express Checkout →
+                        </Link>
+                    </div>
                     <div className="alert alert-warning" style={{ fontSize: 'var(--text-xs)' }}>
                         <span style={{ color: '#F39C12', display: 'flex' }}><AlertTriangle size={16} /></span>
                         <span>Please ensure the name matches your government-issued ID</span>
@@ -133,8 +143,19 @@ export default function PersonalInfoPage() {
 
                         <div className="form-group">
                             <label className="form-label">Address Verification (Utility Bill / Rent Receipt)</label>
+                            <input
+                                type="file"
+                                id="utility-bill-upload"
+                                accept="image/*,.pdf"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                    if (e.target.files?.[0]) {
+                                        u('addressVerified', true);
+                                    }
+                                }}
+                            />
                             <div 
-                                onClick={() => u('addressVerified', true)}
+                                onClick={() => document.getElementById('utility-bill-upload')?.click()}
                                 style={{ 
                                     border: '2px dashed var(--gray-300)', 
                                     padding: '1.5rem', 
@@ -147,13 +168,13 @@ export default function PersonalInfoPage() {
                                 {form.addressVerified ? (
                                     <div className="animate-scale-in">
                                         <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', color: 'var(--success)' }}><Upload size={32} /></span>
-                                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--success)', fontWeight: 600 }}>Document Uploaded Successfully</span>
+                                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--success)', fontWeight: 600 }}>Document Uploaded Successfully (Click to replace)</span>
                                     </div>
                                 ) : (
                                     <>
                                         <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', color: 'var(--gray-400)' }}><Upload size={32} /></span>
-                                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', fontWeight: 500 }}>Click to upload proof of address</span>
-                                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: '0.25rem' }}>Must be within the last 3 months</div>
+                                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', fontWeight: 500 }}>Click to select proof of address file</span>
+                                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: '0.25rem' }}>Must be within the last 3 months (JPG, PNG, PDF)</div>
                                     </>
                                 )}
                             </div>
@@ -195,7 +216,15 @@ export default function PersonalInfoPage() {
                         {(['Bolt', 'Chowdeck', 'Glovo', 'Indrive', 'Waysdrop'].includes(form.employerName)) && (
                             <div className="form-group animate-fade-in-up">
                                 <label className="form-label">Upload {form.employerName} Account Dashboard</label>
-                                <div style={{ border: '2px dashed var(--gray-300)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', textAlign: 'center', cursor: 'pointer', background: 'var(--gray-50)' }}>
+                                <input
+                                    type="file"
+                                    id="platform-dashboard-upload"
+                                    accept="image/*,.pdf"
+                                    style={{ display: 'none' }}
+                                />
+                                <div
+                                    onClick={() => document.getElementById('platform-dashboard-upload')?.click()}
+                                    style={{ border: '2px dashed var(--gray-300)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', textAlign: 'center', cursor: 'pointer', background: 'var(--gray-50)' }}>
                                     <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', color: 'var(--primary)' }}><BarChart3 size={32} /></span>
                                     <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', fontWeight: 500 }}>Click to upload screenshot of your dashboard</span>
                                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: '0.25rem' }}>Showing total rides/earnings</div>

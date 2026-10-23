@@ -31,9 +31,9 @@ export const BNPL_CONFIG = {
 
 // Payment Methods
 export const PAYMENT_METHODS = [
-    { id: 'card', name: 'Debit/Credit Card', icon: CreditCard, description: 'Pay securely with your card' },
-    { id: 'bank_transfer', name: 'Bank Transfer', icon: Building, description: 'Direct bank transfer' },
-    { id: 'wallet', name: 'DandoEv Wallet', icon: Wallet, description: 'Pay from your wallet balance' },
+    { id: 'bank_transfer', name: 'Mono DirectPay (Pay with Bank)', icon: Building, description: 'Instant account-to-account bank transfer via Mono' },
+    { id: 'card', name: 'Debit/Credit Card', icon: CreditCard, description: 'Mastercard, Visa & Verve via secure Mono DirectPay' },
+    { id: 'wallet', name: 'DandoEv Wallet', icon: Wallet, description: 'Pay from your available wallet balance' },
 ] as const;
 
 // KYC Document Types

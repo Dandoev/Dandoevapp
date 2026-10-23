@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, type ApiContext } from '@/lib/api-handler';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { verifyMonoPayment } from '@/lib/mono';
+import { assertVerifiedPayment, PaymentIntentError, resolvePaymentIntent } from '@/lib/payment-intent';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
 /**
  * GET /api/payments/verify?reference=xxx
- * Verify a payment transaction against Paystack and update local records.
+ * Verify a payment transaction against Mono DirectPay or Paystack, and update local records:
+ *  - Confirms Outright Orders (Bikes / Batteries / Chargers)
+ *  - Confirms BNPL Down Payments
+ *  - Settles Manual Ad-Hoc Repayment Installments
  */
 export const GET = withAuth(
   async (req: NextRequest, ctx: ApiContext) => {
@@ -19,28 +24,7 @@ export const GET = withAuth(
     }
 
     try {
-      // ---- Verify with Paystack ----
-      const paystackResponse = await fetch(
-        `${PAYSTACK_BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-          },
-        }
-      );
-
-      const paystackData = await paystackResponse.json();
-
-      if (!paystackData.status) {
-        return NextResponse.json(
-          { error: 'Verification failed', details: paystackData.message },
-          { status: 400 }
-        );
-      }
-
-      const txData = paystackData.data;
-
-      // ---- Update local transaction ----
+      // ---- Find local transaction ----
       const transaction = await prisma.paymentTransaction.findFirst({
         where: {
           OR: [
@@ -50,38 +34,149 @@ export const GET = withAuth(
         },
       });
 
-      if (transaction) {
-        const newStatus = txData.status === 'success' ? 'success' : 'failed';
-        await prisma.paymentTransaction.update({
-          where: { id: transaction.id },
-          data: { status: newStatus },
-        });
+      if (!transaction) {
+        return NextResponse.json({ error: 'Transaction record not found' }, { status: 404 });
+      }
 
-        // If successful and linked to an order, update order status
-        if (newStatus === 'success' && transaction.orderId) {
-          await prisma.order.update({
+      // Check ownership (must belong to authenticated user or admin)
+      const isAdmin = ['super_admin', 'finance_admin', 'operations_admin'].includes(ctx.user.role);
+      if (!isAdmin && transaction.userId !== ctx.user.sub) {
+        log.warn(
+          { userId: ctx.user.sub, txUserId: transaction.userId, reference },
+          'Unauthorized payment verification attempt'
+        );
+        return NextResponse.json({ error: 'Unauthorized to verify this transaction' }, { status: 403 });
+      }
+
+      if (transaction.status === 'success') {
+        return NextResponse.json({
+          success: true,
+          data: { status: 'success', amount: Number(transaction.amount), currency: 'NGN',
+            reference, provider: transaction.provider },
+        });
+      }
+      if (!['initiated', 'pending'].includes(transaction.status)) {
+        return NextResponse.json({ error: 'Payment is not pending' }, { status: 409 });
+      }
+
+      const expectedAmount = Number(transaction.amount);
+      const gatewayReference = transaction.providerRef || transaction.id;
+      let channel = 'mono_directpay';
+      let paidAt = new Date().toISOString();
+
+      // ========================================================
+      // 1. Mono DirectPay Verification
+      // ========================================================
+      if (transaction.provider === 'mono') {
+        const monoResult = await verifyMonoPayment(gatewayReference);
+        assertVerifiedPayment(
+          { reference: gatewayReference, amount: expectedAmount },
+          { status: monoResult.status === 'successful' ? 'success' : monoResult.status,
+            reference: monoResult.reference, amount: monoResult.amount, currency: 'NGN' }
+        );
+        channel = 'Pay with Bank (Mono DirectPay)';
+      } else if (transaction.provider === 'paystack') {
+        // ========================================================
+        // 2. Paystack Gateway Verification
+        // ========================================================
+        const paystackResponse = await fetch(
+          `${PAYSTACK_BASE_URL}/transaction/verify/${encodeURIComponent(gatewayReference)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            },
+          }
+        );
+
+        const paystackData = await paystackResponse.json();
+        if (!paystackResponse.ok || !paystackData.status || !paystackData.data) {
+          throw new PaymentIntentError('Gateway verification failed', 502);
+        }
+        const txData = paystackData.data;
+        assertVerifiedPayment(
+          { reference: gatewayReference, amount: expectedAmount },
+          { status: txData.status, reference: txData.reference,
+            amount: txData.amount / 100, currency: txData.currency }
+        );
+        channel = txData.channel || 'paystack';
+        paidAt = txData.paid_at || paidAt;
+      } else {
+        throw new PaymentIntentError('Unsupported payment provider', 400);
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await resolvePaymentIntent(tx, {
+          userId: transaction.userId, amount: expectedAmount,
+          orderId: transaction.orderId, loanId: transaction.loanId,
+          repaymentId: transaction.repaymentId,
+        });
+        const claimed = await tx.paymentTransaction.updateMany({
+          where: { id: transaction.id, status: { in: ['initiated', 'pending'] } },
+          data: { status: 'success' },
+        });
+        if (claimed.count !== 1) throw new PaymentIntentError('Payment was already processed', 409);
+        // ---- A. Confirm Outright Order (Bike / Batteries / Chargers) ----
+        if (transaction.orderId) {
+          await tx.order.update({
             where: { id: transaction.orderId },
             data: { status: 'confirmed' },
           });
+          log.info({ orderId: transaction.orderId }, 'Order confirmed following successful payment');
         }
-      }
 
-      log.info({ reference, status: txData.status }, 'Payment verified');
+        // ---- B. Settle Ad-Hoc BNPL Installment Repayment ----
+        if (transaction.repaymentId) {
+          await tx.repayment.update({
+            where: { id: transaction.repaymentId },
+            data: {
+              status: 'paid',
+              amountPaid: { increment: expectedAmount },
+              paidDate: new Date(),
+              paymentReference: reference,
+            },
+          });
+          log.info(
+            { repaymentId: transaction.repaymentId, amount: expectedAmount },
+            'Ad-hoc BNPL installment repayment settled via Mono'
+          );
+        }
+
+        // ---- C. Confirm BNPL Down Payment ----
+        if (transaction.loanId) {
+          await tx.loan.update({
+            where: { id: transaction.loanId },
+            data: {
+              status: 'approved',
+              downPayment: expectedAmount,
+            },
+          });
+          log.info(
+            { loanId: transaction.loanId, amount: expectedAmount },
+            'BNPL loan down payment confirmed via Mono DirectPay'
+          );
+        }
+      });
+
+      log.info({ reference, status: 'success', provider: transaction.provider }, 'Payment verified');
 
       return NextResponse.json({
         success: true,
         data: {
-          status: txData.status,
-          amount: txData.amount / 100, // Convert from kobo to Naira
-          currency: txData.currency,
-          reference: txData.reference,
-          paidAt: txData.paid_at,
-          channel: txData.channel,
+          status: 'success',
+          amount: expectedAmount,
+          currency: 'NGN',
+          reference,
+          provider: transaction.provider,
+          paidAt,
+          channel,
         },
       });
     } catch (error) {
+      if (error instanceof PaymentIntentError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
       log.error({ error, reference }, 'Payment verification error');
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      return NextResponse.json({ error: 'Gateway verification unavailable' }, { status: 502 });
     }
   }
 );

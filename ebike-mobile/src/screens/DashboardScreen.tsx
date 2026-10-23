@@ -1,179 +1,1175 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
-import { supabase } from '../lib/supabase';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  Image,
+} from 'react-native';
+import {
+  PiggyBank,
+  Zap,
+  ArrowRight,
+  ShieldCheck,
+  PlusCircle,
+  CreditCard,
+  CheckCircle2,
+  Bell,
+  Sparkles,
+  ChevronRight,
+  Copy,
+  Wifi,
+  ShoppingBag,
+  Building2,
+  FileDown,
+  X,
+} from 'lucide-react-native';
+import { demoStore, DemoWallet, DemoLoan, DemoProduct, DemoUserProfile } from '../lib/demo-data';
+import { getProductAsset } from '../lib/bike-assets';
+import { TabType } from '../components/BottomNavBar';
+import FinancialStatementModal from '../components/FinancialStatementModal';
+import BrandMark from '../components/BrandMark';
 
-const API_BASE = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+interface DashboardScreenProps {
+  onSwitchTab: (tab: TabType) => void;
+  token?: string | null;
+  onNavigateToNotifications?: () => void;
+  onNavigateToFundWallet?: () => void;
+  onNavigateToKyc?: () => void;
+  onSelectProduct?: (product: DemoProduct) => void;
+}
 
-import { ScreenType } from '../../App';
-
-export default function DashboardScreen({ navigateTo, token, setToken }: { navigateTo: (screen: ScreenType) => void, token: string | null, setToken: (t: string | null) => void }) {
-  const [savingsData, setSavingsData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+export default function DashboardScreen({
+  onSwitchTab,
+  onNavigateToNotifications,
+  onNavigateToFundWallet,
+  onNavigateToKyc,
+  onSelectProduct,
+}: DashboardScreenProps) {
+  const [wallet, setWallet] = useState<DemoWallet>(demoStore.getWallet());
+  const [loan, setLoan] = useState<DemoLoan>(demoStore.getLoan());
+  const [user, setUser] = useState<DemoUserProfile>(demoStore.getUser());
+  const [products, setProducts] = useState<DemoProduct[]>(demoStore.getProducts());
+  const [unreadCount, setUnreadCount] = useState<number>(demoStore.getUnreadNotificationCount());
+  const [hasAttachedCard, setHasAttachedCard] = useState<boolean>(demoStore.getHasAttachedCard());
+  const [attachedCard, setAttachedCard] = useState(demoStore.getAttachedCard());
+  const [attachedBank, setAttachedBank] = useState(demoStore.getAttachedBank());
+  const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
-    
-    const fetchSavings = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/api/wallet/savings`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setSavingsData(data.data);
-        }
-      } catch (e) {
-        console.error('Failed to fetch savings data', e);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const unsubscribe = demoStore.subscribe(() => {
+      setWallet(demoStore.getWallet());
+      setLoan(demoStore.getLoan());
+      setUser(demoStore.getUser());
+      setProducts(demoStore.getProducts());
+      setUnreadCount(demoStore.getUnreadNotificationCount());
+      setHasAttachedCard(demoStore.getHasAttachedCard());
+      setAttachedCard(demoStore.getAttachedCard());
+      setAttachedBank(demoStore.getAttachedBank());
+    });
+    return unsubscribe;
+  }, []);
 
-    fetchSavings();
-  }, [token]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setToken(null);
-    navigateTo('SignIn');
+  const handleQuickPay = () => {
+    const res = demoStore.payNextInstallment();
+    setToastMessage(res.message);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // ---- Real-time Notifications Subscription ----
-  useEffect(() => {
-    if (!token || !savingsData?.userId) return; // Wait for user info
-
-    const channel = supabase
-      .channel(`notifications:user:${savingsData.userId}`)
-      .on('broadcast', { event: 'new_notification' }, ({ payload }) => {
-        console.log('Real-time Notification Received:', payload);
-        alert(`${payload.title}\n\n${payload.message}`);
-        // This is hard to call since fetchSavings is scoped to the other useEffect
-        // We might want to move it to a shared scope if we wanted to re-fetch
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [token, savingsData?.userId]);
+  const streakPercent = Math.round((wallet.collectedWeeks / wallet.totalWeeks) * 100);
+  const report = demoStore.getFinancialReport();
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hello, Buyer 👋</Text>
-          <Text style={styles.balanceTitle}>Available Main Balance</Text>
-          <Text style={styles.balance}>₦{savingsData?.mainBalance?.toLocaleString() || '0'}</Text>
+    <ScrollView style={styles.container} contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
+      {/* Top Header Bar */}
+      <View style={styles.topHeader}>
+        <View style={styles.brandRow}>
+          <BrandMark size={38} />
+          <View>
+            <Text style={styles.brandName}>DandoEV</Text>
+            <Text style={styles.brandTagline}>YOUR ELECTRIC LIFE</Text>
+          </View>
         </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={onNavigateToNotifications}
+            activeOpacity={0.8}
+          >
+            <Bell size={20} color="#1E293B" />
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* User Greeting Bar */}
+      <View style={styles.greetingBar}>
+        <View>
+          <Text style={styles.greetingText}>GOOD TO SEE YOU</Text>
+          <Text style={styles.userNameText}>{user.firstName} {user.lastName}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.kycTierBadge}
+          onPress={onNavigateToKyc}
+          activeOpacity={0.8}
+        >
+          <ShieldCheck size={14} color="#0CBDA9" />
+          <Text style={styles.kycTierText}>Tier {user.kycTier} Verified</Text>
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <View style={[styles.card, { alignItems: 'center' }]}>
-            <ActivityIndicator size="large" color="#2E3192" />
-            <Text style={{marginTop: 8, color: '#6B7280'}}>Loading Wallet & Loans...</Text>
+      {/* Floating Toast Message */}
+      {toastMessage && (
+        <View style={styles.toast}>
+          <CheckCircle2 size={16} color="#FFFFFF" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
-      ) : (
-        <>
-            <View style={[styles.card, { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB', borderWidth: 1 }]}>
-                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
-                    <Text style={styles.cardTitle}>🔒 Compulsory Savings Vault</Text>
-                </View>
-                {savingsData?.savedSoFar > 0 ? (
-                    <>
-                        <Text style={{fontSize: 28, fontWeight: '800', fontFamily: 'InterTight_800ExtraBold', color: '#10B981', marginBottom: 4}}>
-                            ₦{savingsData.savedSoFar.toLocaleString()}
-                        </Text>
-                        <Text style={{fontSize: 12, fontFamily: 'InterTight_400Regular', color: '#6B7280', marginBottom: 12}}>
-                            Locked until: {savingsData.lockedUntil !== 'No active restriction' 
-                                ? new Date(savingsData.lockedUntil).toLocaleDateString() 
-                                : 'No lock - Available for unlock sweep!'}
-                        </Text>
-
-                        {/* Daily Collection Progress */}
-                        {savingsData?.dailyStats && (
-                            <View style={{ borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 12 }}>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                    <Text style={{ fontSize: 13, fontWeight: '600', fontFamily: 'InterTight_600SemiBold', color: '#374151' }}>Daily Collection Progress</Text>
-                                    <Text style={{ fontSize: 13, fontWeight: '700', fontFamily: 'InterTight_700Bold', color: '#2E3192' }}>
-                                        {savingsData.dailyStats.collected}/{savingsData.dailyStats.total} Days
-                                    </Text>
-                                </View>
-                                <View style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
-                                    <View style={{ 
-                                        height: '100%', 
-                                        backgroundColor: '#10B981', 
-                                        width: `${(savingsData.dailyStats.collected / (savingsData.dailyStats.total || 1)) * 100}%` 
-                                    }} />
-                                </View>
-                                {savingsData.dailyStats.missed > 0 && (
-                                    <Text style={{ fontSize: 11, fontFamily: 'InterTight_500Medium', color: '#EF4444', marginTop: 4, fontWeight: '500' }}>
-                                        ⚠️ You have missed {savingsData.dailyStats.missed} days. Fund your wallet to catch up.
-                                    </Text>
-                                )}
-                            </View>
-                        )}
-                    </>
-                ) : (
-                    <Text style={styles.subtext}>No compulsory savings actively locked.</Text>
-                )}
-            </View>
-
-            <View style={styles.card}>
-                <Text style={styles.cardTitle}>Active BNPL Loans</Text>
-                <Text style={styles.subtext}>
-                    {savingsData?.loanStatus !== 'none' 
-                        ? `You have an active BNPL loan (Status: ${savingsData?.loanStatus})` 
-                        : "You have no active loans right now."}
-                </Text>
-                {savingsData?.loanStatus === 'none' && (
-                    <TouchableOpacity style={styles.actionBtn}>
-                    <Text style={styles.actionBtnText}>Apply for a Bike</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
-        </>
       )}
 
+      {/* Linked Autopayment Card or Bank Mandate */}
+      <View style={styles.atmCardWrapper}>
+        <View style={styles.paymentMethodSwitcher}>
+          <Text style={styles.paymentMethodLabel}>AUTOPAYMENT METHOD:</Text>
+          <View style={styles.switcherPills}>
+            <TouchableOpacity
+              style={[styles.switchPill, hasAttachedCard && styles.switchPillActive]}
+              onPress={() => demoStore.setHasAttachedCard(true)}
+            >
+              <CreditCard size={12} color={hasAttachedCard ? '#FFFFFF' : '#66728A'} />
+              <Text style={[styles.switchPillText, hasAttachedCard && styles.switchPillTextActive]}>
+                Attached Card
+              </Text>
+            </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>Featured E-Bikes</Text>
-      
-      <View style={styles.bikeCard}>
-        <View style={styles.bikeImagePlaceholder}>
-            <Text style={{fontSize: 40}}>🏍️</Text>
+            <TouchableOpacity
+              style={[styles.switchPill, !hasAttachedCard && styles.switchPillActive]}
+              onPress={() => demoStore.setHasAttachedCard(false)}
+            >
+              <Building2 size={12} color={!hasAttachedCard ? '#FFFFFF' : '#66728A'} />
+              <Text style={[styles.switchPillText, !hasAttachedCard && styles.switchPillTextActive]}>
+                Bank Mandate
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.bikeInfo}>
-          <Text style={styles.bikeName}>Dando S-Series</Text>
-          <Text style={styles.bikePrice}>₦850,000</Text>
-          <Text style={styles.bikeMonthly}>or ₦1,200/day</Text>
+
+        {hasAttachedCard ? (
+          /* Real User Attached Card */
+          <View style={styles.atmCard}>
+            <View style={styles.atmCardTop}>
+              <View style={styles.atmLogoRow}>
+                <View style={[styles.atmLogoCircle, { backgroundColor: '#EA580C' }]} />
+                <Text style={styles.atmCardBrand}>{attachedCard.bankName}</Text>
+                <View style={[styles.platinumBadge, { backgroundColor: '#DCFCE7' }]}>
+                  <Text style={[styles.platinumText, { color: '#166534' }]}>AUTOPAY ACTIVE</Text>
+                </View>
+              </View>
+              <Wifi size={20} color="rgba(255, 255, 255, 0.7)" style={{ transform: [{ rotate: '90deg' }] }} />
+            </View>
+
+            <View style={styles.emvChipRow}>
+              <View style={styles.emvChip}>
+                <View style={styles.chipInnerGrid}>
+                  <View style={styles.chipLineH} />
+                  <View style={styles.chipLineV} />
+                </View>
+              </View>
+              <Text style={styles.contactlessText}>WEEKLY REPAYMENT CARD</Text>
+            </View>
+
+            <View style={styles.atmBalanceSection}>
+              <Text style={styles.atmBalanceLabel}>AVAILABLE WALLET BALANCE: ₦{wallet.mainBalance.toLocaleString()}.00</Text>
+              <Text style={styles.atmCardNumber}>{attachedCard.cardNumberMasked}</Text>
+            </View>
+
+            <View style={styles.atmFooterRow}>
+              <View>
+                <Text style={styles.atmFooterLabel}>CARDHOLDER</Text>
+                <Text style={styles.atmFooterVal}>{attachedCard.cardholderName}</Text>
+              </View>
+              <View>
+                <Text style={styles.atmFooterLabel}>EXPIRES</Text>
+                <Text style={styles.atmFooterVal}>{attachedCard.expiry}</Text>
+              </View>
+              <View style={styles.mastercardPills}>
+                <View style={[styles.mcCircle, { backgroundColor: '#EF4444' }]} />
+                <View style={[styles.mcCircle, { backgroundColor: '#F59E0B', marginLeft: -10 }]} />
+              </View>
+            </View>
+          </View>
+        ) : (
+          /* No Card Attached -> Bank Information Mandate */
+          <View style={[styles.atmCard, { backgroundColor: '#0A154F', borderColor: '#2E6A52' }]}>
+            <View style={styles.atmCardTop}>
+              <View style={styles.atmLogoRow}>
+                <Building2 size={16} color="#A5B4FC" />
+                <Text style={styles.atmCardBrand}>{attachedBank.bankName}</Text>
+                <View style={[styles.platinumBadge, { backgroundColor: '#FEF3C7' }]}>
+                  <Text style={[styles.platinumText, { color: '#92400E' }]}>NIBSS E-MANDATE</Text>
+                </View>
+              </View>
+              <ShieldCheck size={18} color="#0CBDA9" />
+            </View>
+
+            <View style={styles.emvChipRow}>
+              <View style={[styles.emvChip, { backgroundColor: '#4A50AE', borderColor: '#3730A3' }]}>
+                <View style={[styles.chipInnerGrid, { borderColor: '#818CF8' }]}>
+                  <View style={[styles.chipLineH, { backgroundColor: '#3730A3' }]} />
+                  <View style={[styles.chipLineV, { backgroundColor: '#3730A3' }]} />
+                </View>
+              </View>
+              <Text style={[styles.contactlessText, { color: '#A5B4FC' }]}>DIRECT DEBIT ACTIVE</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.atmBalanceSection}
+              activeOpacity={0.8}
+              onPress={() => {
+                setToastMessage(`Copied NUBAN (${attachedBank.accountNumberMasked}) & Mandate Ref!`);
+                setTimeout(() => setToastMessage(null), 3000);
+              }}
+            >
+              <Text style={styles.atmBalanceLabel}>DIRECT DEBIT NUBAN ACCOUNT (TAP TO COPY)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={styles.atmCardNumber}>{attachedBank.accountNumberMasked}</Text>
+                <Copy size={14} color="#A5B4FC" />
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.atmFooterRow}>
+              <View>
+                <Text style={styles.atmFooterLabel}>ACCOUNT NAME</Text>
+                <Text style={styles.atmFooterVal}>{attachedBank.accountName}</Text>
+              </View>
+              <View>
+                <Text style={styles.atmFooterLabel}>MANDATE REFERENCE</Text>
+                <Text style={styles.atmFooterVal}>{attachedBank.mandateReference}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Card Action Hub */}
+        <View style={styles.cardActionRow}>
+          <TouchableOpacity
+            style={styles.primaryFundBtn}
+            onPress={onNavigateToFundWallet}
+            activeOpacity={0.85}
+          >
+            <PlusCircle size={18} color="#FFFFFF" />
+            <Text style={styles.primaryFundBtnText}>Fund Wallet</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryNubanBtn}
+            onPress={() => setShowStatementModal(true)}
+            activeOpacity={0.85}
+          >
+            <FileDown size={16} color="#2E3192" />
+            <Text style={styles.secondaryNubanBtnText}>Financial Report</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
+      <View style={styles.content}>
+        {/* Weekly Deductions Active Loan Card */}
+        <View style={styles.loanCard}>
+          <View style={styles.loanCardHeader}>
+            <View>
+              <View style={styles.deductionFreqBadge}>
+                <Sparkles size={11} color="#2E3192" />
+                <Text style={styles.deductionFreqBadgeText}>
+                  {loan.deductionFrequency.toUpperCase()} DEDUCTION (DEFAULT)
+                </Text>
+              </View>
+              <Text style={styles.loanTitle}>{loan.bikeName}</Text>
+            </View>
+            <TouchableOpacity onPress={() => onSwitchTab('loans')} style={styles.viewLoanBtn}>
+              <Text style={styles.viewLoanText}>Schedule</Text>
+              <ArrowRight size={14} color="#2E3192" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.loanPayRow}>
+            <View>
+              <Text style={styles.loanDueLabel}>Next Weekly Installment</Text>
+              <Text style={styles.loanDueAmount}>₦{loan.weeklyRepayment.toLocaleString()}</Text>
+              <Text style={styles.loanDueDate}>Auto-deducted in 3 days (Mondays)</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.payNowBtn, loan.status === 'completed' && { backgroundColor: '#0CBDA9' }]}
+              onPress={handleQuickPay}
+              disabled={loan.status === 'completed'}
+            >
+              <Text style={styles.payNowText}>
+                {loan.status === 'completed' ? 'Paid' : `Pay ₦${loan.weeklyRepayment.toLocaleString()}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* KYC Upgrade Banner (if Tier 2) */}
+        {user.kycTier < 3 && (
+          <TouchableOpacity
+            style={styles.kycBanner}
+            onPress={onNavigateToKyc}
+            activeOpacity={0.88}
+          >
+            <View style={styles.kycBannerIcon}>
+              <ShieldCheck size={22} color="#4A50AE" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.kycBannerTitle}>Upgrade to Tier 3 KYC 🚀</Text>
+              <Text style={styles.kycBannerSub}>
+                Unlock ₦3,500,000 credit limit & instant battery swaps with Digital Guarantor co-signing.
+              </Text>
+            </View>
+            <ChevronRight size={18} color="#6366F1" />
+          </TouchableOpacity>
+        )}
+
+        {/* Compulsory Savings Vault Card */}
+        <View style={styles.savingsCard}>
+          <View style={styles.savingsTop}>
+            <View style={styles.savingsTitleRow}>
+              <PiggyBank size={20} color="#0CBDA9" />
+              <Text style={styles.savingsTitle}>Save-As-You-Ride Vault</Text>
+            </View>
+            <View style={styles.lockedBadge}>
+              <Text style={styles.lockedBadgeText}>🔒 100% Returnable Escrow</Text>
+            </View>
+          </View>
+
+          <Text style={styles.vaultAmount}>₦{wallet.lockedSaving.toLocaleString()}</Text>
+          <Text style={styles.vaultSub}>
+            100% yours! Auto-unlocks and transfers to your main cash balance upon full loan completion.
+          </Text>
+
+          {/* Daily Collection Streak */}
+          <View style={styles.streakBox}>
+            <View style={styles.streakHeader}>
+              <Text style={styles.streakTitle}>Savings Sweep Streak</Text>
+              <Text style={styles.streakCount}>
+                {wallet.collectedWeeks}/{wallet.totalWeeks} Weeks ({streakPercent}%)
+              </Text>
+            </View>
+            <View style={styles.streakBarBg}>
+              <View style={[styles.streakBarFill, { width: `${streakPercent}%` }]} />
+            </View>
+            <Text style={styles.streakHint}>
+              🔥 ₦1,000 collected daily with your rides. 1 missed day.
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick Action Hub */}
+        <View style={styles.actionHub}>
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => onSwitchTab('bikes')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: '#E7F9F6' }]}>
+              <ShoppingBag size={22} color="#2E3192" />
+            </View>
+            <Text style={styles.actionText}>Shop</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => onSwitchTab('loans')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: '#FEF3C7' }]}>
+              <CreditCard size={22} color="#D97706" />
+            </View>
+            <Text style={styles.actionText}>Repayments</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={onNavigateToFundWallet}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: '#E6FAF6' }]}>
+              <PlusCircle size={22} color="#0CBDA9" />
+            </View>
+            <Text style={styles.actionText}>Fund Wallet</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={onNavigateToKyc}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: '#F3E8FF' }]}>
+              <ShieldCheck size={22} color="#7C3AED" />
+            </View>
+            <Text style={styles.actionText}>Tier 3 KYC</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Featured Products Section (E-Bikes, Batteries, Chargers) */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Featured Mobility Catalog</Text>
+          <TouchableOpacity onPress={() => onSwitchTab('bikes')}>
+            <Text style={styles.seeAllText}>View All ({products.length}) →</Text>
+          </TouchableOpacity>
+        </View>
+
+        {products.slice(0, 3).map((product) => (
+          <TouchableOpacity
+            key={product.id}
+            style={styles.featuredCard}
+            activeOpacity={0.85}
+            onPress={() => onSelectProduct ? onSelectProduct(product) : onSwitchTab('bikes')}
+          >
+            <View style={styles.featuredImgWrapper}>
+              <Image
+                source={getProductAsset(product.id)}
+                style={styles.featuredImg}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.featuredInfo}>
+              <View style={styles.featuredCategoryBadge}>
+                <Text style={styles.featuredCategoryText}>{product.category}</Text>
+              </View>
+              <Text style={styles.featuredBikeName}>{product.name}</Text>
+              <Text style={styles.featuredPrice}>₦{product.price.toLocaleString()}</Text>
+              <Text style={styles.featuredDaily}>
+                Weekly BNPL available • 0% Down
+              </Text>
+            </View>
+            <ArrowRight size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Official Financial Statement Modal */}
+      <FinancialStatementModal
+        visible={showStatementModal}
+        onClose={() => setShowStatementModal(false)}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { padding: 24, backgroundColor: '#2E3192', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  greeting: { color: '#D1D5DB', fontSize: 14, marginBottom: 8, fontFamily: 'InterTight_400Regular' },
-  balanceTitle: { color: '#E5E7EB', fontSize: 12, fontFamily: 'InterTight_400Regular' },
-  balance: { color: '#fff', fontSize: 32, fontWeight: '800', fontFamily: 'InterTight_800ExtraBold' },
-  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16 },
-  logoutText: { color: '#fff', fontSize: 12, fontWeight: '600', fontFamily: 'InterTight_600SemiBold' },
-  card: { backgroundColor: '#fff', margin: 24, padding: 20, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, elevation: 3 },
-  cardTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'InterTight_700Bold', marginBottom: 8, color: '#1A1D5A' },
-  subtext: { color: '#6B7280', fontSize: 14, fontFamily: 'InterTight_400Regular', marginBottom: 16 },
-  actionBtn: { backgroundColor: '#F3F4F6', padding: 12, borderRadius: 8, alignItems: 'center' },
-  actionBtnText: { color: '#2E3192', fontWeight: '700', fontFamily: 'InterTight_700Bold' },
-  sectionTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'InterTight_700Bold', marginHorizontal: 24, marginBottom: 12, color: '#374151' },
-  bikeCard: { marginHorizontal: 24, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', flexDirection: 'row', marginBottom: 16 },
-  bikeImagePlaceholder: { width: 100, height: 100, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  bikeInfo: { padding: 16, flex: 1 },
-  bikeName: { fontSize: 16, fontWeight: '700', fontFamily: 'InterTight_700Bold', color: '#111827', marginBottom: 4 },
-  bikePrice: { fontSize: 14, color: '#4B5563', fontWeight: '500', fontFamily: 'InterTight_500Medium' },
-  bikeMonthly: { fontSize: 12, color: '#10B981', fontWeight: '700', fontFamily: 'InterTight_700Bold', marginTop: 4 }
+  container: { flex: 1, backgroundColor: '#F6F7FC' },
+  topHeader: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 48 : 24,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2FA',
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logoBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#2E3192',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2E3192',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  brandName: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+    letterSpacing: -0.5,
+  },
+  brandTagline: {
+    fontSize: 10,
+    fontFamily: 'Inter_500Medium',
+    color: '#66728A',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EDF2FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  notifBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+  },
+  greetingBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10,
+    backgroundColor: '#F6F7FC',
+  },
+  greetingText: {
+    fontSize: 12,
+    color: '#66728A',
+    fontFamily: 'Inter_400Regular',
+  },
+  userNameText: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+  },
+  kycTierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#E6FAF6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  kycTierText: {
+    color: '#087F75',
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  toast: {
+    backgroundColor: '#0CBDA9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 14,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    flex: 1,
+  },
+
+  /* Photorealistic ATM Card */
+  atmCardWrapper: {
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  paymentMethodSwitcher: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  paymentMethodLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#66728A',
+    letterSpacing: 0.8,
+  },
+  switcherPills: {
+    flexDirection: 'row',
+    backgroundColor: '#DBE2F0',
+    borderRadius: 10,
+    padding: 2,
+    gap: 2,
+  },
+  switchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  switchPillActive: {
+    backgroundColor: '#2E3192',
+    shadowColor: '#2E3192',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  switchPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: '#66728A',
+  },
+  switchPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  atmCard: {
+    backgroundColor: '#0A154F',
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#334155',
+    shadowColor: '#0A154F',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  atmCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  atmLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  atmLogoCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#38BDF8',
+  },
+  atmCardBrand: {
+    color: '#F6F7FC',
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
+  },
+  platinumBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  platinumText: {
+    color: '#DBE2F0',
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
+  },
+  emvChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  emvChip: {
+    width: 44,
+    height: 32,
+    backgroundColor: '#D97706',
+    borderRadius: 6,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#B45309',
+  },
+  chipInnerGrid: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 3,
+    position: 'relative',
+  },
+  chipLineH: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#B45309',
+  },
+  chipLineV: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#B45309',
+  },
+  contactlessText: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    letterSpacing: 1,
+  },
+  atmBalanceSection: {
+    marginBottom: 14,
+  },
+  atmBalanceLabel: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.8,
+  },
+  atmBalanceAmount: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  atmNumberRow: {
+    marginBottom: 16,
+  },
+  atmCardNumber: {
+    color: '#DBE2F0',
+    fontSize: 16,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    letterSpacing: 3,
+  },
+  atmFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  atmFooterLabel: {
+    color: '#66728A',
+    fontSize: 8,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  atmFooterVal: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  mastercardPills: {
+    flexDirection: 'row',
+  },
+  mcCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    opacity: 0.85,
+  },
+  cardActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  primaryFundBtn: {
+    flex: 1,
+    backgroundColor: '#2E3192',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 14,
+    shadowColor: '#2E3192',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  primaryFundBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+  },
+  secondaryNubanBtn: {
+    flex: 1.3,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 13,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DBE2F0',
+  },
+  secondaryNubanBtnText: {
+    color: '#2E3192',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+
+  content: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  loanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#DBE2F0',
+    shadowColor: '#0A154F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  loanCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  deductionFreqBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E7F9F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  deductionFreqBadgeText: {
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#2E3192',
+  },
+  loanTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+  },
+  viewLoanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EDF2FA',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  viewLoanText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#2E3192',
+  },
+  loanPayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  loanDueLabel: {
+    fontSize: 10,
+    color: '#B45309',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  loanDueAmount: {
+    fontSize: 19,
+    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#92400E',
+    marginVertical: 1,
+  },
+  loanDueDate: {
+    fontSize: 10,
+    color: '#B45309',
+    fontFamily: 'Inter_500Medium',
+  },
+  payNowBtn: {
+    backgroundColor: '#D97706',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  payNowText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+  },
+  kycBanner: {
+    backgroundColor: '#E7F9F6',
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    marginBottom: 16,
+  },
+  kycBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#E0E7FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  kycBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+  },
+  kycBannerSub: {
+    fontSize: 11,
+    color: '#2E6A52',
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  savingsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#DBE2F0',
+    shadowColor: '#0A154F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  savingsTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  savingsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  savingsTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+  },
+  lockedBadge: {
+    backgroundColor: '#E6FAF6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  lockedBadgeText: {
+    color: '#087F75',
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  vaultAmount: {
+    fontSize: 26,
+    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0CBDA9',
+  },
+  vaultSub: {
+    fontSize: 11,
+    color: '#66728A',
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+    marginBottom: 14,
+  },
+  streakBox: {
+    backgroundColor: '#F6F7FC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#DBE2F0',
+  },
+  streakHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  streakTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#334155',
+  },
+  streakCount: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#2E3192',
+  },
+  streakBarBg: {
+    height: 8,
+    backgroundColor: '#DBE2F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  streakBarFill: {
+    height: '100%',
+    backgroundColor: '#0CBDA9',
+    borderRadius: 4,
+  },
+  streakHint: {
+    fontSize: 10,
+    color: '#66728A',
+    fontFamily: 'Inter_500Medium',
+    marginTop: 6,
+  },
+  actionHub: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 20,
+  },
+  actionItem: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DBE2F0',
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  actionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#334155',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#2E3192',
+  },
+  featuredCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DBE2F0',
+  },
+  featuredImgWrapper: {
+    width: 76,
+    height: 76,
+    backgroundColor: '#F6F7FC',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  featuredImg: {
+    width: '90%',
+    height: '90%',
+  },
+  featuredInfo: {
+    flex: 1,
+  },
+  featuredCategoryBadge: {
+    backgroundColor: '#E7F9F6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 2,
+  },
+  featuredCategoryText: {
+    color: '#4A50AE',
+    fontSize: 9,
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  featuredBikeName: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+    marginBottom: 2,
+  },
+  featuredPrice: {
+    fontSize: 14,
+    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#2E3192',
+  },
+  featuredDaily: {
+    fontSize: 11,
+    color: '#0CBDA9',
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    marginTop: 1,
+  },
 });

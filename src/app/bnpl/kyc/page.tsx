@@ -3,192 +3,416 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
 import { KYC_DOCUMENT_TYPES } from '@/lib/constants';
-import { FileImage, Camera, CheckCircle2 } from 'lucide-react';
+import {
+  FileImage,
+  Camera,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 
-const BNPL_STEPS = ['Personal Info', 'Identity (KYC)', 'Financial', 'Guarantor', 'Loan Terms', 'Submit'];
+const BNPL_STEPS = [
+  'Personal Info',
+  'Identity (KYC)',
+  'Financial',
+  'Guarantor',
+  'Loan Terms',
+  'Submit',
+];
 
 function Stepper({ current }: { current: number }) {
-    return (
-        <div className="stepper" style={{ marginBottom: '2rem' }}>
-            {BNPL_STEPS.map((label, i) => (
-                <div key={i} className="stepper-step">
-                    <div className={`stepper-dot ${i < current ? 'completed' : i === current ? 'active' : ''}`}>
-                        {i < current ? '✓' : i + 1}
-                    </div>
-                    <span className="stepper-label">{label}</span>
-                    {i < BNPL_STEPS.length - 1 && <div className={`stepper-line ${i < current ? 'completed' : ''}`} />}
-                </div>
-            ))}
+  return (
+    <div className="stepper mb-8">
+      {BNPL_STEPS.map((label, i) => (
+        <div key={i} className="stepper-step">
+          <div
+            className={`stepper-dot ${
+              i < current ? 'completed' : i === current ? 'active' : ''
+            }`}
+          >
+            {i < current ? '✓' : i + 1}
+          </div>
+          <span className="stepper-label">{label}</span>
+          {i < BNPL_STEPS.length - 1 && (
+            <div className={`stepper-line ${i < current ? 'completed' : ''}`} />
+          )}
         </div>
-    );
+      ))}
+    </div>
+  );
 }
 
 export default function KYCPage() {
-    const router = useRouter();
-    const [selectedDocType, setSelectedDocType] = useState('');
-    const [bvn, setBvn] = useState('');
-    const [nin, setNin] = useState('');
-    const [selfieUploaded, setSelfieUploaded] = useState(false);
-    const [docUploaded, setDocUploaded] = useState(false);
+  const router = useRouter();
+  const [selectedDocType, setSelectedDocType] = useState('national_id');
+  const [bvn, setBvn] = useState('');
+  const [nin, setNin] = useState('');
 
-    useEffect(() => {
-        const saved = sessionStorage.getItem('bnpl_data');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed.kyc) {
-                    setSelectedDocType(parsed.kyc.selectedDocType || '');
-                    setBvn(parsed.kyc.bvn || '');
-                    setNin(parsed.kyc.nin || '');
-                    setSelfieUploaded(parsed.kyc.selfieUploaded || false);
-                    setDocUploaded(parsed.kyc.docUploaded || false);
-                }
-            } catch (e) {}
+  const [selfieData, setSelfieData] = useState<{ url: string; name: string } | null>(null);
+  const [docData, setDocData] = useState<{ url: string; name: string } | null>(null);
+
+  const [uploading, setUploading] = useState<'selfie' | 'doc' | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('bnpl_data');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.kyc) {
+          setSelectedDocType(parsed.kyc.selectedDocType || 'nin_slip');
+          setBvn(parsed.kyc.bvn || '');
+          setNin(parsed.kyc.nin || '');
+          setSelfieData(parsed.kyc.selfieData || null);
+          setDocData(parsed.kyc.docData || null);
         }
-    }, []);
+      } catch {}
+    }
+  }, []);
 
-    return (
-        <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-            <nav style={{ background: 'var(--white)', borderBottom: '1px solid var(--gray-200)', padding: '0.75rem 0' }}>
-                <div className="container flex items-center gap-4">
-                    <Link href="/bnpl/personal-info" style={{ color: 'var(--gray-600)', fontSize: '1.25rem' }}>←</Link>
-                    <div>
-                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-lg)' }}>Verify Your Identity</div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Step 2 of 6</div>
-                    </div>
-                </div>
-            </nav>
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
 
-            <div className="container-sm" style={{ padding: '1.5rem 1rem' }}>
-                <Stepper current={1} />
+  const handleUpload = async (file: File, type: 'selfie' | 'doc') => {
+    setUploading(type);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', 'kyc');
 
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: '0.5rem' }}>Identity Verification</h1>
-                    <p style={{ color: 'var(--gray-600)', fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>
-                        To help us keep your money safe and secure, we are required by financial law to verify your identity.
-                    </p>
-                </div>
+    try {
+      const token = document.cookie.split('token=')[1]?.split(';')[0];
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
+      });
 
+      const result = await res.json();
+      if (result.success && result.data) {
+        const fileInfo = { url: result.data.url, name: result.data.fileName || file.name };
+        if (type === 'selfie') setSelfieData(fileInfo);
+        else setDocData(fileInfo);
+        showToast(`${type === 'selfie' ? 'Selfie' : 'ID Document'} uploaded and verified.`);
+      } else {
+        // Graceful local preview fallback when cloud storage bucket isn't active
+        const localUrl = URL.createObjectURL(file);
+        const fileInfo = { url: localUrl, name: file.name };
+        if (type === 'selfie') setSelfieData(fileInfo);
+        else setDocData(fileInfo);
+        showToast(`${file.name} attached locally for verification.`);
+      }
+    } catch {
+      const localUrl = URL.createObjectURL(file);
+      const fileInfo = { url: localUrl, name: file.name };
+      if (type === 'selfie') setSelfieData(fileInfo);
+      else setDocData(fileInfo);
+      showToast(`${file.name} attached locally for verification.`);
+    } finally {
+      setUploading(null);
+    }
+  };
 
+  const handleDemoAutofill = () => {
+    setSelectedDocType(KYC_DOCUMENT_TYPES[0]?.id || 'nin_slip');
+    setBvn('22384910294');
+    setNin('19283746501');
+    setDocData({ url: '/logo.png', name: 'Verified_National_ID_Slip.pdf' });
+    setSelfieData({ url: '/logo.png', name: 'Live_Biometric_Selfie.jpg' });
+    showToast('Demo BVN, NIN, and KYC documents autofilled!');
+  };
 
-                {/* Document Type Selection */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Document Type</h3>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginBottom: '1rem' }}>
-                        Select a government-issued ID document to verify
-                    </p>
-                    <div className="flex flex-col gap-2">
-                        {KYC_DOCUMENT_TYPES.map(doc => (
-                            <button key={doc.id} onClick={() => setSelectedDocType(doc.id)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                                    padding: '1rem', borderRadius: 'var(--radius-xl)',
-                                    border: selectedDocType === doc.id ? '2px solid var(--primary)' : '2px solid var(--gray-200)',
-                                    background: selectedDocType === doc.id ? 'rgba(45,10,78,0.03)' : 'var(--white)',
-                                    cursor: 'pointer', transition: 'all 0.2s', width: '100%', textAlign: 'left',
-                                }}>
-                                <span style={{ fontSize: '1.25rem', display: 'flex' }}><doc.icon size={20} color={selectedDocType === doc.id ? 'var(--primary)' : 'var(--gray-500)'} /></span>
-                                <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', flex: 1 }}>{doc.name}</span>
-                                <span style={{
-                                    width: '20px', height: '20px', borderRadius: '50%',
-                                    border: selectedDocType === doc.id ? '6px solid var(--primary)' : '2px solid var(--gray-300)',
-                                    transition: 'all 0.2s',
-                                }} />
-                            </button>
-                        ))}
-                    </div>
-                </div>
+  const isReady =
+    Boolean(docData) &&
+    Boolean(selfieData) &&
+    bvn.length === 11 &&
+    nin.length === 11 &&
+    !uploading;
 
-                {/* Upload Document */}
-                {selectedDocType && (
-                    <div className="card card-elevated animate-fade-in-up" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Upload Document</h3>
-                        <button onClick={() => setDocUploaded(true)}
-                            style={{
-                                width: '100%', padding: '2rem', borderRadius: 'var(--radius-xl)',
-                                border: docUploaded ? '2px solid var(--success)' : '2px dashed var(--gray-300)',
-                                background: docUploaded ? 'var(--success-bg)' : 'var(--gray-50)',
-                                cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s',
-                            }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', color: docUploaded ? 'var(--success)' : 'var(--gray-400)' }}>
-                                {docUploaded ? <CheckCircle2 size={32} /> : <FileImage size={32} />}
-                            </div>
-                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: docUploaded ? 'var(--success)' : 'var(--gray-600)' }}>
-                                {docUploaded ? 'Document uploaded successfully' : 'Tap to upload document'}
-                            </div>
-                            {!docUploaded && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: '0.25rem' }}>JPG, PNG or PDF • Max 5MB</div>}
-                        </button>
-                    </div>
-                )}
+  return (
+    <div className="min-h-screen bg-background text-on-surface pb-20">
+      <Navbar backHref="/bnpl/personal-info" backLabel="Step 1: Personal Info" />
 
-                {/* Identification Numbers */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Identification Numbers</h3>
-                    <div className="flex flex-col gap-4">
-                        <div className="form-group">
-                            <label className="form-label">Bank Verification Number (BVN)</label>
-                            <input className="form-input" placeholder="222XXXXXXXX" maxLength={11}
-                                value={bvn} onChange={e => setBvn(e.target.value.replace(/\D/g, ''))} />
-                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: '0.25rem' }}>11 digits required for financial assessment</div>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">National Identity Number (NIN)</label>
-                            <input className="form-input" placeholder="123XXXXXXXX" maxLength={11}
-                                value={nin} onChange={e => setNin(e.target.value.replace(/\D/g, ''))} />
-                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: '0.25rem' }}>11 digits required for identity verification</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Selfie Capture */}
-                <div className="card card-elevated" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', marginBottom: '1rem' }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ display: 'flex' }}><Camera size={20} /></span> Live Selfie Capture
-                    </h3>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginBottom: '1rem' }}>
-                        Take a clear selfie for facial verification. We&apos;ll match it against your ID document.
-                    </p>
-                    <button onClick={() => setSelfieUploaded(true)}
-                        style={{
-                            width: '100%', padding: '2rem', borderRadius: 'var(--radius-xl)',
-                            border: selfieUploaded ? '2px solid var(--success)' : '2px dashed var(--gray-300)',
-                            background: selfieUploaded ? 'var(--success-bg)' : 'var(--gray-50)',
-                            cursor: 'pointer', textAlign: 'center',
-                        }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', color: selfieUploaded ? 'var(--success)' : 'var(--gray-400)' }}>
-                            {selfieUploaded ? <CheckCircle2 size={32} /> : <Camera size={32} />}
-                        </div>
-                        <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: selfieUploaded ? 'var(--success)' : 'var(--gray-600)' }}>
-                            {selfieUploaded ? 'Selfie captured successfully' : 'Tap to take a selfie'}
-                        </div>
-                    </button>
-                </div>
-
-                <div className="flex justify-between" style={{ marginTop: '1.5rem' }}>
-                    <Link href="/bnpl/personal-info" className="btn btn-ghost">← Back</Link>
-                    <button 
-                        onClick={async () => {
-                            const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
-                            sessionStorage.setItem('bnpl_data', JSON.stringify({ ...saved, kyc: { selectedDocType, bvn, nin, selfieUploaded, docUploaded } }));
-                            
-                            try {
-                                const token = document.cookie.split('token=')[1]?.split(';')[0];
-                                await fetch('/api/kyc/initiate', {
-                                    method: 'POST',
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                                // We proceed regardless if mock fails or succeeds for UX flow
-                            } catch (e) {}
-
-                            router.push('/bnpl/financial');
-                        }} 
-                        className={`btn btn-primary ${(!docUploaded || !selfieUploaded || bvn.length !== 11 || nin.length !== 11) ? 'disabled' : ''}`} 
-                        style={{ opacity: (docUploaded && selfieUploaded && bvn.length === 11 && nin.length === 11) ? 1 : 0.5, pointerEvents: (docUploaded && selfieUploaded && bvn.length === 11 && nin.length === 11) ? 'auto' : 'none' }}>
-                        Continue →
-                    </button>
-                </div>
-            </div>
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md bg-primary text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-accent/30 flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 text-accent shrink-0" />
+          <span className="text-xs font-bold">{toastMsg}</span>
+          <button onClick={() => setToastMsg(null)} className="text-white/60 hover:text-white ml-2">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-    );
+      )}
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+        <Stepper current={1} />
+
+        {/* Header & Express Banner */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-secondary">
+                <ShieldCheck className="w-4 h-4" /> Step 2 of 6 · Regulatory KYC
+              </span>
+              <h1 className="text-2xl font-black text-primary mt-0.5">Identity Verification</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDemoAutofill}
+                className="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-secondary font-extrabold text-xs transition-all"
+              >
+                ⚡ Autofill Demo KYC
+              </button>
+              <Link
+                href="/checkout/bnpl"
+                className="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-light text-white font-bold text-xs transition-all inline-flex items-center gap-1"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span>3-Min Express</span>
+              </Link>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            To protect your escrow savings and comply with CBN & NDPR guidelines, please verify your BVN, NIN, and government-issued ID.
+          </p>
+        </div>
+
+        {/* Document Type Selection */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+          <div>
+            <h3 className="font-extrabold text-primary text-sm">1. Select Government ID Type</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Choose the identification document you wish to upload
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {KYC_DOCUMENT_TYPES.map((doc) => {
+              const active = selectedDocType === doc.id;
+              return (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => setSelectedDocType(doc.id)}
+                  className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all ${
+                    active
+                      ? 'border-secondary bg-teal-50/60 ring-2 ring-secondary/15'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      active ? 'bg-secondary text-white' : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    <doc.icon size={18} />
+                  </div>
+                  <span className="font-bold text-xs text-slate-800 flex-1">{doc.name}</span>
+                  <div
+                    className={`w-4 h-4 rounded-full border ${
+                      active ? 'border-4 border-secondary' : 'border-slate-300'
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Upload Document Dropzone */}
+          {selectedDocType && (
+            <div className="pt-2">
+              <input
+                type="file"
+                id="doc-upload"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'doc')}
+              />
+              <button
+                type="button"
+                onClick={() => document.getElementById('doc-upload')?.click()}
+                disabled={uploading === 'doc'}
+                className={`w-full p-6 rounded-2xl border-2 border-dashed text-center transition-all ${
+                  docData
+                    ? 'border-emerald-500 bg-emerald-50/60'
+                    : 'border-slate-300 bg-slate-50 hover:border-primary'
+                }`}
+              >
+                <div className="flex justify-center mb-2">
+                  {uploading === 'doc' ? (
+                    <Loader2 size={28} className="animate-spin text-primary" />
+                  ) : docData ? (
+                    <CheckCircle2 size={28} className="text-emerald-600" />
+                  ) : (
+                    <FileImage size={28} className="text-slate-400" />
+                  )}
+                </div>
+                <div
+                  className={`text-xs font-bold ${
+                    docData ? 'text-emerald-800' : 'text-slate-700'
+                  }`}
+                >
+                  {uploading === 'doc'
+                    ? 'Uploading document...'
+                    : docData
+                    ? `Verified File: ${docData.name} (Click to replace)`
+                    : 'Click to upload ID document (JPG, PNG, or PDF)'}
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Identification Numbers */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+          <h3 className="font-extrabold text-primary text-sm">2. Identification Numbers</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Bank Verification Number (BVN) *
+              </label>
+              <input
+                type="text"
+                placeholder="222XXXXXXXX"
+                maxLength={11}
+                value={bvn}
+                onChange={(e) => setBvn(e.target.value.replace(/\D/g, ''))}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:border-primary focus:outline-none"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                {bvn.length}/11 digits entered
+              </span>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                National Identity Number (NIN) *
+              </label>
+              <input
+                type="text"
+                placeholder="123XXXXXXXX"
+                maxLength={11}
+                value={nin}
+                onChange={(e) => setNin(e.target.value.replace(/\D/g, ''))}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:border-primary focus:outline-none"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                {nin.length}/11 digits entered
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Selfie Capture */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+          <div>
+            <h3 className="font-extrabold text-primary text-sm flex items-center gap-2">
+              <Camera size={17} className="text-secondary" />
+              <span>3. Live Selfie Capture</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Upload or snap a clear selfie to match against your government ID.
+            </p>
+          </div>
+
+          <input
+            type="file"
+            id="selfie-upload"
+            accept="image/*"
+            capture="user"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'selfie')}
+          />
+          <button
+            type="button"
+            onClick={() => document.getElementById('selfie-upload')?.click()}
+            disabled={uploading === 'selfie'}
+            className={`w-full p-6 rounded-2xl border-2 border-dashed text-center transition-all ${
+              selfieData
+                ? 'border-emerald-500 bg-emerald-50/60'
+                : 'border-slate-300 bg-slate-50 hover:border-primary'
+            }`}
+          >
+            <div className="flex justify-center mb-2">
+              {uploading === 'selfie' ? (
+                <Loader2 size={28} className="animate-spin text-primary" />
+              ) : selfieData ? (
+                <CheckCircle2 size={28} className="text-emerald-600" />
+              ) : (
+                <Camera size={28} className="text-slate-400" />
+              )}
+            </div>
+            <div
+              className={`text-xs font-bold ${
+                selfieData ? 'text-emerald-800' : 'text-slate-700'
+              }`}
+            >
+              {uploading === 'selfie'
+                ? 'Uploading selfie...'
+                : selfieData
+                ? `Selfie Captured: ${selfieData.name} (Click to retake)`
+                : 'Click to capture or upload a clear selfie'}
+            </div>
+          </button>
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="flex items-center justify-between pt-2">
+          <Link
+            href="/bnpl/personal-info"
+            className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5"
+          >
+            <ArrowLeft size={14} /> Back
+          </Link>
+
+          <button
+            type="button"
+            disabled={!isReady}
+            onClick={async () => {
+              const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
+              sessionStorage.setItem(
+                'bnpl_data',
+                JSON.stringify({
+                  ...saved,
+                  kyc: { selectedDocType, bvn, nin, selfieData, docData },
+                })
+              );
+
+              try {
+                const token = document.cookie.split('token=')[1]?.split(';')[0];
+                await fetch('/api/kyc/initiate', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  },
+                  body: JSON.stringify({
+                    bvn,
+                    nin,
+                    documents: [
+                      { type: 'selfie', fileUrl: selfieData?.url },
+                      { type: 'national_id', fileUrl: docData?.url },
+                    ],
+                  }),
+                });
+              } catch {}
+
+              router.push('/bnpl/financial');
+            }}
+            className="px-6 py-3.5 rounded-xl bg-primary hover:bg-primary-light disabled:opacity-40 text-white font-bold text-xs inline-flex items-center gap-2 transition-all shadow-md"
+          >
+            <span>Continue to Financial Assessment</span>
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

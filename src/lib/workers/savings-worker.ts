@@ -3,6 +3,15 @@ import logger from '../logger';
 import { unlockSavings } from '../wallet';
 
 /**
+ * BullMQ Job processor for daily savings unlocks & sweeps
+ */
+export async function processSavingsJob(job?: any): Promise<void> {
+  const log = logger.child({ jobId: job?.id, worker: 'savings-worker' });
+  log.info({ jobData: job?.data }, 'Processing savings unlock/sweep job');
+  await runSavingsUnlockWorker();
+}
+
+/**
  * Sweeps completed loans and batch releases locked savings into
  * available mainBalance for the users. 
  * Should be run automatically on a Cron cycle (e.g., nightly).

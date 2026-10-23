@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    fontFamily: 'InterTight_700Bold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     color: '#FFFFFF',
   },
   content: {
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   updatedDate: {
     fontSize: 12,
     color: '#6B7280',
-    fontFamily: 'InterTight_400Regular',
+    fontFamily: 'Inter_400Regular',
     marginBottom: 24,
   },
   section: {
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    fontFamily: 'InterTight_800ExtraBold',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#2E3192',
     marginBottom: 12,
     letterSpacing: 0.5,
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   paragraph: {
     fontSize: 14,
     color: '#4B5563',
-    fontFamily: 'InterTight_400Regular',
+    fontFamily: 'Inter_400Regular',
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -141,6 +141,6 @@ const styles = StyleSheet.create({
     color: '#991B1B',
     lineHeight: 20,
     fontWeight: '500',
-    fontFamily: 'InterTight_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
 });

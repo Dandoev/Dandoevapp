@@ -1,55 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, type ApiContext } from '@/lib/api-handler';
-import prisma from '@/lib/prisma';
+import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/loans/delinquent
- * Returns all 'overdue' repayments with their details.
+ * Returns all 'overdue' repayments with their aging days and at-risk capital.
  */
 export const GET = withRoles(
-  ['super_admin', 'finance_admin', 'compliance_officer'],
+  ['super_admin', 'collections_agent', 'finance_admin', 'compliance_officer'],
   async (req: NextRequest, ctx: ApiContext) => {
     try {
-      const overdueRepayments = await prisma.repayment.findMany({
-        where: { status: 'overdue' },
-        include: {
-          loanRelation: {
-            include: {
-              user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
-              bike: { select: { id: true, name: true, brand: true } },
-            },
-          },
-        },
-        orderBy: { dueDate: 'asc' },
-      });
-
-      // Calculate total at-risk amount
-      const totalAtRisk = overdueRepayments.reduce(
-        (acc: number, r: any) => acc + Number(r.amount) - Number(r.amountPaid),
-        0
-      );
+      const delinquentData = await dbService.getDelinquentRepayments();
 
       return NextResponse.json({
         success: true,
         data: {
-          count: overdueRepayments.length,
-          totalAtRisk,
-          repayments: overdueRepayments.map((r: any) => ({
-             repaymentId: r.id,
-             amount: Number(r.amount),
-             amountPaid: Number(r.amountPaid),
-             dueDate: r.dueDate,
-             daysOverdue: Math.floor((Date.now() - new Date(r.dueDate).getTime()) / (1000 * 3600 * 24)),
-             loanId: r.loanId,
-             user: r.loanRelation.user,
-             bike: r.loanRelation.bike,
+          count: delinquentData.repayments.length,
+          totalAtRisk: delinquentData.totalAtRisk,
+          repayments: delinquentData.repayments.map((r) => ({
+            id: r.id,
+            repaymentId: r.id,
+            amount: r.amount,
+            amountPaid: r.amountPaid,
+            dueDate: r.dueDate,
+            daysOverdue: r.daysOverdue || 7,
+            loanId: r.loanId,
+            bikeName: r.bikeName,
+            user: r.user,
+            retryCount: r.retryCount,
           })),
         },
       });
     } catch (error) {
       logger.error({ error }, 'Failed to fetch delinquent loans');
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch delinquent repayments' }, { status: 500 });
     }
   }
 );

@@ -1,10 +1,13 @@
 // ============================================================
 // API Handler — Composable Middleware Chain
-// - withAuth()        → Verify JWT, attach user to context
-// - withRoles()       → RBAC check
-// - withRateLimit()   → Per-tier rate limiting
-// - withValidation()  → Zod schema validation
-// - withIdempotency() → Idempotency key handling
+// - withAuth()            → Verify JWT, attach user to context
+// - withRoles()           → RBAC check
+// - withScopes()          → Fine-grained OAuth 2.0 scope verification
+// - withRateLimit()       → Per-tier rate limiting
+// - withValidation()      → Zod schema validation
+// - withIdempotency()     → Idempotency key handling
+// - withSecurityHeaders() → OWASP security headers injection
+// - withFraudCheck()      → Real-time fraud anomaly assessment
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySupabaseToken, extractBearerToken, type JwtPayload } from './auth';
@@ -12,6 +15,8 @@ import { checkRateLimit, rateLimitResponse, type RateLimitConfig } from './rate-
 import { validateRequest } from './validate';
 import { checkIdempotencyKey, storeIdempotencyResponse } from './idempotency';
 import { createRequestLogger } from './logger';
+import { applySecurityHeaders, hasRequiredScopes, type ApiScope } from './api-security';
+import { evaluateRisk, type FraudAssessmentResult, type FraudEvaluationContext } from './fraud-detector';
 import { ZodSchema } from 'zod';
 import crypto from 'crypto';
 
@@ -22,6 +27,7 @@ export interface ApiContext {
   requestId: string;
   body?: unknown;
   params?: any;
+  fraudAssessment?: FraudAssessmentResult;
 }
 
 type ApiHandler = (req: NextRequest, ctx: ApiContext) => Promise<NextResponse>;
@@ -125,8 +131,10 @@ export function withValidation<T>(
 
 // ---- withIdempotency: Handle idempotent POST requests ----
 
-export function withIdempotency(handler: ApiHandler): ApiHandler {
-  return async (req: NextRequest, ctx: ApiContext) => {
+export function withIdempotency<C extends ApiContext = ApiContext>(
+  handler: (req: NextRequest, ctx: C) => Promise<NextResponse>
+): (req: NextRequest, ctx: C) => Promise<NextResponse> {
+  return async (req: NextRequest, ctx: C) => {
     const idempotencyKey = req.headers.get('idempotency-key');
 
     if (!idempotencyKey) {
@@ -170,3 +178,103 @@ export function getClientIp(req: NextRequest): string {
     'unknown'
   );
 }
+
+// ---- withSecurityHeaders: Inject OWASP security headers ----
+
+export function withSecurityHeaders(
+  handler: (req: NextRequest, ctx?: any) => Promise<NextResponse>
+): (req: NextRequest, ctx?: any) => Promise<NextResponse> {
+  return async (req: NextRequest, ctx?: any) => {
+    const response = await handler(req, ctx);
+    return applySecurityHeaders(response);
+  };
+}
+
+// ---- withScopes: Require specific OAuth 2.0 / fine-grained scopes ----
+
+export function withScopes(
+  requiredScopes: ApiScope[],
+  handler: ApiHandler
+): (req: NextRequest, nextCtx?: any) => Promise<NextResponse> {
+  return withAuth(async (req, ctx) => {
+    // In our JWT or Supabase claims, scopes may be attached to user metadata or derived from role
+    const ROLE_DEFAULT_SCOPES: Record<string, string[]> = {
+      super_admin: ['admin:all', '*'],
+      finance_admin: ['loans:read', 'loans:approve', 'payments:initiate', 'payments:verify'],
+      credit_underwriter: ['loans:read', 'loans:approve', 'compliance:review'],
+      compliance_officer: ['compliance:review', 'loans:read', 'user:read'],
+      operations_admin: ['user:read', 'loans:read'],
+      customer: ['user:read', 'user:write', 'loans:read', 'loans:apply', 'payments:initiate'],
+    };
+
+    const explicitScopes = (ctx.user as any).scopes as string[] | undefined;
+    const userScopes: string[] =
+      explicitScopes && explicitScopes.length > 0
+        ? explicitScopes
+        : ROLE_DEFAULT_SCOPES[ctx.user.role] || [ctx.user.role];
+
+    if (!hasRequiredScopes(userScopes, requiredScopes)) {
+      return NextResponse.json(
+        { error: 'Insufficient scope permissions', requiredScopes },
+        { status: 403 }
+      );
+    }
+    return handler(req, ctx);
+  });
+}
+
+// ---- withFraudCheck: Evaluate risk before mutating financial/auth states ----
+
+export function withFraudCheck<C extends ApiContext = ApiContext>(
+  actionType: FraudEvaluationContext['actionType'],
+  getFinancialDetails?: (req: NextRequest, ctx: C) => { amount?: number; loanAmount?: number; monthlyIncome?: number },
+  handler?: (req: NextRequest, ctx: C) => Promise<NextResponse>
+): (req: NextRequest, ctx: C) => Promise<NextResponse> {
+  return async (req: NextRequest, ctx: C) => {
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers.get('user-agent') || undefined;
+    const financial = getFinancialDetails ? getFinancialDetails(req, ctx) : {};
+
+    const evaluation = await evaluateRisk({
+      userId: ctx.user.sub,
+      ipAddress,
+      userAgent,
+      actionType,
+      amount: financial.amount,
+      loanAmount: financial.loanAmount,
+      monthlyIncome: financial.monthlyIncome,
+    });
+
+    if (evaluation.action === 'BLOCK') {
+      return NextResponse.json(
+        {
+          error: 'Action blocked by fraud security system',
+          riskLevel: evaluation.riskLevel,
+          reasons: evaluation.reasons,
+        },
+        { status: 403 }
+      );
+    }
+
+    if (evaluation.action === 'STEP_UP_MFA') {
+      const mfaHeader = req.headers.get('x-mfa-token');
+      if (!mfaHeader) {
+        return NextResponse.json(
+          {
+            error: 'Step-up Multi-Factor Authentication required for this operation',
+            riskLevel: evaluation.riskLevel,
+            stepUpRequired: true,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    ctx.fraudAssessment = evaluation;
+    if (handler) {
+      return handler(req, ctx);
+    }
+    return NextResponse.json({ success: true, evaluation });
+  };
+}
+

@@ -8,7 +8,7 @@ export default function MobileNav() {
   const pathname = usePathname();
 
   // Hide on Auth pages or Admin, or during fallback SSR/not-found where pathname is null
-  if (!pathname || pathname.startsWith('/auth') || pathname.startsWith('/admin')) return null;
+  if (!pathname || pathname.startsWith('/auth') || pathname.startsWith('/admin') || pathname.startsWith('/login')) return null;
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home, match: (p: string) => p === '/' },

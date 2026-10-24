@@ -19,6 +19,12 @@ export async function proxy(request: NextRequest) {
     request.cookies.get('token')?.value ||
     request.headers.get('authorization')?.replace('Bearer ', '');
 
+  // ---- No marketing landing page: "/" opens the admin dashboard login ----
+  // Signed-in staff go straight to /admin (admin role is verified below).
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL(token ? '/admin' : '/login', request.url));
+  }
+
   // ---- Route Protection Logic ----
   const PROTECTED_ROUTES = ['/dashboard', '/bnpl', '/checkout', '/logistics'];
   const ADMIN_ROUTES = ['/admin'];
@@ -27,7 +33,7 @@ export async function proxy(request: NextRequest) {
   const isAdmin = ADMIN_ROUTES.some(route => pathname.startsWith(route));
 
   if ((isProtected || isAdmin) && !token) {
-    const url = new URL('/auth/signin', request.url);
+    const url = new URL(isAdmin ? '/login' : '/auth/signin', request.url);
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
@@ -59,10 +65,10 @@ export async function proxy(request: NextRequest) {
         ];
 
         if (!adminRoles.includes(role)) {
-          return NextResponse.redirect(new URL('/auth/signin', request.url));
+          return NextResponse.redirect(new URL('/login', request.url));
         }
       } catch {
-        const url = new URL('/auth/signin', request.url);
+        const url = new URL('/login', request.url);
         url.searchParams.set('redirect', pathname);
         return NextResponse.redirect(url);
       }

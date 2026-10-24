@@ -331,31 +331,58 @@ export default function CustomerDashboard() {
           <div className="lg:col-span-8 space-y-6">
             {activeLoan ? (
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-100">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-surface-container-low border border-slate-200 p-2 flex items-center justify-center shrink-0">
-                      <img
-                        src={activeLoan.bikeImage || '/bikes/DandoEV_X6.jpg'}
-                        alt={activeLoan.bikeName}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="badge badge-success">Active BNPL Plan</span>
-                        <span className="text-xs font-mono text-slate-400">
-                          #{activeLoan.loanId?.slice(0, 8)}
-                        </span>
-                      </div>
-                      <h2 className="text-xl font-extrabold text-primary mt-1">
-                        {activeLoan.bikeName}
-                      </h2>
-                    </div>
+                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                      My {activeLoan.bikeName || 'DandoEv G90'}
+                    </h2>
+                  </div>
+                  <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold bg-[#EEF2FF] text-[#2E3192] border border-[#C7D2FE]">
+                    Assigned
+                  </span>
+                </div>
+
+                {/* Bike Asset Details (User Showcase Card with Light Blue Badge) */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                  <div className="sm:col-span-4 w-full h-36 rounded-2xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-center">
+                    <img
+                      src={activeLoan.bikeImage || '/bikes/DandoEv_G90-removebg-preview.png'}
+                      alt={activeLoan.bikeName || 'DandoEv G90'}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
 
+                  <div className="sm:col-span-8 space-y-2.5 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-medium">Bike ID:</span>
+                      <span className="font-bold text-slate-900 font-mono">DEV-G90-0001</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-medium">Financing:</span>
+                      <span className="font-bold text-slate-900">{activeLoan.tenureMonths || 18} months</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-medium">Payment status:</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                        Active
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-medium">Ownership:</span>
+                      <span className="font-bold text-slate-900">Rent-to-own</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-500 border-t border-slate-100 pt-3 italic">
+                  Illustrative example. Actual information comes from the rider&apos;s approved financing and assigned bicycle record.
+                </p>
+
+                <div className="flex items-center justify-between pt-2">
                   <Link
                     href={`/dashboard/invoice?loanId=${activeLoan.loanId}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-primary text-xs font-bold text-primary transition-all"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 hover:border-primary text-xs font-bold text-primary transition-all"
                   >
                     <FileText size={15} />
                     <span>Official Invoice & Chassis Serials</span>

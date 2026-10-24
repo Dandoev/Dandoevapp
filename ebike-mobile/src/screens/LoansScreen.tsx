@@ -222,7 +222,7 @@ export default function LoansScreen({ token }: LoansScreenProps) {
         <View style={styles.savingsCard}>
           <View style={styles.savingsLeft}>
             <View style={styles.savingsIcon}>
-              <PiggyBank size={24} color="#0CBDA9" />
+              <PiggyBank size={24} color="#2E3192" />
             </View>
             <View>
               <Text style={styles.savingsTitle}>Save-As-You-Ride Vault</Text>
@@ -256,7 +256,7 @@ export default function LoansScreen({ token }: LoansScreenProps) {
                 >
                   <View style={styles.repLeft}>
                     {isPaid ? (
-                      <CheckCircle2 size={20} color="#0CBDA9" />
+                      <CheckCircle2 size={20} color="#2E3192" />
                     ) : (
                       <Clock size={20} color="#94A3B8" />
                     )}
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   toastContainer: {
-    backgroundColor: '#0CBDA9',
+    backgroundColor: '#2E3192',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -401,13 +401,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusBadge: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   statusBadgeText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -576,11 +578,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   savingsCard: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#C7D2FE',
     marginBottom: 20,
   },
   savingsLeft: {
@@ -673,7 +675,9 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   statusPaid: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   statusUpcoming: {
     backgroundColor: '#EDF2FA',
@@ -683,6 +687,8 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   statusTextPaid: {
+    color: '#2E3192',
+  },
     color: '#15803D',
   },
   statusTextUpcoming: {

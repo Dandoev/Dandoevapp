@@ -25,9 +25,12 @@ import {
   Building2,
   FileDown,
   X,
+  Battery,
+  Gauge,
+  Check,
 } from 'lucide-react-native';
 import { demoStore, DemoWallet, DemoLoan, DemoProduct, DemoUserProfile } from '../lib/demo-data';
-import { getProductAsset } from '../lib/bike-assets';
+import { getProductAsset, BIKE_ASSETS } from '../lib/bike-assets';
 import { TabType } from '../components/BottomNavBar';
 import FinancialStatementModal from '../components/FinancialStatementModal';
 import BrandMark from '../components/BrandMark';
@@ -121,7 +124,7 @@ export default function DashboardScreen({
           onPress={onNavigateToKyc}
           activeOpacity={0.8}
         >
-          <ShieldCheck size={14} color="#0CBDA9" />
+          <ShieldCheck size={14} color="#2E3192" />
           <Text style={styles.kycTierText}>Tier {user.kycTier} Verified</Text>
         </TouchableOpacity>
       </View>
@@ -133,6 +136,79 @@ export default function DashboardScreen({
           <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
       )}
+
+      {/* My Assigned Vehicle Asset Card (User Showcase Card with Light Blue Badge) */}
+      <View style={styles.assignedBikeCard}>
+        <View style={styles.assignedBikeHeader}>
+          <Text style={styles.assignedBikeTitle}>My DandoEv G90</Text>
+          <View style={styles.assignedBadge}>
+            <Text style={styles.assignedBadgeText}>Assigned</Text>
+          </View>
+        </View>
+
+        <View style={styles.assignedBikeBody}>
+          <View style={styles.assignedBikeImageWrapper}>
+            <Image
+              source={BIKE_ASSETS['bike-g90']}
+              resizeMode="contain"
+              style={styles.assignedBikeImage}
+            />
+          </View>
+
+          <View style={styles.assignedBikeInfoCol}>
+            <TouchableOpacity
+              style={styles.assignedInfoRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                setToastMessage('Copied Bike ID: DEV-G90-0001');
+                setTimeout(() => setToastMessage(null), 3000);
+              }}
+            >
+              <Text style={styles.assignedInfoLabel}>Bike ID: </Text>
+              <Text style={styles.assignedInfoValue}>DEV-G90-0001</Text>
+              <Copy size={13} color="#64748B" style={{ marginLeft: 5 }} />
+            </TouchableOpacity>
+
+            <View style={styles.assignedInfoRow}>
+              <Text style={styles.assignedInfoLabel}>Financing: </Text>
+              <Text style={styles.assignedInfoValue}>18 months</Text>
+            </View>
+
+            <View style={styles.assignedInfoRow}>
+              <Text style={styles.assignedInfoLabel}>Payment status: </Text>
+              <View style={styles.statusActivePill}>
+                <View style={styles.statusActiveDot} />
+                <Text style={styles.statusActiveText}>Active</Text>
+              </View>
+            </View>
+
+            <View style={styles.assignedInfoRow}>
+              <Text style={styles.assignedInfoLabel}>Ownership: </Text>
+              <Text style={styles.assignedInfoValue}>Rent-to-own</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quick UX Telematics Bar */}
+        <View style={styles.telematicsBar}>
+          <View style={styles.telematicsChip}>
+            <Battery size={13} color="#2E3192" />
+            <Text style={styles.telematicsChipText}>Battery: 98% Normal</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.telematicsActionBtn}
+            onPress={() => onSwitchTab('loans')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.telematicsActionText}>Schedule</Text>
+            <ArrowRight size={12} color="#2E3192" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.assignedBikeFootnote}>
+          Illustrative example. Actual information comes from the rider&apos;s approved financing and assigned bicycle record.
+        </Text>
+      </View>
 
       {/* Linked Autopayment Card or Bank Mandate */}
       <View style={styles.atmCardWrapper}>
@@ -168,8 +244,8 @@ export default function DashboardScreen({
               <View style={styles.atmLogoRow}>
                 <View style={[styles.atmLogoCircle, { backgroundColor: '#EA580C' }]} />
                 <Text style={styles.atmCardBrand}>{attachedCard.bankName}</Text>
-                <View style={[styles.platinumBadge, { backgroundColor: '#DCFCE7' }]}>
-                  <Text style={[styles.platinumText, { color: '#166534' }]}>AUTOPAY ACTIVE</Text>
+                <View style={[styles.platinumBadge, { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE', borderWidth: 1 }]}>
+                  <Text style={[styles.platinumText, { color: '#2E3192' }]}>AUTOPAY ACTIVE</Text>
                 </View>
               </View>
               <Wifi size={20} color="rgba(255, 255, 255, 0.7)" style={{ transform: [{ rotate: '90deg' }] }} />
@@ -216,7 +292,7 @@ export default function DashboardScreen({
                   <Text style={[styles.platinumText, { color: '#92400E' }]}>NIBSS E-MANDATE</Text>
                 </View>
               </View>
-              <ShieldCheck size={18} color="#0CBDA9" />
+              <ShieldCheck size={18} color="#60A5FA" />
             </View>
 
             <View style={styles.emvChipRow}>
@@ -305,7 +381,7 @@ export default function DashboardScreen({
               <Text style={styles.loanDueDate}>Auto-deducted in 3 days (Mondays)</Text>
             </View>
             <TouchableOpacity
-              style={[styles.payNowBtn, loan.status === 'completed' && { backgroundColor: '#0CBDA9' }]}
+              style={[styles.payNowBtn, loan.status === 'completed' && { backgroundColor: '#2E3192' }]}
               onPress={handleQuickPay}
               disabled={loan.status === 'completed'}
             >
@@ -340,7 +416,7 @@ export default function DashboardScreen({
         <View style={styles.savingsCard}>
           <View style={styles.savingsTop}>
             <View style={styles.savingsTitleRow}>
-              <PiggyBank size={20} color="#0CBDA9" />
+              <PiggyBank size={20} color="#2E3192" />
               <Text style={styles.savingsTitle}>Save-As-You-Ride Vault</Text>
             </View>
             <View style={styles.lockedBadge}>
@@ -399,8 +475,8 @@ export default function DashboardScreen({
             onPress={onNavigateToFundWallet}
             activeOpacity={0.8}
           >
-            <View style={[styles.actionIcon, { backgroundColor: '#E6FAF6' }]}>
-              <PlusCircle size={22} color="#0CBDA9" />
+            <View style={[styles.actionIcon, { backgroundColor: '#EEF2FF' }]}>
+              <PlusCircle size={22} color="#2E3192" />
             </View>
             <Text style={styles.actionText}>Fund Wallet</Text>
           </TouchableOpacity>
@@ -564,33 +640,186 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#C7D2FE',
   },
   kycTierText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   toast: {
-    backgroundColor: '#0CBDA9',
+    backgroundColor: '#2E3192',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginHorizontal: 16,
     marginTop: 8,
+    marginBottom: 10,
     padding: 12,
     borderRadius: 14,
+    shadowColor: '#2E3192',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   toastText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     flex: 1,
+  },
+  /* My Assigned Vehicle Asset Card (User Showcase Card with Light Blue Badge) */
+  assignedBikeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0A154F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  assignedBikeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  assignedBikeTitle: {
+    fontSize: 20,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontWeight: '800',
+    color: '#0A154F',
+    letterSpacing: -0.5,
+  },
+  assignedBadge: {
+    backgroundColor: '#EEF2FF', // Light blue shade of the #2E3192 logo
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  assignedBadgeText: {
+    color: '#2E3192', // Logo brand color
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontWeight: '700',
+  },
+  assignedBikeBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 14,
+  },
+  assignedBikeImageWrapper: {
+    width: 108,
+    height: 108,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 6,
+  },
+  assignedBikeImage: {
+    width: '100%',
+    height: '100%',
+  },
+  assignedBikeInfoCol: {
+    flex: 1,
+    gap: 7,
+  },
+  assignedInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  assignedInfoLabel: {
+    fontSize: 13.5,
+    fontFamily: 'Inter_500Medium',
+    color: '#475569',
+  },
+  assignedInfoValue: {
+    fontSize: 14.5,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  statusActivePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  statusActiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#2563EB',
+  },
+  statusActiveText: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#1E40AF',
+  },
+  telematicsBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  telematicsChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  telematicsChipText: {
+    fontSize: 11.5,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#334155',
+  },
+  telematicsActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  telematicsActionText: {
+    fontSize: 11.5,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#2E3192',
+  },
+  assignedBikeFootnote: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'Inter_400Regular',
+    color: '#64748B',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 10,
   },
 
   /* Photorealistic ATM Card */
@@ -940,7 +1169,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   kycBanner: {
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#EEF2FF',
     borderRadius: 18,
     padding: 16,
     flexDirection: 'row',
@@ -954,7 +1183,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#E0E7FF',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -966,7 +1195,7 @@ const styles = StyleSheet.create({
   },
   kycBannerSub: {
     fontSize: 11,
-    color: '#2E6A52',
+    color: '#475569',
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
     lineHeight: 15,
@@ -1002,13 +1231,15 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   lockedBadge: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   lockedBadgeText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -1016,7 +1247,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#0CBDA9',
+    color: '#2E3192',
   },
   vaultSub: {
     fontSize: 11,
@@ -1057,7 +1288,7 @@ const styles = StyleSheet.create({
   },
   streakBarFill: {
     height: '100%',
-    backgroundColor: '#0CBDA9',
+    backgroundColor: '#2E3192',
     borderRadius: 4,
   },
   streakHint: {
@@ -1167,7 +1398,7 @@ const styles = StyleSheet.create({
   },
   featuredDaily: {
     fontSize: 11,
-    color: '#0CBDA9',
+    color: '#2E3192',
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     marginTop: 1,

@@ -54,7 +54,7 @@ export default function FinancialStatementModal({ visible, onClose }: FinancialS
           <View style={styles.modalHeader}>
             <View style={styles.headerTitleCol}>
               <View style={styles.officialBadge}>
-                <ShieldCheck size={12} color="#166534" />
+                <ShieldCheck size={12} color="#2E3192" />
                 <Text style={styles.officialBadgeText}>CBN / NIBSS AUDITED LEDGER</Text>
               </View>
               <Text style={styles.modalTitle}>Financial Statement of Account</Text>
@@ -112,8 +112,8 @@ export default function FinancialStatementModal({ visible, onClose }: FinancialS
 
               <View style={styles.summaryTile}>
                 <Text style={styles.summaryTileLabel}>Total Repaid</Text>
-                <Text style={[styles.summaryTileAmount, { color: '#059669' }]}>
-                  ?{report.totalRepaid.toLocaleString()}
+                <Text style={[styles.summaryTileAmount, { color: '#2E3192' }]}>
+                  ₦{report.totalRepaid.toLocaleString()}
                 </Text>
                 <Text style={styles.summaryTileSub}>Verified Sweeps</Text>
               </View>
@@ -158,14 +158,14 @@ export default function FinancialStatementModal({ visible, onClose }: FinancialS
                         style={[
                           styles.ledgerIconCircle,
                           isPositive
-                            ? { backgroundColor: '#E6FAF6' }
+                            ? { backgroundColor: '#EEF2FF' }
                             : isVault
                             ? { backgroundColor: '#EEF2FF' }
                             : { backgroundColor: '#FFF1F2' },
                         ]}
                       >
                         {isPositive ? (
-                          <ArrowDownRight size={16} color="#059669" />
+                          <ArrowDownRight size={16} color="#2E3192" />
                         ) : isVault ? (
                           <Lock size={15} color="#4A50AE" />
                         ) : (
@@ -185,26 +185,26 @@ export default function FinancialStatementModal({ visible, onClose }: FinancialS
                         style={[
                           styles.ledgerAmount,
                           isPositive
-                            ? { color: '#059669' }
+                            ? { color: '#2E3192' }
                             : isVault
                             ? { color: '#4A50AE' }
                             : { color: '#0A154F' },
                         ]}
                       >
-                        {isPositive ? '+' : ''}?{Math.abs(tx.amount).toLocaleString()}
+                        {isPositive ? '+' : ''}₦{Math.abs(tx.amount).toLocaleString()}
                       </Text>
                       <View
                         style={[
                           styles.statusBadge,
                           tx.status === 'Success'
-                            ? { backgroundColor: '#DCFCE7' }
+                            ? { backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }
                             : { backgroundColor: '#E0E7FF' },
                         ]}
                       >
                         <Text
                           style={[
                             styles.statusBadgeText,
-                            tx.status === 'Success' ? { color: '#166534' } : { color: '#3730A3' },
+                            tx.status === 'Success' ? { color: '#2E3192' } : { color: '#3730A3' },
                           ]}
                         >
                           {tx.status.toUpperCase()}
@@ -282,17 +282,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     alignSelf: 'flex-start',
     marginBottom: 6,
   },
   officialBadgeText: {
     fontSize: 9,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#166534',
+    color: '#2E3192',
     letterSpacing: 0.5,
   },
   modalTitle: {
@@ -317,7 +319,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   toastBanner: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#2E3192',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

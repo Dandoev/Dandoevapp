@@ -93,7 +93,7 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
               onPress={onNavigateToKyc}
               activeOpacity={0.8}
             >
-              <ShieldCheck size={14} color="#0CBDA9" />
+              <ShieldCheck size={14} color="#2E3192" />
               <Text style={styles.kycBadgeText}>
                 KYC Tier {user.kycTier} Verified {user.kycTier < 3 ? '• Upgrade to Tier 3 →' : '• Highest Limit'}
               </Text>
@@ -104,19 +104,19 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
         {/* Verification Status Cards */}
         <View style={styles.verificationRow}>
           <View style={styles.verifBox}>
-            <CheckCircle size={16} color="#0CBDA9" />
+            <CheckCircle size={16} color="#2E3192" />
             <Text style={styles.verifText}>BVN Verified</Text>
           </View>
           <View style={styles.verifBox}>
-            <CheckCircle size={16} color="#0CBDA9" />
+            <CheckCircle size={16} color="#2E3192" />
             <Text style={styles.verifText}>NIN Confirmed</Text>
           </View>
           <TouchableOpacity
-            style={[styles.verifBox, user.kycTier >= 3 && { borderColor: '#0CBDA9', backgroundColor: '#E6FAF6' }]}
+            style={[styles.verifBox, user.kycTier >= 3 && { borderColor: '#C7D2FE', backgroundColor: '#EEF2FF' }]}
             onPress={onNavigateToKyc}
           >
-            <CheckCircle size={16} color={user.kycTier >= 3 ? '#0CBDA9' : '#6366F1'} />
-            <Text style={[styles.verifText, user.kycTier >= 3 ? { color: '#087F75' } : { color: '#4A50AE' }]}>
+            <CheckCircle size={16} color={user.kycTier >= 3 ? '#2E3192' : '#6366F1'} />
+            <Text style={[styles.verifText, user.kycTier >= 3 ? { color: '#2E3192' } : { color: '#4A50AE' }]}>
               {user.kycTier >= 3 ? 'Guarantor OK' : '+ Tier 3 KYC'}
             </Text>
           </TouchableOpacity>
@@ -204,7 +204,7 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
 
           <View style={[styles.prefRow, { borderBottomWidth: 0 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <ShieldCheck size={18} color="#0CBDA9" />
+              <ShieldCheck size={18} color="#2E3192" />
               <View>
                 <Text style={styles.prefTitle}>Daily Save-As-You-Ride</Text>
                 <Text style={styles.prefSub}>₦1,000/day micro-savings sweep</Text>
@@ -213,8 +213,8 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
             <Switch
               value={dailySavingsEnabled}
               onValueChange={setDailySavingsEnabled}
-              trackColor={{ false: '#DBE2F0', true: '#A7F3D0' }}
-              thumbColor={dailySavingsEnabled ? '#0CBDA9' : '#94A3B8'}
+              trackColor={{ false: '#DBE2F0', true: '#C7D2FE' }}
+              thumbColor={dailySavingsEnabled ? '#2E3192' : '#94A3B8'}
             />
           </View>
         </View>
@@ -320,7 +320,7 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
             onPress={() => Linking.openURL('https://dashboard.dandoev.com/privacy')}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <ShieldCheck size={18} color="#0CBDA9" />
+              <ShieldCheck size={18} color="#2E3192" />
               <View>
                 <Text style={styles.actionTitle}>Privacy Policy</Text>
                 <Text style={styles.actionSub}>NDPR compliance, data retention & rights</Text>
@@ -427,15 +427,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     alignSelf: 'flex-start',
     marginTop: 6,
   },
   kycBadgeText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -593,17 +595,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   autopayBadge: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#C7D2FE',
   },
   autopayBadgeText: {
     fontSize: 9,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#166534',
+    color: '#2E3192',
     letterSpacing: 0.5,
   },
   paymentMethodCard: {

@@ -492,8 +492,9 @@ textarea {
 }
 
 .badge-success {
-  background: var(--success-bg);
-  color: #1A8F4E;
+  background: #EEF2FF;
+  color: #2E3192;
+  border: 1px solid #C7D2FE;
 }
 
 .badge-warning {

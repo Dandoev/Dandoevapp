@@ -175,7 +175,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <View style={[
                     styles.categoryBadge,
-                    isBattery && { backgroundColor: '#E6FAF6' },
+                    isBattery && { backgroundColor: '#EEF2FF' },
                     isCharger && { backgroundColor: '#FFFBEB' }
                   ]}>
                     <Text style={[
@@ -220,7 +220,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
                 ) : null}
                 {product.batteryCapacity ? (
                   <View style={styles.specItem}>
-                    <Battery size={14} color="#0CBDA9" />
+                    <Battery size={14} color="#2E3192" />
                     <Text style={styles.specText}>{product.batteryCapacity}Ah</Text>
                   </View>
                 ) : null}

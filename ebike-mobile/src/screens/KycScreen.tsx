@@ -127,7 +127,7 @@ export default function KycScreen({ token, onBack, onKycComplete }: KycScreenPro
 
             <Text style={styles.label}>Bank Verification Number (BVN)</Text>
             <View style={styles.inputContainer}>
-              <Lock size={16} color="#0CBDA9" />
+              <Lock size={16} color="#2E3192" />
               <TextInput
                 style={styles.input}
                 value={bvn}
@@ -142,7 +142,7 @@ export default function KycScreen({ token, onBack, onKycComplete }: KycScreenPro
 
             <Text style={styles.label}>National Identity Number (NIN)</Text>
             <View style={styles.inputContainer}>
-              <Lock size={16} color="#0CBDA9" />
+              <Lock size={16} color="#2E3192" />
               <TextInput
                 style={styles.input}
                 value={nin}
@@ -265,7 +265,7 @@ export default function KycScreen({ token, onBack, onKycComplete }: KycScreenPro
             </View>
 
             <View style={styles.guarantorConsentBox}>
-              <CheckCircle2 size={16} color="#0CBDA9" />
+              <CheckCircle2 size={16} color="#2E3192" />
               <Text style={styles.guarantorConsentText}>
                 Digital agreement will be dispatched via SMS & WhatsApp for instant 1-tap co-signing.
               </Text>
@@ -293,7 +293,7 @@ export default function KycScreen({ token, onBack, onKycComplete }: KycScreenPro
         {currentStep === 4 && (
           <View style={[styles.card, { alignItems: 'center', paddingVertical: 32 }]}>
             <View style={styles.successIconBubble}>
-              <ShieldCheck size={48} color="#0CBDA9" />
+              <ShieldCheck size={48} color="#2E3192" />
             </View>
             <Text style={styles.congratsTitle}>Tier 3 KYC Verified! 🎉</Text>
             <Text style={styles.congratsSubtitle}>
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E3192',
   },
   stepBubbleDone: {
-    backgroundColor: '#0CBDA9',
+    backgroundColor: '#2E3192',
   },
   stepNum: {
     fontSize: 12,
@@ -464,13 +464,15 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   verifiedTag: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   verifiedTagText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -478,11 +480,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#C7D2FE',
     marginBottom: 16,
   },
   openBankingLeft: {
@@ -565,7 +567,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -588,11 +592,11 @@ const styles = StyleSheet.create({
   },
   creditLimitBox: {
     width: '100%',
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     padding: 18,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#C7D2FE',
     alignItems: 'center',
     marginBottom: 24,
   },

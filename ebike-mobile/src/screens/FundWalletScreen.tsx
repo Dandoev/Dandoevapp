@@ -136,7 +136,7 @@ export default function FundWalletScreen({ token, onBack, onSuccess }: FundWalle
           /* Success Receipt Card */
           <View style={styles.receiptCard}>
             <View style={styles.successIconBubble}>
-              <CheckCircle2 size={40} color="#0CBDA9" />
+              <CheckCircle2 size={40} color="#2E3192" />
             </View>
             <Text style={styles.receiptTitle}>Wallet Credited Successfully! ⚡</Text>
             <Text style={styles.receiptAmount}>₦{parseInt(amount, 10).toLocaleString()}</Text>
@@ -678,14 +678,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
   },
   checkTag: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   checkTagText: {
     fontSize: 10,
-    color: '#087F75',
+    color: '#2E3192',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   ussdBox: {
@@ -745,7 +747,9 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,

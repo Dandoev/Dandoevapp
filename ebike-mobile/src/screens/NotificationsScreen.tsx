@@ -57,7 +57,7 @@ export default function NotificationsScreen({ onBack }: NotificationsScreenProps
   const getBadgeColor = (type: string) => {
     switch (type) {
       case 'payment':
-        return '#E6FAF6';
+        return '#EEF2FF';
       case 'message':
         return '#F0F9FF';
       case 'update':
@@ -280,15 +280,17 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   amountTag: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     alignSelf: 'flex-start',
     marginTop: 6,
   },
   amountTagText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',

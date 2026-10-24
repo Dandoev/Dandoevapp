@@ -182,7 +182,7 @@ export default function ProductDetailScreen({
             )}
             {product.batteryCapacity && (
               <View style={styles.specTile}>
-                <Battery size={20} color="#0CBDA9" />
+                <Battery size={20} color="#2E3192" />
                 <Text style={styles.specTileLabel}>Battery Capacity</Text>
                 <Text style={styles.specTileVal}>{product.batteryCapacity} Ah Lithium</Text>
               </View>
@@ -512,7 +512,7 @@ export default function ProductDetailScreen({
 
               <View style={styles.bnplDetailRow}>
                 <Text style={styles.bnplDetailLabel}>Initial Down Payment:</Text>
-                <Text style={[styles.bnplDetailVal, { color: '#0CBDA9', fontWeight: '900' }]}>
+                <Text style={[styles.bnplDetailVal, { color: '#2E3192', fontWeight: '900' }]}>
                   ₦0 (0% Down Promo)
                 </Text>
               </View>
@@ -602,7 +602,7 @@ export default function ProductDetailScreen({
             {outrightSuccess ? (
               <View style={styles.successContent}>
                 <View style={styles.successIconCircle}>
-                  <CheckCircle2 size={48} color="#0CBDA9" />
+                  <CheckCircle2 size={48} color="#2E3192" />
                 </View>
                 <Text style={styles.successHeading}>₦{breakdown.totalOutright.toLocaleString()} Paid</Text>
                 <Text style={styles.successMsg}>
@@ -743,13 +743,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 14,
     right: 14,
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   stockBadgeText: {
-    color: '#087F75',
+    color: '#2E3192',
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -803,12 +805,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bnplTagBox: {
-    backgroundColor: '#E6FAF6',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#C7D2FE',
     alignItems: 'flex-end',
   },
   bnplTagHeader: {
@@ -883,7 +885,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#0CBDA9',
+    backgroundColor: '#2E3192',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1251,11 +1253,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   confirmBuyBtn: {
-    backgroundColor: '#0CBDA9',
+    backgroundColor: '#2E3192',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#0CBDA9',
+    shadowColor: '#2E3192',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -1275,7 +1277,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,

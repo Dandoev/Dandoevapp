@@ -119,9 +119,9 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
       <ScrollView contentContainerStyle={styles.scrollContent} contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
         <View style={styles.contentWrapper}>
           <View style={styles.brandHeader}>
-            <BrandMark size={58} />
-            <Text style={styles.brandName}>Dando<Text style={{ color: '#26FEDC' }}>EV</Text></Text>
-            <Text style={styles.brandTagline}>MOVE BEYOND ORDINARY</Text>
+            <BrandMark size={58} backgroundColor="#FFFFFF" />
+            <Text style={styles.brandName}>DandoEv</Text>
+            <Text style={styles.brandTagline}>The future is here</Text>
           </View>
 
           <View style={styles.card}>
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     fontSize: 33,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#26FEDC',
+    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   brandTagline: {

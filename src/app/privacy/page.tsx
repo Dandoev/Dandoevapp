@@ -8,8 +8,8 @@ export default function PrivacyPolicyPage() {
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10 py-4">
         <div className="max-w-5xl mx-auto px-6 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-black text-white tracking-tight flex items-center gap-1">
-            Dando<span className="text-emerald-400">Ev</span>
+          <Link href="/" className="text-2xl font-black text-white tracking-tight">
+            DandoEv
           </Link>
           <div className="flex items-center gap-4 text-xs font-semibold">
             <Link href="/terms" className="text-slate-400 hover:text-white transition-colors">

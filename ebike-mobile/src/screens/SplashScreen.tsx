@@ -46,13 +46,11 @@ export default function SplashScreen() {
         ]}
       >
         <View style={styles.logoCard}>
-          <BrandMark size={94} />
+          <BrandMark size={94} backgroundColor="#FFFFFF" />
         </View>
 
-        <Text style={styles.brandTitle}>
-          Dando<Text style={styles.brandHighlight}>EV</Text>
-        </Text>
-        <Text style={styles.subtitle}>MOVE BEYOND ORDINARY</Text>
+        <Text style={styles.brandTitle}>DandoEv</Text>
+        <Text style={styles.subtitle}>THE FUTURE IS HERE</Text>
 
         <View style={styles.badge}>
           <Text style={styles.badgeText}>ELECTRIC MOBILITY, REIMAGINED</Text>
@@ -90,9 +88,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: 4,
   },
-  brandHighlight: {
-    color: '#26FEDC',
-  },
   subtitle: {
     fontSize: 11,
     color: '#B6C6DC',
@@ -110,7 +105,7 @@ const styles = StyleSheet.create({
     borderColor: '#5459A8',
   },
   badgeText: {
-    color: '#26FEDC',
+    color: '#FFFFFF',
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',

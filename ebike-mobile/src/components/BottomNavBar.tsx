@@ -37,7 +37,7 @@ export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: Bo
               <View style={styles.iconContainer}>
                 <IconComponent
                   size={22}
-                  color={isActive ? '#0A154F' : '#B6C6DC'}
+                  color={isActive ? '#FFFFFF' : '#B6C6DC'}
                   strokeWidth={isActive ? 2.3 : 1.9}
                 />
                 {tab.key === 'loans' && badgeCount?.loans ? (
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabButtonActive: {
-    backgroundColor: '#26FEDC',
+    backgroundColor: '#2E3192',
   },
   iconContainer: {
     position: 'relative',
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   labelActive: {
-    color: '#0A154F',
+    color: '#FFFFFF',
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
   },

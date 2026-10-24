@@ -8,7 +8,7 @@ export default function TermsPage() {
             <nav style={{ background: 'var(--white)', borderBottom: '1px solid var(--gray-200)', padding: '1rem 0', position: 'sticky', top: 0, zIndex: 10 }}>
                 <div className="container flex justify-between items-center">
                     <Link href="/" className="logo" style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.05em' }}>
-                        Dando<span>Ev</span>
+                        DandoEv
                     </Link>
                     <Link href="/bnpl/loan-terms" className="btn btn-primary btn-sm">Return to Application</Link>
                 </div>

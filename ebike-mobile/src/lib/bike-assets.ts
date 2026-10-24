@@ -6,6 +6,7 @@
 export const BRAND_ASSETS = {
   logo: require('../../assets/logo.png'),
   icon: require('../../assets/icon.png'),
+  emblem: require('../../assets/android-icon-foreground.png'),
 };
 
 export const BIKE_ASSETS: Record<string, any> = {

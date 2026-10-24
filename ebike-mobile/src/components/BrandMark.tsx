@@ -5,34 +5,36 @@ import { BRAND_ASSETS } from '../lib/bike-assets';
 interface BrandMarkProps {
   size?: number;
   backgroundColor?: string;
+  variant?: 'emblem' | 'full';
 }
 
-// The supplied wordmark contains the symbol in its upper portion. Frame that
-// symbol consistently without creating a separate, divergent logo asset.
-export default function BrandMark({ size = 36, backgroundColor = '#26FEDC' }: BrandMarkProps) {
+export default function BrandMark({
+  size = 36,
+  backgroundColor = '#FFFFFF',
+  variant = 'emblem',
+}: BrandMarkProps) {
+  const isEmblem = variant === 'emblem';
   return (
     <View
       accessibilityRole="image"
-      accessibilityLabel="DandoEV logo"
+      accessibilityLabel="DandoEv logo"
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.24,
+        borderRadius: Math.round(size * 0.24),
         backgroundColor,
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: Math.round(size * 0.1),
       }}
     >
       <Image
-        source={BRAND_ASSETS.logo}
-        resizeMode="stretch"
+        source={isEmblem ? BRAND_ASSETS.emblem : BRAND_ASSETS.logo}
+        resizeMode="contain"
         style={{
-          position: 'absolute',
-          width: size * 1.46,
-          height: size * 1.33,
-          left: -size * 0.22,
-          top: -size * 0.05,
+          width: '100%',
+          height: '100%',
         }}
       />
     </View>

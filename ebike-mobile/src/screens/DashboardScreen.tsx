@@ -87,10 +87,10 @@ export default function DashboardScreen({
       {/* Top Header Bar */}
       <View style={styles.topHeader}>
         <View style={styles.brandRow}>
-          <BrandMark size={38} />
+          <BrandMark size={38} backgroundColor="#FFFFFF" />
           <View>
-            <Text style={styles.brandName}>DandoEV</Text>
-            <Text style={styles.brandTagline}>YOUR ELECTRIC LIFE</Text>
+            <Text style={styles.brandName}>DandoEv</Text>
+            <Text style={styles.brandTagline}>The future is here</Text>
           </View>
         </View>
 

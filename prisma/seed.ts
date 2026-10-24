@@ -9,7 +9,7 @@ async function main() {
   console.log('🌱 Seeding DandoEv database with rich Nigerian demo datasets...');
 
   // ---- 1. Create Admin Users ----
-  const adminPasswordHash = await bcrypt.hash('Admin@DandoEv2025!', 12);
+  const adminPasswordHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || require('crypto').randomBytes(18).toString('base64url'), 12);
 
   const superAdmin = await prisma.user.upsert({
     where: { email: 'admin@dandoev.com' },
@@ -722,9 +722,9 @@ async function main() {
   console.log('\n✨ Database seeding completed successfully!\n');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🔑 ADMIN ACCOUNTS (Use for Dashboard Presentation):');
-  console.log('  Super Admin   : admin@dandoev.com   / Admin@DandoEv2025!');
-  console.log('  Finance Admin : finance@dandoev.com / Admin@DandoEv2025!');
-  console.log('  Ops Admin     : ops@dandoev.com     / Admin@DandoEv2025!');
+  console.log('  Super Admin   : admin@dandoev.com');
+  console.log('  Finance Admin : finance@dandoev.com');
+  console.log('  Ops Admin     : ops@dandoev.com');
   console.log('────────────────────────────────────────────────────────');
   console.log('👤 DEMO BORROWERS:');
   console.log('  1. Babatunde Adeleke (babatunde.adeleke@demo.com) → PENDING (Demo Asset Allocation)');

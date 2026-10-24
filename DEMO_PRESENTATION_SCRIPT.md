@@ -11,7 +11,7 @@
 | Role | Email | Password | Direct 1-Click Access |
 |---|---|---|---|
 | **Financed Buyer (Solomon Dunu)** | `solomon.dunu@demo.com` | `password123` | Click **"Demo Buyer"** on `/auth/signin` |
-| **Super Administrator** | `admin@dandoev.com` | `Admin@DandoEv2025!` | Click **"Demo Admin"** on `/auth/signin` |
+| **Super Administrator** | `admin@dandoev.com` | (set in Supabase Auth) | Sign in at `/login` |
 
 ---
 

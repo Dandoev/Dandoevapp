@@ -9,7 +9,6 @@ import {
   Mail,
   Eye,
   EyeOff,
-  ArrowRight,
   Smartphone,
   AlertCircle,
   Bike,
@@ -32,90 +31,16 @@ function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const staffPersonas = [
-    {
-      roleName: 'Super Administrator',
-      email: 'admin@dandoev.com',
-      password: 'Admin@DandoEv2025!',
-      badge: 'Full Authority',
-      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      icon: '👑',
-      desc: 'Platform governance, staff provisioning & settlements',
-      target: '/admin',
-      isStaff: true,
-    },
-    {
-      roleName: 'Credit Underwriter',
-      email: 'adewale.risk@dandoev.com',
-      password: 'Underwriter@2026!',
-      badge: 'Origination',
-      badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-      icon: '📊',
-      desc: 'Mono Open Banking analysis & asset allocation',
-      target: '/admin',
-      isStaff: true,
-    },
-    {
-      roleName: 'Fleet Operations',
-      email: 'zainab.fleet@dandoev.com',
-      password: 'FleetOps@2026!',
-      badge: 'Assets',
-      badgeClass: 'bg-teal-100 text-teal-800 border-teal-200',
-      icon: '⚡',
-      desc: 'E-Bike stock, dual 60V battery health & Lagos hubs',
-      target: '/admin',
-      isStaff: true,
-    },
-    {
-      roleName: 'Collections Officer',
-      email: 'emeka.collections@dandoev.com',
-      password: 'Collections@2026!',
-      badge: 'Recovery',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
-      icon: '💰',
-      desc: 'Save-As-You-Ride escrow & automated retry nudges',
-      target: '/admin',
-      isStaff: true,
-    },
-  ];
-
-  const riderPersonas = [
-    {
-      roleName: 'Solomon Dunu (Active BNPL Rider)',
-      email: 'solomon.dunu@rider.dandoev.com',
-      password: 'Rider@DandoEv2026!',
-      badge: 'Tier 3 Verified',
-      badgeClass: 'bg-teal-100 text-teal-800 border-teal-200',
-      icon: '🏍️',
-      desc: 'Active DandoEv X6 loan, compulsory savings vault & repayments',
-      target: '/dashboard?demo=buyer',
-      isStaff: false,
-    },
-    {
-      roleName: 'New E-Bike Buyer (Express BNPL)',
-      email: 'new.buyer@dandoev.com',
-      password: 'Buyer@DandoEv2026!',
-      badge: '3-Min Checkout',
-      badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      icon: '✨',
-      desc: 'Jump straight into the 3-Minute Mono Open Banking Checkout',
-      target: '/checkout/bnpl',
-      isStaff: false,
-    },
-  ];
-
-  const executeSignIn = async (
-    emailToUse: string,
-    passwordToUse: string,
-    targetUrl?: string,
-    isStaffLogin?: boolean
-  ) => {
+  const executeSignIn = async (emailToUse: string, passwordToUse: string) => {
     setLoading(true);
     setError('');
 
-    const destination =
-      targetUrl || redirectParam || (portalMode === 'rider' ? '/dashboard?demo=buyer' : '/admin');
-    const useStaffToken = isStaffLogin ?? portalMode === 'staff';
+    // Only allow same-site redirects (prevents open redirects)
+    const safeRedirect =
+      redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
+        ? redirectParam
+        : null;
+    const destination = safeRedirect || (portalMode === 'rider' ? '/dashboard' : '/admin');
 
     try {
       const res = await fetch('/api/auth/signin', {
@@ -125,38 +50,25 @@ function SignInForm() {
       });
 
       const data = await res.json().catch(() => ({}));
-      const fallbackToken = useStaffToken ? 'demo-token-admin' : 'demo-token-customer';
-      const token = data.accessToken || fallbackToken;
 
-      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `sb-access-token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      if (!res.ok || !data.accessToken) {
+        setError(
+          res.status === 429
+            ? 'Too many attempts. Please try again shortly.'
+            : 'Invalid email or password.'
+        );
+        return;
+      }
+
+      // The API sets the session cookies; mirror the session for client components.
       try {
-        localStorage.setItem('token', token);
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-        } else {
-          localStorage.setItem(
-            'user',
-            JSON.stringify({
-              id: useStaffToken ? 'staff-admin-01' : 'rider-solomon-01',
-              email: emailToUse,
-              role: useStaffToken ? 'super_admin' : 'customer',
-              fullName: useStaffToken ? 'Super Administrator' : 'Solomon Dunu',
-              phone: '+234 803 123 4567',
-            })
-          );
-        }
+        localStorage.setItem('token', data.accessToken);
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
       } catch {}
 
       window.location.href = destination;
     } catch {
-      const fallbackToken = useStaffToken ? 'demo-token-admin' : 'demo-token-customer';
-      document.cookie = `token=${fallbackToken}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `sb-access-token=${fallbackToken}; path=/; max-age=86400; SameSite=Lax`;
-      try {
-        localStorage.setItem('token', fallbackToken);
-      } catch {}
-      window.location.href = destination;
+      setError('Unable to sign in. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -170,8 +82,6 @@ function SignInForm() {
     }
     await executeSignIn(form.email, form.password);
   };
-
-  const activePersonas = portalMode === 'rider' ? riderPersonas : staffPersonas;
 
   return (
     <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-12 bg-[#030712] font-sans">
@@ -324,8 +234,8 @@ function SignInForm() {
             </h2>
             <p className="text-xs text-slate-500 mt-1">
               {portalMode === 'rider'
-                ? 'Track your BNPL loan progress, compulsory savings vault, or launch a 1-click demo below.'
-                : 'Enter your official staff credentials or click a verified persona below for instant access.'}
+                ? 'Track your BNPL loan progress, repayments and compulsory savings vault.'
+                : 'Enter your official staff credentials to continue.'}
             </p>
           </div>
 
@@ -399,53 +309,6 @@ function SignInForm() {
                 : 'Sign In to Operations Console →'}
             </button>
           </form>
-
-          {/* Quick Persona Section */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Or 1-Click Verified Demo Access
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {activePersonas.map((persona) => (
-              <button
-                key={persona.email}
-                type="button"
-                onClick={() => {
-                  setForm({ email: persona.email, password: persona.password });
-                  executeSignIn(persona.email, persona.password, persona.target, persona.isStaff);
-                }}
-                disabled={loading}
-                className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50/80 hover:border-primary hover:bg-slate-100/80 flex items-center justify-between transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-base shrink-0">
-                    {persona.icon}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-xs text-slate-900">
-                        {persona.roleName}
-                      </span>
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${persona.badgeClass}`}
-                      >
-                        {persona.badge}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{persona.desc}</div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-            ))}
-          </div>
 
           {portalMode === 'rider' && (
             <p className="text-center text-xs text-slate-500 mt-5">

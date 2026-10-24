@@ -16,6 +16,7 @@
       "bundleIdentifier": "com.dandoev.mobile",
       "buildNumber": "1",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "DandoEv requires camera access to capture KYC identity documents and selfie verification.",
         "NSPhotoLibraryUsageDescription": "DandoEv requires photo library access to upload identity and utility documents."
       }

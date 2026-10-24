@@ -254,7 +254,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
               activeOpacity={0.85}
             >
               {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#0A154F" />
               ) : (
                 <Text style={styles.buttonText}>Create Account</Text>
               )}
@@ -304,10 +304,11 @@ const styles = StyleSheet.create({
   },
   brandTagline: {
     fontSize: 13,
-    color: '#B6C6DC',
-    fontFamily: 'Inter_500Medium',
+    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
     marginTop: 5,
     letterSpacing: 2,
+    opacity: 0.95,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -336,14 +337,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
   },
   autofillText: {
     fontSize: 11,
-    color: '#2E3192',
+    color: '#1768D1',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   errorBox: {
@@ -413,8 +414,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   checkboxActive: {
-    backgroundColor: '#2E3192',
-    borderColor: '#2E3192',
+    backgroundColor: '#36C0FE',
+    borderColor: '#36C0FE',
   },
   termsText: {
     fontSize: 12,
@@ -423,22 +424,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsLink: {
-    color: '#2E3192',
+    color: '#1768D1',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   button: {
-    backgroundColor: '#2E3192',
+    backgroundColor: '#36C0FE',
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    shadowColor: '#2E3192',
+    shadowColor: '#36C0FE',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 4,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#0A154F',
     fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   linkText: {
-    color: '#2E3192',
+    color: '#1768D1',
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',

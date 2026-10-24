@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   presetChipActive: {
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     borderWidth: 1,
     borderColor: '#4A50AE',
   },
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     borderColor: '#DBE2F0',
   },
   methodTabActive: {
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     borderColor: '#2E3192',
   },
   methodTabText: {
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,

@@ -136,7 +136,7 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#0A154F" />
             ) : (
               <Text style={styles.buttonText}>Sign in</Text>
             )}
@@ -185,10 +185,11 @@ const styles = StyleSheet.create({
   },
   brandTagline: {
     fontSize: 13,
-    color: '#B6C6DC',
-    fontFamily: 'Inter_500Medium',
+    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
     marginTop: 5,
     letterSpacing: 2,
+    opacity: 0.95,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -252,19 +253,19 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   button: {
-    backgroundColor: '#0A154F',
+    backgroundColor: '#36C0FE',
     paddingVertical: 16,
     borderRadius: 18,
     alignItems: 'center',
     marginTop: 6,
-    shadowColor: '#2E3192',
+    shadowColor: '#36C0FE',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 4,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#0A154F',
     fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
@@ -290,14 +291,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#E8F6FE',
     borderWidth: 1.5,
-    borderColor: '#C7D2FE',
+    borderColor: '#BFDBFE',
     paddingVertical: 14,
     borderRadius: 14,
   },
   demoButtonText: {
-    color: '#2E3192',
+    color: '#1768D1',
     fontSize: 14,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
@@ -322,7 +323,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   linkText: {
-    color: '#2E3192',
+    color: '#1768D1',
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',

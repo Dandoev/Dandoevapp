@@ -453,7 +453,7 @@ export default function DashboardScreen({
             onPress={() => onSwitchTab('bikes')}
             activeOpacity={0.8}
           >
-            <View style={[styles.actionIcon, { backgroundColor: '#E7F9F6' }]}>
+            <View style={[styles.actionIcon, { backgroundColor: '#E8F6FE' }]}>
               <ShoppingBag size={22} color="#2E3192" />
             </View>
             <Text style={styles.actionText}>Shop</Text>
@@ -579,8 +579,9 @@ const styles = StyleSheet.create({
   },
   brandTagline: {
     fontSize: 10,
-    fontFamily: 'Inter_500Medium',
-    color: '#66728A',
+    fontFamily: 'Inter_600SemiBold',
+    color: '#0A154F',
+    opacity: 0.9,
   },
   headerActions: {
     flexDirection: 'row',
@@ -1096,7 +1097,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1371,7 +1372,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   featuredCategoryBadge: {
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,

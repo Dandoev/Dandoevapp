@@ -160,10 +160,10 @@ export default function ProductDetailScreen({
                 <Text style={styles.bnplTagSub}>100% Returnable Escrow • {selectedTenure} Mo</Text>
               </View>
             ) : (
-              <View style={[styles.bnplTagBox, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
-                <Text style={[styles.bnplTagHeader, { color: '#15803D' }]}>PURCHASE MODEL</Text>
-                <Text style={[styles.bnplTagPrice, { color: '#166534', fontSize: 13 }]}>Outright Only</Text>
-                <Text style={[styles.bnplTagSub, { color: '#15803D' }]}>No BNPL for Accessories</Text>
+              <View style={[styles.bnplTagBox, { backgroundColor: '#E8F6FE', borderColor: '#BFDBFE' }]}>
+                <Text style={[styles.bnplTagHeader, { color: '#1768D1' }]}>PURCHASE MODEL</Text>
+                <Text style={[styles.bnplTagPrice, { color: '#0A154F', fontSize: 13 }]}>Outright Only</Text>
+                <Text style={[styles.bnplTagSub, { color: '#1768D1' }]}>No BNPL for Accessories</Text>
               </View>
             )}
           </View>
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 14,
     left: 14,
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   breakdownTypeBadge: {
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1247,7 +1247,7 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontFamily: 'Inter_500Medium',
     lineHeight: 16,
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
@@ -1358,7 +1358,7 @@ const styles = StyleSheet.create({
   },
   deliveryOptionCardActive: {
     borderColor: '#2E3192',
-    backgroundColor: '#E7F9F6',
+    backgroundColor: '#E8F6FE',
   },
   deliveryOptionRadio: {
     width: 20,

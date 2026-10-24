@@ -1,6 +1,7 @@
 'use client';
 
 export default function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -8,11 +9,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <head>
-        <title>Something went wrong - DandoEv</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body style={{ margin: 0, fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8FAFC', color: '#0F172A' }}>
+      <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#F8FAFC', color: '#0F172A' }}>
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center' }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: '#EEF2F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', color: '#0A154F', marginBottom: '24px' }}>
             !

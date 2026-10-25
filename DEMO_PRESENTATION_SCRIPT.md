@@ -86,7 +86,7 @@
   1. **Executive Portfolio KPIs:** Total Revenue (₦48.65M), Active Financed Bikes (38), Default Rate (1.45%), Portfolio Status Breakdown.
   2. **Physical Asset Serial Allocation:**
      - Navigate to **"Applications"** tab.
-     - Click **"Approve"** on a loan to demonstrate how operations assigns the physical **Bike Serial Number, Chassis Number, and Dual Battery Numbers** before dispatch.
+     - Click **"Approve"** on a loan to demonstrate how operations assigns the physical **Bike Serial Number, Chassis Number, and Battery Number** before dispatch.
   3. **Real-Time Fraud & Anomaly Console ([`/admin/fraud`](file:///c:/Users/DELL/Downloads/Ebike/src/app/admin/fraud/page.tsx)):**
      - Real-time stream of high-risk flags, velocity triggers, and debt-to-income (DTI) violations.
      - 1-click **"Approve Override"** vs **"Block & Suspend Profile"**.

@@ -41,24 +41,22 @@ export function calculateInstallment(principal: number, monthlyInterestRate: num
     // Interest = Principal * (Rate/100) * Months
     const totalInterest = Math.round(principal * (monthlyInterestRate / 100) * tenureMonths);
 
-    // Health Insurance: Fixed 60,000 NGN
-    const healthInsuranceFee = 60000;
+    // Comprehensive Insurance: 10% on every product (compulsory)
+    const healthInsuranceFee = Math.round(principal * 0.10);
     // Processing Fee: Fixed 20,000
     const processingFee = 20000;
 
     // 4. Compulsory Savings
-    // 1000 Naira per DAY. 
-    // Total Days = Month * 30.
-    const totalDays = tenureMonths * 30;
-    const totalSavings = totalDays * 1000;
+    // ₦7,000 Naira per WEEK (Weekly deduction model)
+    const totalWeeks = tenureMonths * 4;
+    const totalSavings = totalWeeks * 7000;
 
     // 5. Total Repayable
-    // Includes Principal + Interest + Health Insurance + Processing + Savings
+    // Includes Principal + Interest + 10% Insurance + Processing + Savings
     const totalRepayable = principal + totalInterest + healthInsuranceFee + processingFee + totalSavings;
 
-    // 6. Installments
-    // Bi-daily (Every 2 days)
-    const numberOfInstallments = Math.floor(totalDays / 2);
+    // 6. Installments (Weekly Deductions Only)
+    const numberOfInstallments = totalWeeks;
     const installmentAmount = Math.ceil(totalRepayable / numberOfInstallments);
 
     return {

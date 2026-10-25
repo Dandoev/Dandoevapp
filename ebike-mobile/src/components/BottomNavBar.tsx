@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Inter_500Medium',
     color: '#B6C6DC',
     marginTop: 2,

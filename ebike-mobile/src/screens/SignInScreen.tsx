@@ -12,6 +12,7 @@ import {
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import { demoStore } from '../lib/demo-data';
+import { MobileApi } from '../lib/api';
 import { ScreenType } from '../../App';
 import BrandMark from '../components/BrandMark';
 
@@ -45,7 +46,35 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
         return;
       }
 
-      // Real Supabase sign-in attempt
+      // 1. Attempt sign-in via Backend API (Render)
+      try {
+        const resData = await MobileApi.signIn({ email: email.trim(), password });
+        if (resData.success && (resData.accessToken || resData.session?.access_token || resData.token)) {
+          const authToken = resData.accessToken || resData.session?.access_token || resData.token;
+          setToken(authToken);
+          if (resData.user) {
+            const u = resData.user;
+            demoStore.setUser({
+              id: u.id,
+              email: u.email,
+              firstName: u.firstName || u.user_metadata?.firstName || 'Rider',
+              lastName: u.lastName || u.user_metadata?.lastName || '',
+              phone: u.phone || u.user_metadata?.phone || '',
+              kycTier: u.kycTier || 2,
+            });
+          }
+          navigateTo('Dashboard');
+          return;
+        }
+      } catch (apiErr: any) {
+        if (apiErr.message && !apiErr.message.includes('failed with status 5') && !apiErr.message.includes('Network')) {
+          setErrorMessage(apiErr.message);
+          return;
+        }
+        // Fallback to Supabase if network or server error
+      }
+
+      // 2. Real Supabase sign-in fallback attempt
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -177,14 +206,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   brandName: {
-    fontSize: 33,
+    fontSize: 34,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   brandTagline: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
     marginTop: 5,
@@ -205,7 +234,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
     marginBottom: 20,
@@ -248,7 +277,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     marginLeft: 10,
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter_400Regular',
     color: '#0A154F',
   },
@@ -266,7 +295,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#0A154F',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -282,7 +311,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: '#94A3B8',
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Inter_500Medium',
     marginHorizontal: 10,
   },
@@ -299,13 +328,13 @@ const styles = StyleSheet.create({
   },
   demoButtonText: {
     color: '#1768D1',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   demoHint: {
     textAlign: 'center',
-    fontSize: 10,
+    fontSize: 12,
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
     marginTop: 6,
@@ -319,12 +348,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#66728A',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },
   linkText: {
     color: '#1768D1',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
   },

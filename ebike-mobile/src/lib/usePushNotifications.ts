@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from '../lib/supabase';
+import { APP_CONFIG } from './config';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -57,9 +58,7 @@ async function syncTokenWithBackend(token: string) {
   if (!session) return;
 
   try {
-    const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://dandoev.com/api').replace(/\/api$/, '');
-    
-    await fetch(`${API_BASE}/api/user/push-token`, {
+    await fetch(`${APP_CONFIG.apiEndpoint}/user/push-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { demoStore, DemoUserProfile } from '../lib/demo-data';
 import FinancialStatementModal from '../components/FinancialStatementModal';
+import { APP_CONFIG } from '../lib/config';
 
 interface ProfileScreenProps {
   onLogout: () => void;
@@ -130,25 +131,15 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
             <View style={{ flex: 1 }}>
               <Text style={styles.prefTitle}>Deduction Frequency</Text>
               <Text style={styles.prefSub}>
-                {loan.deductionFrequency === 'weekly'
-                  ? 'Weekly Sweeps (Default: ₦10,500 every Monday)'
-                  : loan.deductionFrequency === 'daily'
-                  ? 'Daily Sweeps (₦1,500/day micro-deduction)'
-                  : 'Monthly Sweeps (₦42,000 on the 28th)'}
+                Weekly Sweeps (₦10,500 auto-swept every Monday)
               </Text>
             </View>
-            <View style={styles.pillContainer}>
-              {(['weekly', 'daily', 'monthly'] as const).map((freq) => (
-                <TouchableOpacity
-                  key={freq}
-                  style={[styles.profilePill, loan.deductionFrequency === freq && styles.profilePillActive]}
-                  onPress={() => demoStore.setDeductionFrequency(freq)}
-                >
-                  <Text style={[styles.profilePillText, loan.deductionFrequency === freq && styles.profilePillTextActive]}>
-                    {freq === 'weekly' ? 'Weekly' : freq === 'daily' ? 'Daily' : 'Monthly'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={[styles.pillContainer, { marginTop: 8 }]}>
+              <View style={[styles.profilePill, styles.profilePillActive, { flex: 0, paddingHorizontal: 16 }]}>
+                <Text style={[styles.profilePillText, styles.profilePillTextActive]}>
+                  Weekly Deduction
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -317,7 +308,7 @@ export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateT
 
           <TouchableOpacity
             style={styles.actionRow}
-            onPress={() => Linking.openURL('https://dashboard.dandoev.com/privacy')}
+            onPress={() => Linking.openURL(APP_CONFIG.privacyPolicyUrl)}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <ShieldCheck size={18} color="#2E3192" />

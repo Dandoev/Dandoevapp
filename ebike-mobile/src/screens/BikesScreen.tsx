@@ -23,7 +23,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
   const products = demoStore.getProducts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [cadence, setCadence] = useState<MobileCadence>('bidaily');
+  const cadence: MobileCadence = 'weekly';
 
   const categories = ['All', 'E-Bikes', 'Batteries', 'Chargers'];
 
@@ -43,19 +43,8 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
   });
 
   const getInstallmentDisplay = (price: number) => {
-    // 12 months tenure, 4% monthly flat rate, plus ₦1,000/day compulsory returnable savings
-    const totalObligation = price * 1.48;
-    const dailyBase = Math.round(totalObligation / 360) + 1000;
-    if (cadence === 'daily') {
-      return { amount: dailyBase, suffix: '/day' };
-    }
-    if (cadence === 'bidaily') {
-      return { amount: dailyBase * 2, suffix: '/2 days' };
-    }
-    if (cadence === 'weekly') {
-      return { amount: Math.round(( price * 1.16 ) / 48), suffix: '/wk' };
-    }
-    return { amount: Math.round(totalObligation / 12), suffix: '/mo' };
+    // 12 months tenure, weekly deduction (48 weeks)
+    return { amount: Math.round((price * 1.16) / 48), suffix: '/wk' };
   };
 
   return (
@@ -110,33 +99,11 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
           })}
         </ScrollView>
 
-        {/* Pay-As-You-Ride Cadence Switcher */}
+        {/* Pay-As-You-Ride Weekly Deduction Badge */}
         <View style={styles.cadenceBar}>
-          <Text style={styles.cadenceLabel}>Payment view</Text>
-          <View style={styles.cadencePills}>
-            {(
-              [
-                { id: 'daily', label: 'Daily' },
-                { id: 'bidaily', label: '2 Days' },
-                { id: 'weekly', label: 'Weekly' },
-                { id: 'monthly', label: 'Monthly' },
-              ] as const
-            ).map((item) => {
-              const active = cadence === item.id;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.cadenceBtn, active && styles.cadenceBtnActive]}
-                  onPress={() => setCadence(item.id)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text style={[styles.cadenceBtnText, active && styles.cadenceBtnTextActive]}>
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <Text style={styles.cadenceLabel}>Payment schedule</Text>
+          <View style={[styles.cadenceBtn, styles.cadenceBtnActive, { paddingHorizontal: 14 }]}>
+            <Text style={styles.cadenceBtnTextActive}>Weekly deduction</Text>
           </View>
         </View>
       </View>
@@ -251,7 +218,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
                 </Text>
                 <View style={styles.detailsButton}>
                   <Text style={styles.detailsButtonText}>
-                    {product.type === 'bike' ? 'Explore ride' : 'View details'}
+                    See more details
                   </Text>
                   <ArrowRight size={14} color="#2E3192" />
                 </View>
@@ -311,7 +278,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
@@ -328,13 +295,13 @@ const styles = StyleSheet.create({
     borderColor: '#BFDBFE',
   },
   shopBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#2E3192',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#6B7280',
     fontFamily: 'Inter_400Regular',
     marginTop: 5,
@@ -460,17 +427,17 @@ const styles = StyleSheet.create({
   },
   categoryBadgeText: {
     color: '#2E3192',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   bikeName: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
   bikeBrand: {
-    fontSize: 11,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
     marginTop: 1,
@@ -479,13 +446,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   price: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#2E3192',
   },
   dailyBadge: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#2E3192',
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',

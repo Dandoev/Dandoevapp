@@ -1,9 +1,9 @@
 // ============================================================
 // DandoEv Mobile — Unified Backend API Client
-// Connects React Native app to Next.js 16 API endpoints
+// Connects React Native app to backend API endpoints
 // ============================================================
 
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://dashboard.dandoev.com').replace(/\/+$/, '') + '/api';
+import { APP_CONFIG } from './config';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -22,7 +22,8 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
     headers['Authorization'] = `Bearer ${options.token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const res = await fetch(`${APP_CONFIG.apiEndpoint}${cleanEndpoint}`, {
     method: options.method || 'GET',
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -38,6 +39,40 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 
 export const MobileApi = {
   // 1. Auth & Session
+  async signIn(credentials: { email: string; password: string }) {
+    return apiRequest<{
+      success: boolean;
+      accessToken?: string;
+      token?: string;
+      user?: any;
+      session?: any;
+      error?: string;
+    }>('/auth/signin', {
+      method: 'POST',
+      body: credentials,
+    });
+  },
+
+  async signUp(userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    password: string;
+  }) {
+    return apiRequest<{
+      success: boolean;
+      accessToken?: string;
+      token?: string;
+      user?: any;
+      session?: any;
+      error?: string;
+    }>('/auth/signup', {
+      method: 'POST',
+      body: userData,
+    });
+  },
+
   async getProfile(token: string) {
     return apiRequest<{ success: boolean; data: any }>('/auth/me', { token });
   },

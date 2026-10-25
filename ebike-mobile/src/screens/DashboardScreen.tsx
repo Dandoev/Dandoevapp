@@ -363,7 +363,7 @@ export default function DashboardScreen({
               <View style={styles.deductionFreqBadge}>
                 <Sparkles size={11} color="#2E3192" />
                 <Text style={styles.deductionFreqBadgeText}>
-                  {loan.deductionFrequency.toUpperCase()} DEDUCTION (DEFAULT)
+                  WEEKLY DEDUCTION
                 </Text>
               </View>
               <Text style={styles.loanTitle}>{loan.bikeName}</Text>
@@ -571,14 +571,14 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   brandName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
     letterSpacing: -0.5,
   },
   brandTagline: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     color: '#0A154F',
     opacity: 0.9,
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   },
   notifBadgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -627,12 +627,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F7FC',
   },
   greetingText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
   },
   userNameText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
   },
   assignedBadgeText: {
     color: '#2E3192', // Logo brand color
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
   },
@@ -976,13 +976,13 @@ const styles = StyleSheet.create({
   },
   atmBalanceLabel: {
     color: '#94A3B8',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 0.8,
   },
   atmBalanceAmount: {
     color: '#FFFFFF',
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: -0.5,
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
   },
   primaryFundBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
   },
   secondaryNubanBtnText: {
     color: '#2E3192',
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
   },

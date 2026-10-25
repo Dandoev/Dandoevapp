@@ -10,7 +10,7 @@ describe('BNPL Loan Calculations & Terms', () => {
     expect(calculateDownPayment(price, 20)).toBe(300000);
   });
 
-  it('calculates installment terms with health insurance, processing fees and daily savings', () => {
+  it('calculates installment terms with 10% insurance, processing fees and weekly savings', () => {
     const principal = 1000000; // 1,000,000 NGN
     const monthlyRate = 4; // 4% flat monthly
     const tenureMonths = 6;
@@ -20,20 +20,20 @@ describe('BNPL Loan Calculations & Terms', () => {
     // Expected calculations:
     // Interest = 1,000,000 * (4 / 100) * 6 = 240,000
     expect(terms.totalInterest).toBe(240000);
-    expect(terms.healthInsuranceFee).toBe(60000);
+    expect(terms.healthInsuranceFee).toBe(100000); // 10% compulsory insurance
     expect(terms.processingFee).toBe(20000);
 
-    // Compulsory savings: 6 months * 30 days * 1,000 NGN = 180,000
-    expect(terms.totalSavings).toBe(180000);
+    // Compulsory savings: 6 months * 4 weeks * 7,000 NGN = 168,000
+    expect(terms.totalSavings).toBe(168000);
 
-    // Total repayable = 1,000,000 + 240,000 + 60,000 + 20,000 + 180,000 = 1,500,000
-    expect(terms.totalRepayable).toBe(1500000);
+    // Total repayable = 1,000,000 + 240,000 + 100,000 + 20,000 + 168,000 = 1,528,000
+    expect(terms.totalRepayable).toBe(1528000);
 
-    // Total days = 180, Bi-daily installments = 90
-    expect(terms.numberOfInstallments).toBe(90);
+    // Total weekly installments = 24
+    expect(terms.numberOfInstallments).toBe(24);
 
-    // Installment amount = ceil(1,500,000 / 90) = 16,667
-    expect(terms.installmentAmount).toBe(16667);
+    // Installment amount = ceil(1,528,000 / 24) = 63,667
+    expect(terms.installmentAmount).toBe(63667);
   });
 
   it('computes risk score deterministically within bounds [0, 100]', () => {

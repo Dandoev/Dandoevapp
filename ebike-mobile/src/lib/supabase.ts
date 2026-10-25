@@ -2,9 +2,10 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-// These should be set in EXPO_PUBLIC_ environment variables in production
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+import { APP_CONFIG } from './config';
+
+const supabaseUrl = APP_CONFIG.supabase.url;
+const supabaseAnonKey = APP_CONFIG.supabase.anonKey;
 
 /**
  * Mobile Supabase Client.

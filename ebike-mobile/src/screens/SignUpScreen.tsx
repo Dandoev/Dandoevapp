@@ -12,10 +12,9 @@ import {
 import { User, Mail, Lock, Phone, Check, AlertCircle, Sparkles } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import { demoStore } from '../lib/demo-data';
+import { MobileApi } from '../lib/api';
 import { ScreenType } from '../../App';
 import BrandMark from '../components/BrandMark';
-
-const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://dandoev.com/api').replace(/\/api$/, '');
 
 interface SignUpScreenProps {
   navigateTo: (screen: ScreenType) => void;
@@ -66,21 +65,16 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
     setLoading(true);
 
     try {
-      // 1. Try local Next.js API endpoint if reachable
+      // 1. Try Backend API endpoint if reachable
       try {
-        const apiRes = await fetch(`${API_BASE}/api/auth/signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firstName,
-            lastName,
-            email,
-            phone: phone || '+234 800 000 0000',
-            password,
-          }),
+        const apiData = await MobileApi.signUp({
+          firstName,
+          lastName,
+          email,
+          phone: phone || '+234 800 000 0000',
+          password,
         });
-        const apiData = await apiRes.json();
-        if (apiRes.ok && apiData.success) {
+        if (apiData.success) {
           // Success via backend
           demoStore.setUser({
             firstName,
@@ -296,14 +290,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   brandName: {
-    fontSize: 33,
+    fontSize: 34,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   brandTagline: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
     marginTop: 5,
@@ -322,13 +316,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 27,
+    fontSize: 26,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
@@ -343,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   autofillText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#1768D1',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -392,7 +386,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     marginLeft: 8,
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter_400Regular',
     color: '#0A154F',
   },
@@ -418,13 +412,14 @@ const styles = StyleSheet.create({
     borderColor: '#36C0FE',
   },
   termsText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
     flex: 1,
   },
   termsLink: {
     color: '#1768D1',
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   button: {
@@ -440,7 +435,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#0A154F',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -452,12 +447,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#66728A',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },
   linkText: {
     color: '#1768D1',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
   },

@@ -18,19 +18,49 @@
 
 .admin-workspace {
   font-family: var(--font-inter), 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .admin-workspace h1,
-.admin-workspace h2,
-.admin-workspace h3,
-.admin-workspace h4,
-.admin-workspace h5,
-.admin-workspace h6,
-.admin-workspace .font-display,
-.admin-workspace .font-heading,
-.admin-workspace .font-black,
-.admin-workspace .font-extrabold {
+.admin-workspace .display-hero {
   font-family: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.admin-workspace h2,
+.admin-workspace .heading-title {
+  font-family: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.admin-workspace h3,
+.admin-workspace .subheading {
+  font-family: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.admin-workspace p,
+.admin-workspace .body-text,
+.admin-workspace input,
+.admin-workspace select,
+.admin-workspace textarea {
+  font-size: 16px;
+}
+
+.admin-workspace .subtitle-text,
+.admin-workspace .text-secondary {
+  font-size: 14px;
+}
+
+.admin-workspace .caption-text,
+.admin-workspace .badge,
+.admin-workspace .label,
+.admin-workspace label {
+  font-size: 12px;
 }
 
 .admin-workspace img {
@@ -137,16 +167,17 @@
   --font-display: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
   --font-body: var(--font-inter), 'Inter', sans-serif;
 
-  /* Font Sizes */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 2rem;
-  --text-4xl: 2.5rem;
-  --text-5xl: 3.5rem;
+  /* Font Sizes: Exact Standard */
+  --text-xs: 0.75rem;    /* 12px: Captions, Badges, and Labels */
+  --text-sm: 0.875rem;   /* 14px: Secondary / Subtitle Text */
+  --text-sub: 0.9375rem; /* 15px: Secondary / Subtitle Text */
+  --text-base: 1rem;     /* 16px: Body Text (minimum readable size) */
+  --text-lg: 1.25rem;    /* 20px: Subheading */
+  --text-xl: 1.5rem;     /* 24px: Heading / Title */
+  --text-2xl: 1.75rem;   /* 28px: Heading / Title */
+  --text-3xl: 2rem;      /* 32px: Display / Hero */
+  --text-4xl: 2.125rem;  /* 34px: Display / Hero */
+  --text-5xl: 3rem;      /* 48px: Splash / Brand Wordmark */
 
   /* Spacing */
   --space-1: 0.25rem;

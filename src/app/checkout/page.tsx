@@ -134,6 +134,7 @@ function CheckoutContent() {
     0
   );
   const subtotal = bikePrice + accessoriesPrice;
+  const insuranceFee = Math.round(subtotal * 0.10);
 
   const deliveryFee =
     deliveryType === 'pickup'
@@ -143,7 +144,7 @@ function CheckoutContent() {
       : delivery.state
       ? 50000
       : 0;
-  const total = subtotal + deliveryFee;
+  const total = subtotal + insuranceFee + deliveryFee;
 
   const step1Valid = Boolean(
     buyer.firstName.trim() &&
@@ -541,9 +542,15 @@ function CheckoutContent() {
 
               <div className="space-y-2.5 pt-4 border-t border-slate-100 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Subtotal</span>
+                  <span className="text-slate-500">Base Subtotal</span>
                   <span className="font-bold text-slate-800 tabular-nums">
                     {formatNaira(subtotal)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Compulsory Insurance (10%)</span>
+                  <span className="font-bold text-slate-800 tabular-nums">
+                    {formatNaira(insuranceFee)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -572,7 +579,7 @@ function CheckoutContent() {
                   <p className="text-[11px] text-slate-600 leading-relaxed">
                     Finance this order with <strong>0% down payment</strong> and pay just{' '}
                     <strong className="text-primary">
-                      {formatNaira(bnplPreview.installmentAmount)} / every 2 days
+                      {formatNaira(Math.round((Number(bike.price) * 1.16) / 48))} / week
                     </strong>{' '}
                     while building compulsory savings.
                   </p>

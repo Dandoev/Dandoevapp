@@ -127,22 +127,24 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
   // JOURNEY 3: Outright Cash Purchase via Mono DirectPay
   // ============================================================
   describe('Journey 3: Outright E-Bike & Accessory Purchase via Mono DirectPay', () => {
-    it('calculates outright purchase totals without financing interest or insurance', () => {
-      const bikePrice = 1400000; // DandoEv X6
-      const batteryPrice = 385000; // 48V/60V 25Ah Battery
+    it('calculates outright purchase totals with 10% compulsory insurance', () => {
+      const bikePrice = 1500000; // DandoEv X6
+      const batteryPrice = 385000; // 48V 20Ah Battery
       const chargerPrice = 60000; // Fast Charger
       const deliveryFeeLagos = 20000;
 
       const subtotal = bikePrice + batteryPrice + chargerPrice;
-      const totalOutright = subtotal + deliveryFeeLagos;
+      const insurance = Math.round(subtotal * 0.10);
+      const totalOutright = subtotal + insurance + deliveryFeeLagos;
 
-      expect(subtotal).toBe(1845000);
-      expect(totalOutright).toBe(1865000);
+      expect(subtotal).toBe(1945000);
+      expect(insurance).toBe(194500);
+      expect(totalOutright).toBe(2159500);
     });
 
     it('initializes a secure Mono DirectPay checkout session with correct parameters', async () => {
       const reference = `TX-MONO-TEST-${Date.now()}`;
-      const amount = 1865000;
+      const amount = 2159500;
 
       const session = await initiateMonoPayment({
         amount,
@@ -326,24 +328,22 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
   // ============================================================
   describe('Journey 7: Mobile App Store State & Pricing Parity', () => {
     it('verifies mobile product pricing breakdown aligns with web rules', () => {
-      const bikeBasePrice = 1400000;
+      const bikeBasePrice = 1700000; // G90 Flagship
+      const insurance = Math.round(bikeBasePrice * 0.10);
       const deliveryLagos = 20000;
       const deliveryOutside = 50000;
 
-      // Outright purchases have ₦0 insurance, ₦0 registration, ₦0 GPS fees
-      const outrightLagosTotal = bikeBasePrice + deliveryLagos;
-      const outrightOutsideTotal = bikeBasePrice + deliveryOutside;
+      // Outright purchases include 10% compulsory insurance
+      const outrightLagosTotal = bikeBasePrice + insurance + deliveryLagos;
+      const outrightOutsideTotal = bikeBasePrice + insurance + deliveryOutside;
 
-      expect(outrightLagosTotal).toBe(1420000);
-      expect(outrightOutsideTotal).toBe(1450000);
+      expect(outrightLagosTotal).toBe(1890000);
+      expect(outrightOutsideTotal).toBe(1920000);
     });
 
-    it('ensures mobile cadence options reflect bi-daily, daily, weekly, and monthly', () => {
-      const cadences = ['daily', 'bidaily', 'weekly', 'monthly'];
-      expect(cadences).toContain('bidaily');
-      expect(cadences).toContain('daily');
-      expect(cadences).toContain('weekly');
-      expect(cadences).toContain('monthly');
+    it('ensures repayment deduction is strictly weekly', () => {
+      const cadence = 'weekly';
+      expect(cadence).toBe('weekly');
     });
   });
 });

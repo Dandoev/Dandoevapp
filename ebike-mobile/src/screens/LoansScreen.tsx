@@ -138,38 +138,20 @@ export default function LoansScreen({ token }: LoansScreenProps) {
             </View>
           </View>
 
-          {/* Deduction Frequency Switcher */}
+          {/* Deduction Frequency Indicator */}
           <View style={styles.frequencySection}>
             <View style={styles.freqHeader}>
               <Text style={styles.freqTitle}>Repayment Deduction Frequency</Text>
             </View>
-            <View style={styles.freqSelector}>
-              {(['weekly', 'daily', 'monthly'] as const).map((freq) => {
-                const isActive = loan.deductionFrequency === freq;
-                const label = freq === 'weekly' ? 'Weekly (Default)' : freq === 'daily' ? 'Daily' : 'Monthly';
-                return (
-                  <TouchableOpacity
-                    key={freq}
-                    style={[styles.freqBtn, isActive && styles.freqBtnActive]}
-                    onPress={() => {
-                      demoStore.setDeductionFrequency(freq);
-                      setToastMessage(`Switched deductions to ${freq.toUpperCase()}! Schedule updated.`);
-                      setTimeout(() => setToastMessage(null), 3000);
-                    }}
-                  >
-                    <Text style={[styles.freqBtnText, isActive && styles.freqBtnTextActive]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={{ flexDirection: 'row', marginTop: 4 }}>
+              <View style={[styles.freqBtn, styles.freqBtnActive, { flex: 0, paddingHorizontal: 16 }]}>
+                <Text style={[styles.freqBtnText, styles.freqBtnTextActive]}>
+                  Weekly Deduction
+                </Text>
+              </View>
             </View>
             <Text style={styles.freqSub}>
-              {loan.deductionFrequency === 'weekly'
-                ? '⚡ ₦10,500 auto-swept every Monday. 0% penalty when funded on time.'
-                : loan.deductionFrequency === 'daily'
-                ? '⚡ ₦1,500 micro-deductions swept daily from your wallet.'
-                : '⚡ ₦42,000 deducted on the 28th of every calendar month.'}
+              ⚡ ₦{loan.weeklyRepayment.toLocaleString()} auto-swept every Monday. 0% penalty when funded on time.
             </Text>
           </View>
 
@@ -177,10 +159,10 @@ export default function LoansScreen({ token }: LoansScreenProps) {
           <View style={styles.dueBox}>
             <View style={styles.dueLeft}>
               <Text style={styles.dueLabel}>
-                Next {loan.deductionFrequency === 'weekly' ? 'Weekly' : loan.deductionFrequency === 'daily' ? 'Daily' : 'Monthly'} Installment Due
+                Next Weekly Installment Due
               </Text>
               <Text style={styles.dueAmount}>
-                ₦{(loan.deductionFrequency === 'weekly' ? loan.weeklyRepayment : loan.nextDueAmount).toLocaleString()}
+                ₦{loan.weeklyRepayment.toLocaleString()}
               </Text>
               <View style={styles.dateRow}>
                 <Calendar size={13} color="#D97706" />
@@ -212,7 +194,7 @@ export default function LoansScreen({ token }: LoansScreenProps) {
             <View style={styles.breakdownCol}>
               <Text style={styles.breakdownLabel}>Frequency</Text>
               <Text style={[styles.breakdownValue, { color: '#2E3192' }]}>
-                {loan.deductionFrequency.toUpperCase()}
+                WEEKLY
               </Text>
             </View>
           </View>
@@ -237,11 +219,7 @@ export default function LoansScreen({ token }: LoansScreenProps) {
         {/* Repayment Schedule Table */}
         <View style={styles.scheduleSection}>
           <Text style={styles.sectionHeader}>
-            {loan.deductionFrequency === 'weekly'
-              ? '48-Week Repayment Schedule (Weekly Sweeps)'
-              : loan.deductionFrequency === 'daily'
-              ? 'Daily Micro-Deduction Schedule'
-              : '12-Month Installment Schedule'}
+            48-Week Repayment Schedule (Weekly Sweeps)
           </Text>
           <View style={styles.scheduleCard}>
             {loan.repayments.map((rep, idx) => {
@@ -378,7 +356,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loanBadge: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#4A50AE',
     backgroundColor: '#E8F6FE',
@@ -389,13 +367,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   loanBikeName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
   loanContractId: {
-    fontSize: 11,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
     marginTop: 2,
@@ -410,7 +388,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     color: '#2E3192',
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   progressContainer: {

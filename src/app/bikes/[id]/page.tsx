@@ -55,7 +55,7 @@ export default function BikeDetailPage() {
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedTenure, setSelectedTenure] = useState(BNPL_CONFIG.defaultTenure);
   const [downPaymentPercent, setDownPaymentPercent] = useState<number>(0);
-  const [cadenceView, setCadenceView] = useState<'daily' | 'bidaily' | 'monthly'>('bidaily');
+  const cadenceView = 'weekly';
   const [paymentChoice, setPaymentChoice] = useState<'buy' | 'bnpl'>('bnpl');
   const [accessoriesList, setAccessoriesList] = useState<any[]>([]);
   const [selectedAccessories, setSelectedAccessories] = useState<Record<string, boolean>>({});
@@ -148,19 +148,8 @@ export default function BikeDetailPage() {
     totalSavings,
   } = calculateInstallment(financedPrincipal, BNPL_CONFIG.interestRate, selectedTenure);
 
-  const displayInstallment =
-    cadenceView === 'daily'
-      ? Math.round(installmentAmount / 2)
-      : cadenceView === 'bidaily'
-      ? installmentAmount
-      : Math.round(installmentAmount * 15);
-
-  const cadenceLabel =
-    cadenceView === 'daily'
-      ? '/ day'
-      : cadenceView === 'bidaily'
-      ? '/ every 2 days'
-      : '/ month';
+  const displayInstallment = Math.round(totalRepayable / (selectedTenure * 4));
+  const cadenceLabel = '/ week';
 
   const toggleAccessory = (accId: string) => {
     setSelectedAccessories((prev) => ({
@@ -200,7 +189,7 @@ export default function BikeDetailPage() {
         selectedColor: selectedColor || bike.colors?.[0] || 'Matte Black',
         tenure: selectedTenure,
         downPaymentPercent,
-        repaymentCadence: cadenceView === 'monthly' ? 'monthly' : 'daily',
+        repaymentCadence: 'weekly',
         accessories: selectedAccs,
       })
     );
@@ -462,10 +451,10 @@ export default function BikeDetailPage() {
                       Total Outright Cash Price
                     </div>
                     <div className="text-3xl font-black text-primary tabular-nums mt-0.5">
-                      {formatNaira(grossAssetPrice)}
+                      {formatNaira(grossAssetPrice + Math.round(grossAssetPrice * 0.10))}
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Includes 1-year comprehensive motor & battery warranty + free Lagos delivery.
+                      Includes 10% compulsory insurance + 1-year motor & battery warranty + free Lagos delivery.
                     </p>
                   </div>
                   <button
@@ -489,26 +478,10 @@ export default function BikeDetailPage() {
                   <div className="p-5 rounded-2xl bg-primary text-white space-y-3 relative overflow-hidden">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-accent">
-                        Estimated Repayment
+                        Repayment Schedule
                       </span>
-                      <div className="inline-flex bg-white/10 p-0.5 rounded-lg">
-                        {[
-                          { id: 'daily', label: 'Daily' },
-                          { id: 'bidaily', label: '2-Days' },
-                          { id: 'monthly', label: 'Monthly' },
-                        ].map((c) => (
-                          <button
-                            key={c.id}
-                            onClick={() => setCadenceView(c.id as any)}
-                            className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                              cadenceView === c.id
-                                ? 'bg-accent text-primary-dark'
-                                : 'text-white/80 hover:text-white'
-                            }`}
-                          >
-                            {c.label}
-                          </button>
-                        ))}
+                      <div className="inline-flex bg-accent text-primary-dark px-2.5 py-1 rounded-md text-[10px] font-bold">
+                        Weekly Deduction
                       </div>
                     </div>
 
@@ -520,7 +493,7 @@ export default function BikeDetailPage() {
                     </div>
 
                     <div className="text-[11px] text-slate-300 flex items-center justify-between pt-2 border-t border-white/10">
-                      <span>{numberOfInstallments} bi-daily installments</span>
+                      <span>{selectedTenure * 4} weekly installments</span>
                       <span className="text-accent font-bold">{selectedTenure} Months Tenure</span>
                     </div>
                   </div>
@@ -695,7 +668,7 @@ export default function BikeDetailPage() {
                 <span className="text-xs font-medium text-slate-500">{cadenceLabel}</span>
               </>
             ) : (
-              formatNaira(grossAssetPrice)
+              formatNaira(grossAssetPrice + Math.round(grossAssetPrice * 0.10))
             )}
           </div>
         </div>

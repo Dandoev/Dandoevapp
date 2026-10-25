@@ -87,12 +87,12 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <BrandMark size={36} backgroundColor="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.6 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 26, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.6 }}>
               DandoEv
             </Text>
           </View>
           <Pressable onPress={onComplete} accessibilityRole="button" accessibilityLabel="Sign in" style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
-            <Text style={{ color: '#0A154F', fontFamily: 'Inter_600SemiBold', fontSize: 16 }}>
+            <Text style={{ color: '#0A154F', fontFamily: 'Inter_600SemiBold', fontSize: 15 }}>
               Sign in
             </Text>
           </Pressable>
@@ -128,10 +128,10 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#36C0FE', fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
+              <Text style={{ color: '#36C0FE', fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
                 {slide.detailNum}{' '}
               </Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
                 / {slide.detailLabel}
               </Text>
             </View>
@@ -215,12 +215,12 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
               }}
             >
               <ShieldCheck size={16} color="#0A154F" />
-              <Text style={{ color: '#0A154F', fontSize: 12.5, fontFamily: 'PlusJakartaSans_700Bold' }}>
+              <Text style={{ color: '#0A154F', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' }}>
                 {slide.stat}
               </Text>
             </View>
 
-            <Text style={{ color: '#0A154F', fontSize: 13, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.2 }}>
+            <Text style={{ color: '#0A154F', fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.2 }}>
               DandoEv
             </Text>
           </View>
@@ -253,8 +253,8 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
           <Text
             style={{
               color: '#334155',
-              fontSize: 15,
-              lineHeight: 23,
+              fontSize: 16,
+              lineHeight: 25,
               fontFamily: 'Inter_400Regular',
               marginTop: 12,
               maxWidth: 430,
@@ -286,7 +286,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
                 />
               ))}
             </View>
-            <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 13.5 }}>
+            <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 14 }}>
               {String(index + 1).padStart(2, '0')} / 03
             </Text>
           </View>
@@ -310,7 +310,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
               elevation: 4,
             }}
           >
-            <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 17 }}>
+            <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 16 }}>
               {index === slides.length - 1 ? 'Get started' : 'Continue'}
             </Text>
             <ArrowRight size={22} color="#0A154F" strokeWidth={2.4} />
@@ -336,7 +336,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
                 hitSlop={12}
                 style={{ paddingVertical: 4 }}
               >
-                <Text style={{ color: '#64748B', fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                <Text style={{ color: '#64748B', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
                   Back
                 </Text>
               </Pressable>

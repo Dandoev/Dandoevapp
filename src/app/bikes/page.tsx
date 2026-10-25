@@ -23,7 +23,7 @@ import type { BikeFilters } from '@/lib/types';
 
 export default function BikeCatalogPage() {
   const [filters, setFilters] = useState<BikeFilters>({});
-  const [cadenceView, setCadenceView] = useState<'daily' | 'bidaily' | 'monthly'>('bidaily');
+  const cadenceView = 'weekly';
   const [bikes, setBikes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -92,20 +92,10 @@ export default function BikeCatalogPage() {
   );
 
   const getCadenceInstallment = (price: number) => {
-    const { installmentAmount } = calculateInstallment(
-      Number(price),
-      BNPL_CONFIG.interestRate,
-      BNPL_CONFIG.defaultTenure
-    );
-    const amount =
-      cadenceView === 'daily'
-        ? Math.round(installmentAmount / 2)
-        : cadenceView === 'bidaily'
-        ? installmentAmount
-        : Math.round(installmentAmount * 15);
-    const suffix =
-      cadenceView === 'daily' ? '/day' : cadenceView === 'bidaily' ? '/2 days' : '/mo';
-    return { amount, suffix };
+    return {
+      amount: Math.round((Number(price) * 1.16) / 48),
+      suffix: '/wk',
+    };
   };
 
   return (
@@ -129,29 +119,13 @@ export default function BikeCatalogPage() {
               </p>
             </div>
 
-            {/* Cadence Toggle */}
+            {/* Payment Schedule Badge */}
             <div className="flex flex-col sm:items-end gap-1.5">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Display BNPL Installments As:
+                Payment Schedule:
               </span>
-              <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-                {[
-                  { id: 'daily', label: 'Daily' },
-                  { id: 'bidaily', label: 'Every 2 Days' },
-                  { id: 'monthly', label: 'Monthly' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setCadenceView(tab.id as any)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      cadenceView === tab.id
-                        ? 'bg-primary text-white shadow-2xs'
-                        : 'text-slate-600 hover:text-primary'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              <div className="inline-flex items-center bg-primary text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
+                Weekly Deduction
               </div>
             </div>
           </div>
@@ -525,7 +499,7 @@ export default function BikeCatalogPage() {
                 <tbody className="divide-y divide-slate-200 text-xs">
                   <tr>
                     <td className="py-3.5 pr-4 font-bold text-slate-600">
-                      Pay-As-You-Ride ({cadenceView})
+                      Pay-As-You-Ride (Weekly)
                     </td>
                     {comparedBikes.map((bike) => {
                       const { amount, suffix } = getCadenceInstallment(Number(bike.price));

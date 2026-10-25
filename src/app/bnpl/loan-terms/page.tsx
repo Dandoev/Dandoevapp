@@ -63,9 +63,7 @@ export default function LoanTermsPage() {
   const [pageLoading, setPageLoading] = useState(true);
 
   const [selectedTenure, setSelectedTenure] = useState<number>(BNPL_CONFIG.defaultTenure || 12);
-  const [deductionFrequency, setDeductionFrequency] = useState<
-    'daily' | 'bidaily' | 'weekly' | 'monthly'
-  >('bidaily');
+  const deductionFrequency = 'weekly';
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [accessories, setAccessories] = useState<any[]>([]);
@@ -81,7 +79,6 @@ export default function LoanTermsPage() {
       try {
         const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
         if (saved.tenure) setSelectedTenure(Number(saved.tenure));
-        if (saved.deductionFrequency) setDeductionFrequency(saved.deductionFrequency);
         if (saved.accessories) setAccessories(saved.accessories);
         if (saved.personalInfo?.address) setDeliveryAddress(saved.personalInfo.address);
         if (saved.personalInfo?.state) setDeliveryState(saved.personalInfo.state);
@@ -133,15 +130,8 @@ export default function LoanTermsPage() {
     deliveryType === 'pickup' ? 0 : deliveryState === 'Lagos' ? 20000 : deliveryState ? 50000 : 0;
   const totalRepayableWithDelivery = totalRepayable + deliveryFee;
 
-  // Compute Term-Based Installment Count & Auto-Deduction Amount
-  const totalInstallments =
-    deductionFrequency === 'daily'
-      ? selectedTenure * 30
-      : deductionFrequency === 'weekly'
-      ? selectedTenure * 4
-      : deductionFrequency === 'monthly'
-      ? selectedTenure
-      : selectedTenure * 15; // bidaily
+  // Compute Term-Based Installment Count & Auto-Deduction Amount (Weekly)
+  const totalInstallments = selectedTenure * 4;
 
   const perDeductionAmount = Math.round(totalRepayableWithDelivery / totalInstallments);
   const mandateCapAmount = Math.ceil((perDeductionAmount * 1.15) / 100) * 100;
@@ -152,14 +142,7 @@ export default function LoanTermsPage() {
   const startDateStr = startDateObj.toISOString().split('T')[0];
   const endDateStr = endDateObj.toISOString().split('T')[0];
 
-  const frequencyLabel =
-    deductionFrequency === 'daily'
-      ? 'Daily'
-      : deductionFrequency === 'weekly'
-      ? 'Weekly'
-      : deductionFrequency === 'monthly'
-      ? 'Monthly'
-      : 'Bi-Daily (Every 2 Days)';
+  const frequencyLabel = 'Weekly';
 
   const canSubmit =
     accepted &&
@@ -240,52 +223,21 @@ export default function LoanTermsPage() {
 
           <div>
             <h3 className="font-extrabold text-primary text-sm mb-2.5">
-              2. Select Mono Mandate Auto-Deduction Frequency
+              2. Mono Mandate Auto-Deduction Schedule
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {[
-                {
-                  id: 'daily',
-                  label: 'Daily',
-                  cycles: selectedTenure * 30,
-                  amt: Math.round(totalRepayableWithDelivery / (selectedTenure * 30)),
-                },
-                {
-                  id: 'bidaily',
-                  label: 'Every 2 Days',
-                  cycles: selectedTenure * 15,
-                  amt: Math.round(totalRepayableWithDelivery / (selectedTenure * 15)),
-                },
-                {
-                  id: 'weekly',
-                  label: 'Weekly',
-                  cycles: selectedTenure * 4,
-                  amt: Math.round(totalRepayableWithDelivery / (selectedTenure * 4)),
-                },
-                {
-                  id: 'monthly',
-                  label: 'Monthly',
-                  cycles: selectedTenure,
-                  amt: Math.round(totalRepayableWithDelivery / selectedTenure),
-                },
-              ].map((freq) => (
-                <button
-                  key={freq.id}
-                  type="button"
-                  onClick={() => setDeductionFrequency(freq.id as any)}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    deductionFrequency === freq.id
-                      ? 'bg-primary text-white border-primary shadow-sm'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="text-[11px] font-bold opacity-80">{freq.label}</div>
-                  <div className="text-sm font-black mt-0.5 tabular-nums">
-                    {formatNaira(freq.amt)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="p-3.5 rounded-2xl border bg-primary text-white border-primary shadow-sm flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold opacity-80">Weekly Auto-Deduction (Default)</div>
+                  <div className="text-base font-black mt-0.5 tabular-nums">
+                    {formatNaira(Math.round(totalRepayableWithDelivery / (selectedTenure * 4)))} / week
                   </div>
-                  <div className="text-[10px] opacity-75 mt-0.5">{freq.cycles} debits</div>
-                </button>
-              ))}
+                  <div className="text-[10px] opacity-75 mt-0.5">{selectedTenure * 4} weekly debits</div>
+                </div>
+                <span className="px-2.5 py-1 bg-white/20 rounded-lg text-xs font-bold text-white">
+                  Active
+                </span>
+              </div>
             </div>
           </div>
         </div>

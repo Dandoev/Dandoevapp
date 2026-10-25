@@ -44,7 +44,7 @@ export default function ProductDetailScreen({
   onApplyBNPL,
 }: ProductDetailScreenProps) {
   const [selectedTenure, setSelectedTenure] = useState<number>(12);
-  const [selectedCadence, setSelectedCadence] = useState<'daily' | 'bidaily' | 'weekly' | 'monthly'>('bidaily');
+  const selectedCadence: 'weekly' = 'weekly';
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('pickup');
   const [showOutrightModal, setShowOutrightModal] = useState<boolean>(false);
   const [outrightSuccess, setOutrightSuccess] = useState<boolean>(false);
@@ -54,26 +54,8 @@ export default function ProductDetailScreen({
   const breakdown = getProductPriceBreakdown(product, selectedTenure, deliveryType);
 
   const weeklyAmt = breakdown.weeklyDeduction || 0;
-  const dailyAmt = Math.round(weeklyAmt / 7);
-  const biDailyAmt = dailyAmt * 2;
-  const monthlyAmt = Math.round(weeklyAmt * 4.33);
-
-  const activeCadenceAmount =
-    selectedCadence === 'daily'
-      ? dailyAmt
-      : selectedCadence === 'bidaily'
-      ? biDailyAmt
-      : selectedCadence === 'weekly'
-      ? weeklyAmt
-      : monthlyAmt;
-  const activeCadenceSuffix =
-    selectedCadence === 'daily'
-      ? '/day'
-      : selectedCadence === 'bidaily'
-      ? '/2 days'
-      : selectedCadence === 'weekly'
-      ? '/wk'
-      : '/mo';
+  const activeCadenceAmount = weeklyAmt;
+  const activeCadenceSuffix = '/wk';
 
   const handleShare = () => {
     setShareToast(`Link for ${product.name} copied to clipboard!`);
@@ -148,7 +130,7 @@ export default function ProductDetailScreen({
             <View>
               <Text style={styles.cashLabel}>Base Item Price</Text>
               <Text style={styles.cashPrice}>₦{product.price.toLocaleString()}</Text>
-              <Text style={styles.cashSub}>Exclusive of delivery & insurance</Text>
+              <Text style={styles.cashSub}>10% compulsory insurance included on checkout</Text>
             </View>
 
             {isBike ? (
@@ -391,46 +373,30 @@ export default function ProductDetailScreen({
             </View>
 
             <Text style={styles.calcSubtitle}>
-              Select your preferred tenure and deduction cadence:
+              Select your preferred repayment tenure (weekly deduction schedule):
             </Text>
 
-            {/* Cadence Switcher Pills */}
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
-              {(
-                [
-                  { id: 'daily', label: 'Daily' },
-                  { id: 'bidaily', label: 'Every 2 Days' },
-                  { id: 'weekly', label: 'Weekly' },
-                  { id: 'monthly', label: 'Monthly' },
-                ] as const
-              ).map((item) => {
-                const active = selectedCadence === item.id;
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => setSelectedCadence(item.id)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 7,
-                      borderRadius: 10,
-                      backgroundColor: active ? '#2E3192' : '#FFFFFF',
-                      borderWidth: 1,
-                      borderColor: active ? '#2E3192' : '#DBE2F0',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontFamily: 'PlusJakartaSans_700Bold',
-                        color: active ? '#FFFFFF' : '#475569',
-                      }}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            {/* Weekly Deduction Locked Indicator */}
+            <View style={{ flexDirection: 'row', marginBottom: 14 }}>
+              <View
+                style={{
+                  paddingVertical: 7,
+                  paddingHorizontal: 14,
+                  borderRadius: 10,
+                  backgroundColor: '#2E3192',
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontFamily: 'PlusJakartaSans_700Bold',
+                    color: '#FFFFFF',
+                  }}
+                >
+                  Weekly Deduction
+                </Text>
+              </View>
             </View>
 
             {/* Tenure Chips */}
@@ -464,8 +430,8 @@ export default function ProductDetailScreen({
 
               <View style={styles.bnplDetailRow}>
                 <View>
-                  <Text style={styles.bnplDetailLabel}>1-Year Comprehensive Insurance (7%):</Text>
-                  <Text style={styles.bnplDetailHint}>Theft, fire, accident & battery cover</Text>
+                  <Text style={styles.bnplDetailLabel}>1-Year Comprehensive Insurance (10%):</Text>
+                  <Text style={styles.bnplDetailHint}>Compulsory theft, fire, accident & battery cover</Text>
                 </View>
                 <Text style={styles.bnplDetailVal}>₦{breakdown.insuranceFee.toLocaleString()}</Text>
               </View>
@@ -631,6 +597,10 @@ export default function ProductDetailScreen({
                     <Text style={styles.orderVal}>₦{breakdown.basePrice.toLocaleString()}</Text>
                   </View>
                   <View style={styles.orderRow}>
+                    <Text style={styles.orderLabel}>Compulsory Insurance (10%):</Text>
+                    <Text style={styles.orderVal}>₦{breakdown.insuranceFee.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.orderRow}>
                     <Text style={styles.orderLabel}>
                       {deliveryType === 'pickup'
                         ? 'Hub Pickup:'
@@ -736,7 +706,7 @@ const styles = StyleSheet.create({
   },
   categoryBadgeText: {
     color: '#4A50AE',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   stockBadge: {
@@ -752,7 +722,7 @@ const styles = StyleSheet.create({
   },
   stockBadgeText: {
     color: '#2E3192',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   headerSection: {
@@ -764,13 +734,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   productName: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
   brandModel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
     marginTop: 2,
@@ -787,19 +757,19 @@ const styles = StyleSheet.create({
     borderColor: '#DBE2F0',
   },
   cashLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
   },
   cashPrice: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
     marginTop: 1,
   },
   cashSub: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
     marginTop: 2,

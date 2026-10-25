@@ -48,6 +48,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
   const slide = slides[index];
   const compact = height < 720;
   const heroHeight = Math.min(Math.max(height * 0.38, 270), 390);
+  const haloSize = Math.min(width * 0.68, heroHeight * 0.75, 270);
   const advance = () => index === slides.length - 1 ? onComplete() : setIndex(index + 1);
 
   return (
@@ -156,18 +157,16 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
             </View>
           </View>
 
-          {/* Blue Sphere Halo Behind Bike (Exact Match to Image) */}
+          {/* Blue Sphere Halo Behind Bike */}
           <View
             style={{
               position: 'absolute',
-              width: width * 0.72,
-              height: width * 0.72,
-              maxWidth: 320,
-              maxHeight: 320,
-              borderRadius: 999,
+              width: haloSize,
+              height: haloSize,
+              borderRadius: haloSize / 2,
               backgroundColor: '#8AD1FD',
               alignSelf: 'center',
-              top: heroHeight * 0.12,
+              top: (heroHeight - haloSize) / 2 - 4,
             }}
           />
 
@@ -176,11 +175,11 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
             source={slide.image}
             resizeMode="contain"
             style={{
-              width: '115%',
-              height: '76%',
+              width: '100%',
+              height: heroHeight * 0.74,
               alignSelf: 'center',
               position: 'absolute',
-              bottom: 6,
+              bottom: 8,
             }}
           />
 

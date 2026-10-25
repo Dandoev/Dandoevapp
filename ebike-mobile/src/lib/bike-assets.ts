@@ -11,10 +11,10 @@ export const BRAND_ASSETS = {
 
 export const BIKE_ASSETS: Record<string, any> = {
   'bike-g90': require('../../assets/bikes/DandoEv_G90-removebg-preview.png'),
-  'bike-x5': require('../../assets/bikes/DandoEv_X5.jpg'),
+  'bike-x5': require('../../assets/bikes/DandoEv_X5-removebg-preview.png'),
   'bike-x6': require('../../assets/bikes/DandoEV_X6.jpg'),
   'bike-x4': require('../../assets/bikes/DandoEV_X6.jpg'),
-  'bike-x5-lite': require('../../assets/bikes/DandoEv_X5.jpg'),
+  'bike-x5-lite': require('../../assets/bikes/DandoEv_X5-removebg-preview.png'),
   'bike-x2': require('../../assets/bikes/DandoEv_G90_Lite-removebg-preview.png'),
   'bike-g90-lite': require('../../assets/bikes/DandoEv_G90_Lite-removebg-preview.png'),
   'battery-48v-25ah': require('../../assets/batteries/0a1ca434-12a4-4dd2-9df0-0f491053101b.jpg'),

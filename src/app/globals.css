@@ -1,5 +1,60 @@
 @import "tailwindcss";
 
+/* Restore Tailwind utility values inside the admin workspace. The site's
+   older unlayered reset otherwise flattens its spacing and button styles. */
+.admin-workspace,
+.admin-workspace *,
+.admin-workspace *::before,
+.admin-workspace *::after {
+  margin: revert-layer;
+  padding: revert-layer;
+}
+
+.admin-workspace button {
+  background: revert-layer;
+  border: revert-layer;
+  color: revert-layer;
+}
+
+.admin-workspace {
+  font-family: var(--font-inter), 'Inter', sans-serif;
+}
+
+.admin-workspace h1,
+.admin-workspace h2,
+.admin-workspace h3,
+.admin-workspace h4,
+.admin-workspace h5,
+.admin-workspace h6,
+.admin-workspace .font-display,
+.admin-workspace .font-heading,
+.admin-workspace .font-black,
+.admin-workspace .font-extrabold {
+  font-family: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
+}
+
+.admin-workspace img {
+  height: revert-layer;
+}
+
+.admin-login,
+.admin-login *,
+.admin-login *::before,
+.admin-login *::after {
+  margin: revert-layer;
+  padding: revert-layer;
+}
+
+.admin-login button {
+  background: revert-layer;
+  border: revert-layer;
+  color: revert-layer;
+}
+
+.admin-login img {
+  height: revert-layer;
+}
+
 /* ============================================================
    DandoEv E-Bike BNPL - Enterprise Design System (Shadcn UI)
    ============================================================ */
@@ -78,9 +133,9 @@
   --info: #0284c7;
   --info-bg: #f0f9ff;
 
-  /* Typography */
-  --font-display: var(--font-poppins), 'Inter', sans-serif;
-  --font-body: var(--font-poppins), 'Inter', sans-serif;
+  /* Typography (Aligned with Mobile App: Plus Jakarta Sans + Inter) */
+  --font-display: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
+  --font-body: var(--font-inter), 'Inter', sans-serif;
 
   /* Font Sizes */
   --text-xs: 0.75rem;
@@ -131,6 +186,9 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-inter), 'Inter', sans-serif;
+  --font-display: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
+  --font-heading: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', sans-serif;
   --color-primary: var(--primary);
   --color-primary-light: var(--primary-light);
   --color-primary-dark: var(--primary-dark);

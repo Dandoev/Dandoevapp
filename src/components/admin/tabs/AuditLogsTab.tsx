@@ -20,14 +20,6 @@ interface AuditLogsTabProps {
   auditLogs: any[];
 }
 
-const DEFAULT_LOGS = [
-  { id: 'log-01', user: { firstName: 'System', lastName: 'Admin' }, action: 'LOAN_APPROVED', details: 'Allocated Frame VIN DND-2026-X5-098 and dual batteries BAT-60V-01, BAT-60V-02', ipAddress: '102.89.23.14', createdAt: '2026-03-24T10:15:00.000Z' },
-  { id: 'log-02', user: { firstName: 'Adewale', lastName: 'Okonkwo' }, action: 'MONO_STATEMENT_VERIFIED', details: 'Income verification successful: ₦340,000 monthly inflow detected', ipAddress: '197.210.54.12', createdAt: '2026-03-24T09:45:00.000Z' },
-  { id: 'log-03', user: { firstName: 'System', lastName: 'Worker' }, action: 'DAILY_SAVINGS_LOCKED', details: 'Compulsory ₦1,000 daily micro-savings successfully transferred to escrow for active loans', ipAddress: '127.0.0.1', createdAt: '2026-03-24T08:30:00.000Z' },
-  { id: 'log-04', user: { firstName: 'Emeka', lastName: 'Nnamdi' }, action: 'PAYMENT_REMINDER_SENT', details: 'Automated WhatsApp & SMS repayment reminder dispatched for installment due in 24h', ipAddress: '102.89.44.88', createdAt: '2026-03-24T06:30:00.000Z' },
-  { id: 'log-05', user: { firstName: 'Zainab', lastName: 'Aliyu' }, action: 'BIKE_STOCK_UPDATED', details: 'Added 10 new DandoEv X5 dual-battery units to Lagos fulfillment hub', ipAddress: '102.89.12.90', createdAt: '2026-03-24T04:30:00.000Z' },
-];
-
 const getActorName = (log: any) =>
   log.actorName ||
   (log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() : '') ||
@@ -37,7 +29,7 @@ export default function AuditLogsTab({ auditLogs }: AuditLogsTabProps) {
   const [search, setSearch] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  const sampleLogs = auditLogs && auditLogs.length > 0 ? auditLogs : DEFAULT_LOGS;
+  const sampleLogs = auditLogs || [];
 
   const filteredLogs = sampleLogs.filter((l) => {
     if (search.trim()) {
@@ -56,7 +48,7 @@ export default function AuditLogsTab({ auditLogs }: AuditLogsTabProps) {
       (l) =>
         `${l.id},"${getActorName(l)}",${l.action},"${(
           l.details || ''
-        ).replace(/"/g, '""')}",${l.ipAddress || '102.89.23.14'},${l.createdAt}`
+        ).replace(/"/g, '""')}",${l.ipAddress || ''},${l.createdAt}`
     );
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
     const link = document.createElement('a');

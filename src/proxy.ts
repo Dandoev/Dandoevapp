@@ -25,15 +25,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(token ? '/admin' : '/login', request.url));
   }
 
+  // Customer journeys run in the mobile app. Keep the web surface staff-only;
+  // API routes stay available to the mobile client.
+  const mobileOnlyPaths = ['/dashboard', '/auth', '/bikes', '/accessories', '/checkout', '/bnpl'];
+  if (mobileOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return NextResponse.redirect(new URL(token ? '/admin' : '/login', request.url));
+  }
+
   // ---- Route Protection Logic ----
-  const PROTECTED_ROUTES = ['/dashboard', '/bnpl', '/checkout', '/logistics'];
   const ADMIN_ROUTES = ['/admin'];
 
-  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isAdmin = ADMIN_ROUTES.some(route => pathname.startsWith(route));
 
-  if ((isProtected || isAdmin) && !token) {
-    const url = new URL(isAdmin ? '/login' : '/auth/signin', request.url);
+  if (isAdmin && !token) {
+    const url = new URL('/login', request.url);
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }

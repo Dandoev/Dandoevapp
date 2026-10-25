@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySupabaseToken, extractBearerToken } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { isDemoAllowed } from '@/lib/env';
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,6 +37,17 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
+      if (isDemoAllowed() && decoded.sub === 'demo-admin-id') {
+        return NextResponse.json({
+          user: {
+            id: decoded.sub,
+            email: decoded.email,
+            firstName: 'Local',
+            lastName: 'Administrator',
+            role: decoded.role,
+          },
+        });
+      }
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 

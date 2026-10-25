@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, withValidation, type ApiContext } from '@/lib/api-handler';
 import prisma from '@/lib/prisma';
-import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
 import { z } from 'zod';
 
@@ -96,11 +95,7 @@ export const PATCH = withRoles(
 
       return NextResponse.json({ success: true, data: updatedDoc });
     } catch (error) {
-      logger.warn({ error }, 'Failed to update KYC document in Prisma, attempting dbService fallback');
-      const fallbackDoc = await dbService.updateKycStatus(id, status, ctx.user.sub, rejectionReason);
-      if (fallbackDoc) {
-        return NextResponse.json({ success: true, data: fallbackDoc });
-      }
+      logger.error({ error }, 'Failed to update KYC document');
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
   })

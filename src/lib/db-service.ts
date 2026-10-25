@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import prisma from './prisma';
+import { isDemoAllowed } from './env';
 import {
   DEMO_BIKES,
   DEMO_USERS,
@@ -495,7 +496,7 @@ class DbService {
         }));
       }
     } catch {
-      // Database unavailable, fallback to persistent JSON storage
+      if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
 
     const db = await this.loadDb();
@@ -592,7 +593,7 @@ class DbService {
         }));
       }
     } catch {
-      // Database unavailable, fallback to persistent JSON storage
+      if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
 
     const db = await this.loadDb();
@@ -917,7 +918,7 @@ class DbService {
         }));
       }
     } catch {
-      // Database unavailable, fallback to persistent JSON storage
+      if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
 
     const db = await this.loadDb();

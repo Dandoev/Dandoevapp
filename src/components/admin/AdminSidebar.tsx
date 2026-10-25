@@ -15,8 +15,6 @@ import {
   LogOut,
   Activity,
   X,
-  Zap,
-  ExternalLink,
 } from 'lucide-react';
 
 export type AdminTab =
@@ -38,6 +36,7 @@ interface AdminSidebarProps {
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   userRole?: string;
+  userProfile?: { firstName?: string; lastName?: string; email?: string } | null;
 }
 
 interface MenuItem {
@@ -50,11 +49,10 @@ interface MenuItem {
   section: 'operations' | 'finance' | 'governance';
 }
 
-const ROLE_PROFILES: Record<string, { name: string; title: string; initials: string }> = {
-  super_admin: { name: 'Adebayo Ogunlesi', title: 'Super Admin · Head of Ops', initials: 'AO' },
-  credit_underwriter: { name: 'Adewale Okonkwo', title: 'Senior Credit Underwriter', initials: 'AK' },
-  fleet_manager: { name: 'Zainab Aliyu', title: 'Fleet & Battery Hub Lead', initials: 'ZA' },
-  collections_agent: { name: 'Emeka Nnamdi', title: 'Collections & Recovery', initials: 'EN' },
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin', finance_admin: 'Finance Admin', compliance_officer: 'Compliance Officer',
+  operations_admin: 'Operations Admin', credit_underwriter: 'Credit Underwriter',
+  fleet_manager: 'Fleet Manager', collections_agent: 'Collections Agent',
 };
 
 export default function AdminSidebar({
@@ -64,9 +62,11 @@ export default function AdminSidebar({
   isOpenMobile,
   onCloseMobile,
   userRole = 'super_admin',
+  userProfile,
 }: AdminSidebarProps) {
   const isSuperAdmin = userRole === 'super_admin';
-  const profile = ROLE_PROFILES[userRole] || ROLE_PROFILES.super_admin;
+  const fullName = `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || 'Administrator';
+  const initials = `${userProfile?.firstName?.[0] || ''}${userProfile?.lastName?.[0] || ''}` || 'AD';
 
   const menuItems: MenuItem[] = [
     // Core Operations
@@ -150,7 +150,7 @@ export default function AdminSidebar({
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     } catch {}
-    window.location.href = '/auth/signin';
+    window.location.href = '/login';
   };
 
   return (
@@ -163,28 +163,25 @@ export default function AdminSidebar({
         />
       )}
 
-      {/* DandoEv Deep Navy & Charcoal Enterprise Sidebar */}
+      {/* Admin navigation follows the mobile brand's navy and cyan palette. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between w-[260px] shrink-0 bg-[#070D2D] text-slate-300 transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 border-r border-white/10 ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between w-[260px] shrink-0 bg-[#0A1B46] text-[#C8E4F5] transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 border-r border-[#55C5F3]/15 ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Brand Logo Header */}
-          <div className="flex items-center justify-between h-20 px-6 border-b border-white/10">
+          <div className="flex items-center justify-between h-24 px-5 border-b border-white/10">
             <Link href="/admin" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#26fedc] to-[#006b5b] flex items-center justify-center text-[#021064] shadow-md">
-                <Zap className="h-5 w-5 fill-current" />
+              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-md p-1.5">
+                <img src="/logo.png" alt="DandoEv" className="h-full w-full object-contain" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-lg font-black tracking-tight text-white">DandoEv</span>
-                  <span className="px-1.5 py-0.5 rounded bg-[#26fedc]/15 text-[#26fedc] font-mono text-[10px] font-extrabold uppercase">
-                    OPS
-                  </span>
+                  <span className="text-lg font-black tracking-tight text-white font-display">DandoEv</span>
                 </div>
-                <span className="block text-[10px] text-slate-400 font-medium">
-                  BNPL &amp; Fleet Command
+                <span className="block text-[10px] text-[#8DC5E4] font-semibold uppercase tracking-wider">
+                  Admin workspace
                 </span>
               </div>
             </Link>
@@ -222,7 +219,7 @@ export default function AdminSidebar({
                         disabled={isRestricted}
                         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer ${
                           isActive
-                            ? 'bg-linear-to-r from-[#006b5b] to-[#008975] text-white shadow-md ring-1 ring-[#26fedc]/30'
+                            ? 'bg-[#36B9EF] text-[#071B48] shadow-md ring-1 ring-[#8EE0FF]/50'
                             : isRestricted
                             ? 'opacity-30 cursor-not-allowed text-slate-500'
                             : 'text-slate-300/85 hover:bg-white/8 hover:text-white'
@@ -231,7 +228,7 @@ export default function AdminSidebar({
                         <div className="flex items-center gap-3">
                           <Icon
                             className={`h-4 w-4 shrink-0 ${
-                              isActive ? 'text-[#26fedc]' : 'text-slate-400'
+                              isActive ? 'text-[#071B48]' : 'text-[#8FB5D0]'
                             }`}
                           />
                           <span>{item.label}</span>
@@ -241,7 +238,7 @@ export default function AdminSidebar({
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               isActive
-                                ? 'bg-[#26fedc] text-[#021064]'
+                                ? 'bg-[#071B48] text-white'
                                 : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
                             }`}
                           >
@@ -257,25 +254,17 @@ export default function AdminSidebar({
           </nav>
         </div>
 
-        {/* Footer Area: Buyer Storefront Shortcut, Active Staff Profile & Logout */}
-        <div className="p-4 border-t border-white/10 space-y-3 bg-[#050920]">
-          <Link
-            href="/bikes"
-            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-          >
-            <span>Open Rider Storefront</span>
-            <ExternalLink className="h-3.5 w-3.5 text-[#26fedc]" />
-          </Link>
-
+        {/* Staff identity and sign out */}
+        <div className="p-4 border-t border-white/10 space-y-3 bg-[#071638]">
           {/* Staff Profile Card */}
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-9 w-9 rounded-xl bg-linear-to-br from-[#021064] to-[#006b5b] border border-[#26fedc]/30 flex items-center justify-center text-[#26fedc] text-xs font-black shrink-0">
-                {profile.initials}
+              <div className="h-9 w-9 rounded-xl bg-[#37BCEC] border border-[#8EE0FF]/40 flex items-center justify-center text-[#071B48] text-xs font-black shrink-0">
+                {initials.toUpperCase()}
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-extrabold text-white truncate">{profile.name}</div>
-                <div className="text-[10px] text-slate-400 truncate">{profile.title}</div>
+                <div className="text-xs font-extrabold text-white truncate">{fullName}</div>
+                <div className="text-[10px] text-slate-400 truncate">{ROLE_LABELS[userRole] || 'Administrator'}</div>
               </div>
             </div>
 

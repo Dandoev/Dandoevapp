@@ -94,13 +94,11 @@ export default function LoanApprovalModal({
         onApproveSuccess(allocated);
         onClose();
       } else {
-        // Graceful fallback for demo/unseeded records so underwriting workflow remains interactive
-        onApproveSuccess(allocated);
-        onClose();
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'The loan could not be approved.');
       }
     } catch {
-      onApproveSuccess(allocated);
-      onClose();
+      setError('Network error. The loan was not changed.');
     } finally {
       setLoading(false);
     }

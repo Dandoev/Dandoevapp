@@ -2,8 +2,7 @@
 
 import React, { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Zap, Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
-import { APP_NAME } from '@/lib/constants';
+import { Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 
 const ADMIN_ROLES = [
   'super_admin',
@@ -76,8 +75,8 @@ function AdminLoginForm() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans"
-      style={{ background: 'radial-gradient(ellipse at top left, #0b1e4f 0%, #04091a 60%, #020510 100%)' }}
+      className="admin-login min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans"
+      style={{ background: 'radial-gradient(circle at 85% 10%, #A9E6FF 0%, #E5F6FF 38%, #F4FAFF 78%)' }}
     >
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -85,18 +84,18 @@ function AdminLoginForm() {
             <img src="/logo.png" alt="DandoEv" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="text-xl font-black tracking-tight text-white">DandoEv</div>
-            <div className="text-xs text-slate-300">The future is here • Admin Dashboard</div>
+            <div className="text-xl font-black tracking-tight text-[#0A1B46]">DandoEV</div>
+            <div className="text-xs text-[#416381]">Secure admin workspace</div>
           </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl shadow-2xl p-8 space-y-5"
+          className="bg-white rounded-3xl border border-[#C7E9F8] shadow-[0_24px_80px_rgba(10,27,70,0.12)] p-8 space-y-5"
           autoComplete="on"
         >
           <div className="flex items-center gap-2 text-slate-900">
-            <ShieldCheck className="w-5 h-5 text-primary" />
+            <ShieldCheck className="w-5 h-5 text-[#1699CE]" />
             <h1 className="text-xl font-extrabold">Staff sign in</h1>
           </div>
 
@@ -155,7 +154,7 @@ function AdminLoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0A154F] text-white font-bold text-sm hover:opacity-90 disabled:opacity-60 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#27B7EA] text-[#071B48] font-bold text-sm hover:bg-[#5DD0F3] disabled:opacity-60 transition-colors"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {loading ? 'Signing in…' : 'Sign in'}

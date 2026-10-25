@@ -29,6 +29,12 @@ interface OverviewTabProps {
     defaultRate: number;
     monthlyRevenue: Array<{ month: string; revenue: number }>;
     loansByStatus: Array<{ status: string; count: number }>;
+    escrowBalance?: number;
+    onTimeRate?: number;
+    monthGrowth?: number;
+    recentLedger?: any[];
+    regionalHubs?: any[];
+    providerVolume?: Array<{ provider: string; amount: number }>;
   };
   delinquentData: {
     totalAtRisk: number;
@@ -48,85 +54,19 @@ export default function OverviewTab({
 }: OverviewTabProps) {
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'repayment' | 'escrow'>('all');
 
-  const totalPortfolioNaira = stats?.totalRevenue || 48200000;
-  const activeLoansCount = stats?.activeLoans || 18;
-  const pendingCount = stats?.pendingApplications ?? 3;
-  const totalEscrowVault = activeLoansCount * 45000;
-  const capitalAtRisk = delinquentData?.totalAtRisk || 176000;
-  const defaultRate = stats?.defaultRate || 2.1;
+  const totalPortfolioNaira = stats?.totalRevenue || 0;
+  const activeLoansCount = stats?.activeLoans || 0;
+  const pendingCount = stats?.pendingApplications ?? 0;
+  const totalEscrowVault = stats?.escrowBalance || 0;
+  const capitalAtRisk = delinquentData?.totalAtRisk || 0;
+  const defaultRate = stats?.defaultRate || 0;
 
-  const monthlySeries =
-    stats?.monthlyRevenue && stats.monthlyRevenue.length > 0
-      ? stats.monthlyRevenue
-      : [
-          { month: 'May', revenue: 5400000 },
-          { month: 'Jun', revenue: 7200000 },
-          { month: 'Jul', revenue: 9100000 },
-          { month: 'Aug', revenue: 11800000 },
-          { month: 'Sep', revenue: 14100000 },
-          { month: 'Oct', revenue: 16800000 },
-        ];
+  const monthlySeries = stats?.monthlyRevenue || [];
 
   const maxMonthlyRev = Math.max(...monthlySeries.map((m) => m.revenue), 1);
 
   // Live Naira Repayment & Escrow Sweep Ledger
-  const recentLedger = [
-    {
-      id: 'ld-01',
-      rider: 'Solomon Dunu',
-      bike: 'DandoEv S-Series Commuter',
-      channel: 'Paystack Auto-Debit · #PSTK_9881',
-      category: 'repayment',
-      amount: 14500,
-      escrowAdded: 2000,
-      time: '12 mins ago',
-      status: 'Settled',
-    },
-    {
-      id: 'ld-02',
-      rider: 'Babatunde Adeleke',
-      bike: 'DandoEv X6 Cargo Pro',
-      channel: 'Mono Direct Debit · #MONO_4412',
-      category: 'repayment',
-      amount: 16200,
-      escrowAdded: 2000,
-      time: '44 mins ago',
-      status: 'Settled',
-    },
-    {
-      id: 'ld-03',
-      rider: 'Fleet Escrow Sweep (18 Active Riders)',
-      bike: 'Save-As-You-Ride Compulsory Vault',
-      channel: 'Automated CBN Escrow Lock',
-      category: 'escrow',
-      amount: 36000,
-      escrowAdded: 36000,
-      time: '2 hours ago',
-      status: 'Locked in Escrow',
-    },
-    {
-      id: 'ld-04',
-      rider: 'Amina Bello',
-      bike: 'DandoEv X5 Dual-Battery',
-      channel: 'Providus Virtual NUBAN · #PROV_1102',
-      category: 'repayment',
-      amount: 15000,
-      escrowAdded: 2000,
-      time: '3 hours ago',
-      status: 'Settled',
-    },
-    {
-      id: 'ld-05',
-      rider: 'Musa Abdullahi',
-      bike: 'DandoEv X6 Cargo Pro',
-      channel: '10% Returnable Security Deposit',
-      category: 'escrow',
-      amount: 65000,
-      escrowAdded: 65000,
-      time: '5 hours ago',
-      status: 'Escrow Funded',
-    },
-  ];
+  const recentLedger = stats?.recentLedger || [];
 
   const filteredLedger = recentLedger.filter((item) => {
     if (ledgerFilter === 'all') return true;
@@ -134,29 +74,9 @@ export default function OverviewTab({
   });
 
   // Regional Hub Utilization
-  const regionalHubs = [
-    {
-      city: 'Lagos Hubs (Ikeja, Lekki, Yaba)',
-      activeBikes: 12,
-      chargedPacks: 57,
-      collectionRate: '98.4%',
-      tone: 'bg-emerald-500',
-    },
-    {
-      city: 'Abuja Hub (Wuse II Corridor)',
-      activeBikes: 4,
-      chargedPacks: 22,
-      collectionRate: '96.9%',
-      tone: 'bg-[#006b5b]',
-    },
-    {
-      city: 'Ibadan Hub (Ring Road)',
-      activeBikes: 2,
-      chargedPacks: 16,
-      collectionRate: '95.2%',
-      tone: 'bg-[#021064]',
-    },
-  ];
+  const regionalHubs = stats?.regionalHubs || [];
+  const providerVolume = stats?.providerVolume || [];
+  const providerTotal = providerVolume.reduce((sum, item) => sum + item.amount, 0);
 
   return (
     <div className="space-y-6 pb-12 font-sans text-slate-800">
@@ -165,13 +85,13 @@ export default function OverviewTab({
           ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {/* KPI 1: Gross BNPL Portfolio */}
-        <div className="bg-linear-to-br from-[#021064] to-[#0a228c] text-white rounded-2xl p-6 shadow-md flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full bg-[#26fedc]/10 blur-xl pointer-events-none" />
+        <div className="bg-linear-to-br from-[#0A1B46] to-[#17469D] text-white rounded-2xl p-6 shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full bg-[#65D9FA]/10 blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-[#26fedc]">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-[#65D9FA]">
               Gross BNPL Portfolio
             </span>
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#26fedc]">
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#65D9FA]">
               <Wallet className="h-4.5 w-4.5" />
             </div>
           </div>
@@ -180,15 +100,15 @@ export default function OverviewTab({
             <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums">
               {formatNaira(totalPortfolioNaira)}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-300 font-bold mt-1">
+            <div className="flex items-center gap-1.5 text-xs text-cyan-200 font-bold mt-1">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span>+18.4% MoM · 97.8% On-Time Repayments</span>
+              <span>{(stats?.monthGrowth || 0).toFixed(1)}% MoM · {(stats?.onTimeRate || 0).toFixed(1)}% On-Time Repayments</span>
             </div>
           </div>
 
           <button
             onClick={() => onNavigateToTab('payments')}
-            className="text-xs font-bold text-white/90 hover:text-[#26fedc] inline-flex items-center gap-1 transition-colors cursor-pointer"
+            className="text-xs font-bold text-white/90 hover:text-[#65D9FA] inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
             <span>Open Repayment Ledger ({activeLoansCount} Active Loans)</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -208,7 +128,7 @@ export default function OverviewTab({
 
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-[#021064] tabular-nums">
+              <span className="text-3xl font-black text-[#0A1B46] tabular-nums">
                 {pendingCount}
               </span>
               <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
@@ -222,7 +142,7 @@ export default function OverviewTab({
 
           <button
             onClick={() => onNavigateToTab('applications')}
-            className="text-xs font-extrabold text-[#006b5b] hover:underline inline-flex items-center gap-1 cursor-pointer"
+            className="text-xs font-extrabold text-[#087CA9] hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
             <span>Review &amp; Allocate VIN Serials</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -235,7 +155,7 @@ export default function OverviewTab({
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
               Rider Escrow Savings Vault
             </span>
-            <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#006b5b] border border-teal-200 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-sky-50 text-[#087CA9] border border-sky-200 flex items-center justify-center">
               <PiggyBank className="h-4.5 w-4.5" />
             </div>
           </div>
@@ -251,7 +171,7 @@ export default function OverviewTab({
 
           <button
             onClick={() => onNavigateToTab('reconciliation')}
-            className="text-xs font-extrabold text-[#021064] hover:underline inline-flex items-center gap-1 cursor-pointer"
+            className="text-xs font-extrabold text-[#0A1B46] hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
             <span>Verify Gateway Settlements</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -301,21 +221,21 @@ export default function OverviewTab({
         <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#006b5b]">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#087CA9]">
                  Portfolio Cashflow Velocity
               </span>
-              <h2 className="text-base font-black text-[#021064]">
+              <h2 className="text-base font-black text-[#0A1B46]">
                 Monthly BNPL Collections &amp; Escrow Growth (₦)
               </h2>
             </div>
 
             <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#021064]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#0A1B46]" />
                 <span>Principal + EMI</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#006b5b]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#087CA9]" />
                 <span>Escrow Savings</span>
               </span>
             </div>
@@ -332,18 +252,18 @@ export default function OverviewTab({
                     key={item.month}
                     className="flex-1 flex flex-col items-center justify-end h-full gap-2 group"
                   >
-                    <div className="text-[10px] font-extrabold text-slate-500 group-hover:text-[#021064] tabular-nums">
+                    <div className="text-[10px] font-extrabold text-slate-500 group-hover:text-[#0A1B46] tabular-nums">
                       ₦{(item.revenue / 1000000).toFixed(1)}M
                     </div>
                     <div className="w-full flex items-end justify-center gap-1.5 h-full">
                       <div
                         style={{ height: `${heightPct}%` }}
-                        className="w-full max-w-[18px] bg-[#021064] rounded-t-md transition-all group-hover:bg-[#1a2b88]"
+                        className="w-full max-w-[18px] bg-[#0A1B46] rounded-t-md transition-all group-hover:bg-[#1a2b88]"
                         title={`${item.month}: ${formatNaira(item.revenue)}`}
                       />
                       <div
                         style={{ height: `${escrowHeightPct}%` }}
-                        className="w-full max-w-[12px] bg-[#006b5b] rounded-t-md transition-all group-hover:brightness-110"
+                        className="w-full max-w-[12px] bg-[#087CA9] rounded-t-md transition-all group-hover:brightness-110"
                         title={`Escrow Vault: ${formatNaira(Math.round(item.revenue * 0.18))}`}
                       />
                     </div>
@@ -355,25 +275,16 @@ export default function OverviewTab({
           </div>
 
           {/* Gateway Breakdown Footer */}
-          <div className="grid grid-cols-3 gap-3 pt-4 text-xs">
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                Paystack Mandates
-              </span>
-              <span className="font-black text-slate-900 text-sm">58.4% Volume</span>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                Dedicated Virtual NUBAN
-              </span>
-              <span className="font-black text-slate-900 text-sm">29.1% Volume</span>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                Mono Direct Debit
-              </span>
-              <span className="font-black text-slate-900 text-sm">12.5% Volume</span>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-xs">
+            {providerVolume.length === 0 && <p className="col-span-full text-slate-500">No successful payment volume in this period.</p>}
+            {providerVolume.map((item) => (
+              <div key={item.provider} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-bold uppercase text-slate-400 block">{item.provider}</span>
+                <span className="font-black text-slate-900 text-sm">
+                  {providerTotal ? ((item.amount / providerTotal) * 100).toFixed(1) : '0.0'}% Volume
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -382,22 +293,27 @@ export default function OverviewTab({
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#006b5b]">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#087CA9]">
                   Fleet &amp; Swap Network
                 </span>
-                <h2 className="text-base font-black text-[#021064]">
-                  Regional Hub Telemetry ({bikesCount || 6} Models)
+                <h2 className="text-base font-black text-[#0A1B46]">
+                  Regional Hub Telemetry ({bikesCount} Models)
                 </h2>
               </div>
               <button
                 onClick={() => onNavigateToTab('bikes')}
-                className="text-xs font-bold text-[#006b5b] hover:underline cursor-pointer"
+                className="text-xs font-bold text-[#087CA9] hover:underline cursor-pointer"
               >
                 Manage Fleet &rarr;
               </button>
             </div>
 
             <div className="space-y-3.5 mt-4">
+              {regionalHubs.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-500">
+                  Hub telemetry is unavailable until operational hub records are configured.
+                </p>
+              )}
               {regionalHubs.map((hub) => (
                 <div
                   key={hub.city}
@@ -411,10 +327,10 @@ export default function OverviewTab({
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
                     <span className="inline-flex items-center gap-1">
-                      <Bike className="w-3.5 h-3.5 text-[#021064]" /> {hub.activeBikes} Financed Bikes
+                      <Bike className="w-3.5 h-3.5 text-[#0A1B46]" /> {hub.activeBikes} Financed Bikes
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <BatteryCharging className="w-3.5 h-3.5 text-[#006b5b]" /> {hub.chargedPacks} Charged Packs
+                      <BatteryCharging className="w-3.5 h-3.5 text-[#087CA9]" /> {hub.chargedPacks} Charged Packs
                     </span>
                   </div>
                 </div>
@@ -422,21 +338,21 @@ export default function OverviewTab({
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between">
+          <div className="p-4 rounded-xl bg-sky-50/70 border border-sky-200 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <FileCheck className="w-5 h-5 text-[#006b5b] shrink-0" />
+              <FileCheck className="w-5 h-5 text-[#087CA9] shrink-0" />
               <div>
-                <div className="text-xs font-extrabold text-[#021064]">
+                <div className="text-xs font-extrabold text-[#0A1B46]">
                   KYC &amp; Guarantor Co-Sign Queue
                 </div>
                 <div className="text-[11px] text-slate-600">
-                  All active riders verified via Mono BVN &amp; NDPR audit
+                  Review identity documents and guarantor verification records
                 </div>
               </div>
             </div>
             <button
               onClick={() => onNavigateToTab('compliance')}
-              className="px-3 py-1.5 rounded-lg bg-[#021064] text-white text-xs font-bold hover:opacity-95 shrink-0 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[#0A1B46] text-white text-xs font-bold hover:opacity-95 shrink-0 cursor-pointer"
             >
               Audit KYC
             </button>
@@ -452,7 +368,7 @@ export default function OverviewTab({
         <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-black text-[#021064]">
+              <h2 className="text-base font-black text-[#0A1B46]">
                 Live Naira Repayment &amp; Escrow Feed
               </h2>
               <p className="text-xs text-slate-500">
@@ -473,8 +389,8 @@ export default function OverviewTab({
                   onClick={() => setLedgerFilter(tab.id)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     ledgerFilter === tab.id
-                      ? 'bg-[#021064] text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-[#021064]'
+                      ? 'bg-[#0A1B46] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-[#0A1B46]'
                   }`}
                 >
                   {tab.label}
@@ -484,6 +400,7 @@ export default function OverviewTab({
           </div>
 
           <div className="divide-y divide-slate-100">
+            {filteredLedger.length === 0 && <p className="py-8 text-center text-xs text-slate-500">No settled transactions found.</p>}
             {filteredLedger.map((tx) => (
               <div
                 key={tx.id}
@@ -493,8 +410,8 @@ export default function OverviewTab({
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       tx.category === 'escrow'
-                        ? 'bg-teal-50 text-[#006b5b] border border-teal-200'
-                        : 'bg-indigo-50 text-[#021064] border border-indigo-200'
+                        ? 'bg-sky-50 text-[#087CA9] border border-sky-200'
+                        : 'bg-indigo-50 text-[#0A1B46] border border-indigo-200'
                     }`}
                   >
                     {tx.category === 'escrow' ? (
@@ -518,7 +435,7 @@ export default function OverviewTab({
                     +{formatNaira(tx.amount)}
                   </div>
                   <div className="text-[10px] font-bold text-slate-400">
-                    {tx.status} · {tx.time}
+                    {tx.status} · {timeAgo(tx.time)}
                   </div>
                 </div>
               </div>
@@ -530,25 +447,26 @@ export default function OverviewTab({
         <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <Activity className="h-4.5 w-4.5 text-[#006b5b]" />
-              <h2 className="text-base font-black text-[#021064]">Security &amp; Audit Stream</h2>
+              <Activity className="h-4.5 w-4.5 text-[#087CA9]" />
+              <h2 className="text-base font-black text-[#0A1B46]">Security &amp; Audit Stream</h2>
             </div>
             <button
               onClick={() => onNavigateToTab('activity')}
-              className="text-xs font-bold text-[#006b5b] hover:underline cursor-pointer"
+              className="text-xs font-bold text-[#087CA9] hover:underline cursor-pointer"
             >
               Full Audit Log &rarr;
             </button>
           </div>
 
           <div className="space-y-3">
+            {auditLogs.length === 0 && <p className="py-8 text-center text-xs text-slate-500">No audit activity recorded.</p>}
             {(auditLogs || []).slice(0, 4).map((log: any) => (
               <div
                 key={log.id}
                 className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded bg-[#021064]/10 text-[#021064] font-mono text-[10px] font-extrabold">
+                  <span className="px-2 py-0.5 rounded bg-[#0A1B46]/10 text-[#0A1B46] font-mono text-[10px] font-extrabold">
                     {(log.action || 'SYSTEM_EVENT').replace(/_/g, ' ')}
                   </span>
                   <span className="text-[10px] font-mono text-slate-400">

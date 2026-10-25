@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-poppins",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-plus-jakarta-sans",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -15,18 +22,15 @@ export const metadata: Metadata = {
   keywords: "electric bikes, e-bikes, BNPL, buy now pay later, Nigeria, DandoEv",
 };
 
-import MobileNav from "@/components/layout/MobileNav";
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={poppins.variable}>
-      <body className={poppins.className} style={{ paddingBottom: '80px' }}> {/* Padding for mobile nav */}
+    <html lang="en" className={`${plusJakartaSans.variable} ${inter.variable}`}>
+      <body className={`${inter.className} font-sans antialiased`}>
         {children}
-        <MobileNav />
       </body>
     </html>
   );

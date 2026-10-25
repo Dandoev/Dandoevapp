@@ -203,35 +203,11 @@ export default function UsersAccessTab({
         });
         fetchStaff();
       } else {
-        // Local fallback so provisioning works smoothly in preview mode
-        const newStaff: UserItem = {
-          id: `usr-${Date.now()}`,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          role: formData.role,
-          status: 'active',
-          permissions: formData.permissions,
-          createdAt: new Date().toISOString().slice(0, 10),
-        };
-        setUsers(prev => [newStaff, ...prev]);
-        setIsCreateModalOpen(false);
-        showNotice(`Staff account for ${formData.firstName} provisioned!`);
+        const data = await res.json().catch(() => ({}));
+        showNotice(data.error || 'Staff account could not be created.');
       }
     } catch {
-      const newStaff: UserItem = {
-        id: `usr-${Date.now()}`,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        role: formData.role,
-        status: 'active',
-        permissions: formData.permissions,
-        createdAt: new Date().toISOString().slice(0, 10),
-      };
-      setUsers(prev => [newStaff, ...prev]);
-      setIsCreateModalOpen(false);
-      showNotice(`Staff account for ${formData.firstName} provisioned!`);
+      showNotice('Network error. Staff account was not created.');
     } finally {
       setIsSubmitting(false);
     }
@@ -241,16 +217,18 @@ export default function UsersAccessTab({
     const target = users.find(u => u.id === userId);
     if (!target) return;
     const nextStatus = target.status === 'active' ? 'suspended' : 'active';
-    setUsers(users.map(u => (u.id === userId ? { ...u, status: nextStatus } : u)));
-    showNotice(`${target.firstName}'s access status updated to ${nextStatus.toUpperCase()}.`);
-
     try {
-      await fetch('/api/admin/users', {
+      const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId, status: nextStatus }),
       });
-    } catch {}
+      if (!response.ok) throw new Error('Update failed');
+      setUsers(users.map(u => (u.id === userId ? { ...u, status: nextStatus } : u)));
+      showNotice(`${target.firstName}'s access status updated to ${nextStatus.toUpperCase()}.`);
+    } catch {
+      showNotice('Access status could not be updated.');
+    }
   };
 
   const filteredUsers = users.filter(u => {

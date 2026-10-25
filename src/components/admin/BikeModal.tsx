@@ -52,7 +52,6 @@ export default function BikeModal({ bike, onClose, onSave }: BikeModalProps) {
     const payload = {
       ...(bike || {}),
       ...form,
-      id: bike?.id || `ebike-${Date.now()}`,
       price: parseFloat(form.price) || 0,
       stockQuantity: parseInt(form.stockQuantity, 10) || 0,
       bnplMinDownPayment: parseInt(form.bnplMinDownPayment, 10) || 0,
@@ -69,16 +68,15 @@ export default function BikeModal({ bike, onClose, onSave }: BikeModalProps) {
       });
 
       if (res.ok) {
-        onSave(payload);
+        const data = await res.json();
+        onSave(data.data || data);
         onClose();
       } else {
-        // Graceful fallback in preview mode so Fleet Tab updates immediately
-        onSave(payload);
-        onClose();
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'The bike could not be saved.');
       }
     } catch {
-      onSave(payload);
-      onClose();
+      setError('Network error. The fleet record was not changed.');
     } finally {
       setLoading(false);
     }

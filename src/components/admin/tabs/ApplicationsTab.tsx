@@ -187,12 +187,12 @@ export default function ApplicationsTab({
                     </div>
                     <div>
                       <div className="text-[11px] text-slate-500 font-medium">Bi-Daily EMI</div>
-                      <div className="font-bold text-slate-900 mt-0.5">{formatNaira(Math.round((loan.monthlyRepayment || 65000) / 15))} / 2 days</div>
+                      <div className="font-bold text-slate-900 mt-0.5">{formatNaira(Math.round(Number(loan.monthlyRepayment || 0) / 15))} / 2 days</div>
                     </div>
                     <div>
                       <div className="text-[11px] text-slate-500 font-medium">Credit Risk Tier</div>
                       <div className="font-bold text-emerald-700 flex items-center gap-1 mt-0.5">
-                        <span>{loan.riskScore || 85}/100</span>
+                        <span>{loan.riskScore == null ? 'Unavailable' : `${loan.riskScore}/100`}</span>
                         <span className="text-[10px] font-semibold bg-emerald-100 px-1 rounded text-emerald-800">Tier A</span>
                       </div>
                     </div>

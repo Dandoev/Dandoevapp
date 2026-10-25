@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import {
   Wallet,
   PiggyBank,
@@ -42,7 +41,13 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
   });
 
   const totalFinanced = loans.reduce((acc, l) => acc + (l.totalRepayable || l.totalAmount || l.loanAmount || 0), 0);
-  const totalRepaidEstimate = loans.reduce((acc, l) => acc + (l.amountPaid || ((l.totalRepayable || l.totalAmount || 650000) * 0.45)), 0);
+  const repayments = loans.flatMap((loan) => Array.isArray(loan.repayments) ? loan.repayments : []);
+  const totalRepaid = repayments.reduce((acc, repayment) => acc + Number(repayment.amountPaid || 0), 0);
+  const escrowBalance = loans.reduce((acc, loan) => acc + Number(loan.wallet?.lockedSaving || 0), 0);
+  const dueCutoff = Date.now() + 48 * 60 * 60 * 1000;
+  const nextDueInflow = repayments
+    .filter((repayment) => repayment.status === 'upcoming' && new Date(repayment.dueDate).getTime() <= dueCutoff)
+    .reduce((acc, repayment) => acc + Number(repayment.amount || 0), 0);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -52,7 +57,7 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Gross Portfolio Collections</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{formatNaira(totalRepaidEstimate)}</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{formatNaira(totalRepaid)}</h3>
             </div>
             <div className="rounded-lg p-2.5 bg-emerald-50 text-emerald-700">
               <Wallet className="h-5 w-5" />
@@ -60,7 +65,7 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium mt-2">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>97.2% On-Time Bi-Daily Settlement</span>
+            <span>Recorded successful collections</span>
           </div>
         </Card>
 
@@ -68,7 +73,7 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Compulsory Escrow Balance</p>
-              <h3 className="text-2xl font-bold text-purple-700 mt-1">{formatNaira(loans.length * 45000)}</h3>
+              <h3 className="text-2xl font-bold text-purple-700 mt-1">{formatNaira(escrowBalance)}</h3>
             </div>
             <div className="rounded-lg p-2.5 bg-purple-50 text-purple-700">
               <PiggyBank className="h-5 w-5" />
@@ -81,7 +86,7 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Next 48H Due Inflow</p>
-              <h3 className="text-2xl font-bold text-[#021064] mt-1">{formatNaira(activeLoans.length * 15000)}</h3>
+              <h3 className="text-2xl font-bold text-[#021064] mt-1">{formatNaira(nextDueInflow)}</h3>
             </div>
             <div className="rounded-lg p-2.5 bg-indigo-50 text-[#021064]">
               <Calendar className="h-5 w-5" />
@@ -153,12 +158,12 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
                   const freq = (loan.deductionFrequency || 'bidaily').toLowerCase();
                   const emi =
                     freq === 'daily'
-                      ? Math.round((loan.monthlyRepayment || 65000) / 30)
+                      ? Math.round(Number(loan.monthlyRepayment || 0) / 30)
                       : freq === 'weekly'
-                      ? Math.round((loan.monthlyRepayment || 65000) / 4)
+                      ? Math.round(Number(loan.monthlyRepayment || 0) / 4)
                       : freq === 'monthly'
-                      ? (loan.monthlyRepayment || 65000)
-                      : Math.round((loan.monthlyRepayment || 65000) / 15);
+                      ? Number(loan.monthlyRepayment || 0)
+                      : Math.round(Number(loan.monthlyRepayment || 0) / 15);
                   const cadenceLabel =
                     freq === 'daily'
                       ? '/ day'
@@ -167,7 +172,7 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
                       : freq === 'monthly'
                       ? '/ mo'
                       : '/ 2d';
-                  const savings = 45000;
+                  const savings = Number(loan.wallet?.lockedSaving || 0);
 
                   return (
                     <TableRow key={loan.id}>
@@ -205,13 +210,14 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
                           >
                             Statement
                           </Button>
-                          <Link
-                            href={`/dashboard/invoice?loanId=${loan.id}`}
+                          <button
+                            type="button"
+                            onClick={() => onOpenDetailDrawer(loan)}
                             className="inline-flex items-center gap-1 text-xs font-semibold text-[#021064] hover:underline px-2 py-1"
                           >
                             <FileText className="h-3.5 w-3.5" />
-                            Invoice
-                          </Link>
+                            Loan details
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>

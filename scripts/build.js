@@ -5,7 +5,7 @@
 // "Cannot read properties of null (reading 'useContext')". Force it here.
 const { spawnSync } = require('node:child_process');
 
-const env = { ...process.env, NODE_ENV: 'production' };
+const env = { ...process.env, NODE_ENV: 'production', EBIKE_LOW_RESOURCE_BUILD: '1' };
 const shell = process.platform === 'win32';
 
 function run(cmd, args) {

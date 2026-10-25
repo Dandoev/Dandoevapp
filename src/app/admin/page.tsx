@@ -28,6 +28,7 @@ import ApplicationDetailDrawer from '@/components/admin/ApplicationDetailDrawer'
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [currentRole, setCurrentRole] = useState<string>('super_admin');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -48,6 +49,7 @@ export default function AdminDashboard() {
   });
   const [systemConfig, setSystemConfig] = useState<Record<string, string>>({});
   const [recoveryExecuting, setRecoveryExecuting] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Modals & Drawers State
   const [isBikeModalOpen, setIsBikeModalOpen] = useState(false);
@@ -71,6 +73,10 @@ export default function AdminDashboard() {
     setTimeout(() => setToast(null), 4500);
   };
 
+  const reportLoadError = (section: string) => {
+    setLoadError(`Some live ${section} data could not be loaded. Check the database connection and retry.`);
+  };
+
   // Data Fetchers
   const fetchAdminStats = async () => {
     try {
@@ -78,8 +84,8 @@ export default function AdminDashboard() {
       if (r.ok) {
         const d = await r.json();
         setAdminStats(d.data);
-      }
-    } catch (e) {}
+      } else reportLoadError('overview');
+    } catch { reportLoadError('overview'); }
   };
 
   const fetchBikes = async () => {
@@ -89,7 +95,7 @@ export default function AdminDashboard() {
       if (r.ok) {
         const data = await r.json();
         setBikes(Array.isArray(data) ? data : []);
-      }
+      } else reportLoadError('fleet');
     } catch (e) {
       console.error('Failed to fetch bikes', e);
     } finally {
@@ -104,7 +110,7 @@ export default function AdminDashboard() {
         const d = await r.json();
         setDelinquentData(d.data || { totalAtRisk: 0, repayments: [] });
       }
-    } catch (e) {}
+    } catch { reportLoadError('delinquency'); }
   };
 
   const fetchUserList = async () => {
@@ -114,7 +120,7 @@ export default function AdminDashboard() {
         const d = await r.json();
         setUserList(d.data || []);
       }
-    } catch (e) {}
+    } catch { reportLoadError('user'); }
   };
 
   const fetchReconData = async () => {
@@ -124,7 +130,7 @@ export default function AdminDashboard() {
         const d = await r.json();
         setReconData(d || { logs: [], settlements: [] });
       }
-    } catch (e) {}
+    } catch { reportLoadError('reconciliation'); }
   };
 
   const fetchKycDocs = async () => {
@@ -134,7 +140,7 @@ export default function AdminDashboard() {
         const d = await r.json();
         setKycDocs(d.data || []);
       }
-    } catch (e) {}
+    } catch { reportLoadError('KYC'); }
   };
 
   const fetchAuditLogs = async () => {
@@ -144,7 +150,7 @@ export default function AdminDashboard() {
         const d = await r.json();
         setAuditLogs(d.data || []);
       }
-    } catch (e) {}
+    } catch { reportLoadError('audit'); }
   };
 
   const fetchConfig = async () => {
@@ -154,7 +160,7 @@ export default function AdminDashboard() {
         const d = await r.json();
         setSystemConfig(d.data || {});
       }
-    } catch (e) {}
+    } catch { reportLoadError('configuration'); }
   };
 
   const refreshLoans = async () => {
@@ -163,7 +169,7 @@ export default function AdminDashboard() {
       const lData = await lRes.json();
       setLoans(Array.isArray(lData.data) ? [...lData.data].reverse() : []);
       fetchAdminStats();
-    } catch (e) {}
+    } catch { reportLoadError('loan'); }
   };
 
   const handleExecuteRecoveryAction = (actionType: string, actionLabel: string, repayment?: any) => {
@@ -232,20 +238,16 @@ export default function AdminDashboard() {
 
   // Initial Load
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      let token =
-        document.cookie.split('; ').find((row) => row.startsWith('token='))?.split('=')[1] ||
-        localStorage.getItem('token');
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get('demo') === 'admin' || !token) {
-        token = 'demo-token-admin';
-        document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `sb-access-token=${token}; path=/; max-age=86400; SameSite=Lax`;
-        try {
-          localStorage.setItem('token', token);
-        } catch {}
-      }
-    }
+    fetch('/api/auth/me')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to load authenticated administrator');
+        return response.json();
+      })
+      .then((data) => {
+        setCurrentRole(data.user.role);
+        setCurrentUser(data.user);
+      })
+      .catch(() => reportLoadError('administrator profile'));
 
     Promise.all([
       fetch('/api/loans').then((r) => r.json()),
@@ -257,7 +259,7 @@ export default function AdminDashboard() {
         setLoans([...loansArr].reverse());
         setOrders([...ordersArr].reverse());
       })
-      .catch((e) => console.error(e));
+      .catch(() => reportLoadError('loan and order'));
 
     fetchBikes();
     fetchDelinquent();
@@ -272,29 +274,23 @@ export default function AdminDashboard() {
   const pendingAppsCount = loans.filter((l) => l.status === 'under_review' || l.status === 'pending').length;
 
   const stats = {
-    totalRevenue: adminStats?.totalRevenue || 48200000,
+    totalRevenue: adminStats?.totalRevenue || 0,
     pendingApplications: pendingAppsCount,
-    activeLoans: adminStats?.activeLoans || loans.filter((l) => l.status === 'active' || l.status === 'approved').length || 18,
-    totalUsers: adminStats?.totalUsers || 240,
-    defaultRate: adminStats?.defaultRate || 2.1,
-    loansByStatus: adminStats?.loansByStatus || [
-      { status: 'active', count: 18 },
-      { status: 'pending', count: pendingAppsCount },
-      { status: 'completed', count: 6 },
-      { status: 'defaulted', count: 2 },
-    ],
-    monthlyRevenue: adminStats?.monthlyRevenue || [
-      { month: 'Oct', revenue: 4500000 },
-      { month: 'Nov', revenue: 6800000 },
-      { month: 'Dec', revenue: 8900000 },
-      { month: 'Jan', revenue: 11200000 },
-      { month: 'Feb', revenue: 13500000 },
-      { month: 'Mar', revenue: 16200000 },
-    ],
+    activeLoans: adminStats?.activeLoans || 0,
+    totalUsers: adminStats?.totalUsers || 0,
+    defaultRate: adminStats?.defaultRate || 0,
+    loansByStatus: adminStats?.loansByStatus || [],
+    monthlyRevenue: adminStats?.monthlyRevenue || [],
+    escrowBalance: adminStats?.escrowBalance || 0,
+    onTimeRate: adminStats?.onTimeRate || 0,
+    monthGrowth: adminStats?.monthGrowth || 0,
+    recentLedger: adminStats?.recentLedger || [],
+    regionalHubs: adminStats?.regionalHubs || [],
+    providerVolume: adminStats?.providerVolume || [],
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] text-slate-900 antialiased font-sans">
+    <div className="admin-workspace flex min-h-screen bg-[#EAF6FF] text-[#0A1B46] antialiased font-sans">
       {/* Enterprise Toast Notification */}
       {toast && (
         <div
@@ -358,6 +354,7 @@ export default function AdminDashboard() {
         isOpenMobile={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
         userRole={currentRole}
+        userProfile={currentUser}
       />
 
       {/* Main Administrative Workplace */}
@@ -365,7 +362,6 @@ export default function AdminDashboard() {
         {/* Global Executive Header */}
         <AdminHeader
           currentRole={currentRole}
-          onRoleChange={setCurrentRole}
           onOpenMobileInfo={() => setMobileInfoOpen(true)}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
           searchQuery={globalSearch}
@@ -378,7 +374,13 @@ export default function AdminDashboard() {
         />
 
         {/* Tab Content Container: Finebank clean canvas */}
-        <main className="flex-1 overflow-y-auto px-8 py-8 w-full bg-[#F8F9FA]">
+        <main className="flex-1 overflow-y-auto w-full bg-[radial-gradient(circle_at_92%_0%,#D2F1FF_0%,#EAF6FF_34%,#F5FAFF_75%)] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">
+          {loadError && (
+            <div role="alert" className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span>{loadError}</span>
+              <button type="button" onClick={() => window.location.reload()} className="shrink-0 font-bold underline">Retry</button>
+            </div>
+          )}
           {activeTab === 'overview' && (
             <OverviewTab
               stats={stats}

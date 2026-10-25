@@ -28,49 +28,6 @@ interface ComplianceTabProps {
   kycDocs: any[];
 }
 
-const DEFAULT_DOCS = [
-  {
-    id: 'kyc-01',
-    user: { firstName: 'Solomon', lastName: 'Dunu', email: 'solomon.dunu@demo.com' },
-    type: 'national_id',
-    fileName: 'NIN_Slip_SolomonDunu.pdf',
-    bvnMasked: '223•••••819',
-    matchScore: '99.2% Biometric Match',
-    status: 'pending',
-    createdAt: '2026-10-16',
-  },
-  {
-    id: 'kyc-02',
-    user: { firstName: 'Babatunde', lastName: 'Adeleke', email: 'babatunde.adeleke@demo.com' },
-    type: 'utility_bill',
-    fileName: 'EKEDC_ElectricityBill_Oct2026.pdf',
-    bvnMasked: '221•••••402',
-    matchScore: '98.7% Address Match',
-    status: 'approved',
-    createdAt: '2026-10-15',
-  },
-  {
-    id: 'kyc-03',
-    user: { firstName: 'Amina', lastName: 'Bello', email: 'amina.bello@demo.com' },
-    type: 'drivers_license',
-    fileName: 'FRSC_DriversLicense_AminaBello.jpg',
-    bvnMasked: '224•••••118',
-    matchScore: '99.5% Biometric Match',
-    status: 'approved',
-    createdAt: '2026-10-14',
-  },
-  {
-    id: 'kyc-04',
-    user: { firstName: 'Chinedu', lastName: 'Eze', email: 'chinedu.eze@demo.com' },
-    type: 'bvn_slip',
-    fileName: 'NIBSS_BVN_Printout_ChineduEze.pdf',
-    bvnMasked: '222•••••904',
-    matchScore: '97.8% NIBSS Match',
-    status: 'pending',
-    createdAt: '2026-10-16',
-  },
-];
-
 function normalizeDoc(d: any) {
   const type = d.type || d.documentType || 'national_id';
   const status =
@@ -82,11 +39,11 @@ function normalizeDoc(d: any) {
   const rawUser = d.user || (d.userName ? {
     firstName: d.userName.split(' ')[0] || 'Applicant',
     lastName: d.userName.split(' ').slice(1).join(' ') || 'User',
-    email: `${d.userName.toLowerCase().replace(/\s+/g, '.')}@demo.com`,
+    email: d.userEmail || '',
   } : {
     firstName: 'Verified',
     lastName: 'Applicant',
-    email: 'borrower@dandoev.com',
+    email: '',
   });
 
   return {
@@ -94,16 +51,16 @@ function normalizeDoc(d: any) {
     user: rawUser,
     type,
     fileName: d.fileName || 'KYC_Document.pdf',
-    fileUrl: d.fileUrl || '/bikes/DandoEv_X5-removebg-preview.png',
-    bvnMasked: d.bvnMasked || '223•••••819',
-    matchScore: d.matchScore || '98.9% Biometric Match',
+    fileUrl: d.fileUrl || '',
+    bvnMasked: d.bvnMasked || 'Unavailable',
+    matchScore: d.matchScore || 'Unavailable',
     status,
     createdAt: d.createdAt || d.uploadedAt || new Date().toISOString().split('T')[0],
   };
 }
 
 export default function ComplianceTab({ kycDocs }: ComplianceTabProps) {
-  const rawDocs = kycDocs && kycDocs.length > 0 ? kycDocs : DEFAULT_DOCS;
+  const rawDocs = kycDocs || [];
   const [docs, setDocs] = useState<any[]>(() => rawDocs.map(normalizeDoc));
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -136,15 +93,17 @@ export default function ComplianceTab({ kycDocs }: ComplianceTabProps) {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      await fetch(`/api/admin/kyc/${docId}`, {
+      const response = await fetch(`/api/admin/kyc/${docId}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({
           status: nextStatus === 'approved' ? 'verified' : 'rejected',
         }),
       });
+      if (!response.ok) throw new Error('Update failed');
     } catch {
-      // Optimistic update holds
+      setDocs((prev) => prev.map((d) => (d.id === docId ? { ...d, status: target?.status } : d)));
+      triggerToast('Verification status could not be updated.');
     }
   };
 
@@ -326,13 +285,13 @@ export default function ComplianceTab({ kycDocs }: ComplianceTabProps) {
               <div className="flex justify-between">
                 <span className="text-slate-500">NIBSS BVN Cross-Check:</span>
                 <span className="font-mono font-bold text-[#021064]">
-                  {selectedDoc.bvnMasked || '223•••••819'}
+                  {selectedDoc.bvnMasked || 'Unavailable'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Biometric Confidence:</span>
                 <span className="font-bold text-emerald-700">
-                  {selectedDoc.matchScore || '99.1% Match'}
+                  {selectedDoc.matchScore || 'Unavailable'}
                 </span>
               </div>
             </div>

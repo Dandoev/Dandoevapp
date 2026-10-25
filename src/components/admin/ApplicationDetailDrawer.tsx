@@ -40,13 +40,12 @@ export default function ApplicationDetailDrawer({
     ? `${loan.personalInfo.firstName} ${loan.personalInfo.lastName}`
     : loan.userName || 'Applicant';
   const email = loan.user?.email || loan.personalInfo?.email || loan.userEmail || 'No Email';
-  const phone = loan.user?.phone || loan.personalInfo?.phone || loan.userPhone || '080********';
-  const address = loan.deliveryAddress || loan.personalInfo?.address || 'Lagos, Nigeria';
+  const phone = loan.user?.phone || loan.personalInfo?.phone || loan.userPhone || 'Not provided';
+  const address = loan.deliveryAddress || loan.personalInfo?.address || 'Not provided';
 
-  // Synthetic or retrieved Mono scoring
-  const monthlyInflow = loan.monthlyInflow || 320000;
-  const loanMonthly = loan.monthlyRepayment || Math.round((loan.totalAmount || 650000) / (loan.tenure || 12));
-  const dtiRatio = Math.round((loanMonthly / monthlyInflow) * 100);
+  const monthlyInflow = Number(loan.monthlyInflow || 0);
+  const loanMonthly = Number(loan.monthlyRepayment || 0);
+  const dtiRatio = monthlyInflow > 0 ? Math.round((loanMonthly / monthlyInflow) * 100) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-fade-in">
@@ -117,14 +116,14 @@ export default function ApplicationDetailDrawer({
               </div>
               <div className="p-3 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                 <div className="text-xs text-neutral-400">Debt-to-Income (DTI)</div>
-                <div className={`text-sm font-bold mt-0.5 ${dtiRatio > 35 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                  {dtiRatio}% {dtiRatio <= 35 ? '(Healthy)' : '(High)'}
+                <div className={`text-sm font-bold mt-0.5 ${dtiRatio !== null && dtiRatio > 35 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                  {dtiRatio === null ? 'Unavailable' : `${dtiRatio}% ${dtiRatio <= 35 ? '(Healthy)' : '(High)'}`}
                 </div>
               </div>
               <div className="p-3 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                 <div className="text-xs text-neutral-400">Credit Bureau Score</div>
                 <div className="text-sm font-bold text-emerald-500 mt-0.5">
-                  {loan.riskScore || 720} / 850
+                  {loan.riskScore == null ? 'Unavailable' : `${loan.riskScore} / 850`}
                 </div>
               </div>
             </div>

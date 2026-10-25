@@ -31,63 +31,16 @@ interface ReconciliationTabProps {
   };
 }
 
-const DEFAULT_LOGS = [
-  {
-    id: 'rec-01',
-    provider: 'Paystack',
-    rider: 'Solomon Dunu',
-    amount: 45000,
-    escrowSplit: 6000,
-    reference: 'PSTK_2026_9881',
-    channel: 'Dedicated Virtual NUBAN',
-    status: 'matched',
-    date: '2026-10-16 14:22',
-  },
-  {
-    id: 'rec-02',
-    provider: 'Mono Direct',
-    rider: 'Babatunde Adeleke',
-    amount: 15000,
-    escrowSplit: 2000,
-    reference: 'MONO_DD_4412',
-    channel: 'Direct Debit Mandate',
-    status: 'matched',
-    date: '2026-10-16 11:08',
-  },
-  {
-    id: 'rec-03',
-    provider: 'Providus Virtual',
-    rider: 'Amina Bello',
-    amount: 65000,
-    escrowSplit: 10000,
-    reference: 'PROV_VAN_1102',
-    channel: 'NIP Bank Transfer',
-    status: 'matched',
-    date: '2026-10-15 18:45',
-  },
-  {
-    id: 'rec-04',
-    provider: 'Paystack',
-    rider: 'Chinedu Eze',
-    amount: 32500,
-    escrowSplit: 4000,
-    reference: 'PSTK_2026_0944',
-    channel: 'Card Tokenization',
-    status: 'pending',
-    date: '2026-10-15 09:30',
-  },
-];
-
 function normalizeLog(log: any) {
-  const amount = Number(log.amount ?? log.inflowAmount ?? (log.totalProcessed ? log.totalProcessed * 15000 : 45000));
+  const amount = Number(log.amount ?? log.inflowAmount ?? 0);
   return {
     id: log.id || `rec-${Math.random()}`,
-    provider: log.provider || log.bankName || (log.totalProcessed ? 'Mono Direct Debit' : 'Paystack Direct Debit'),
-    rider: log.rider || 'Verified Borrower',
-    amount: isNaN(amount) ? 45000 : amount,
-    escrowSplit: Number(log.escrowSplit ?? (log.inflowAmount ? Math.round(log.inflowAmount * 0.1) : 4000)),
-    reference: log.reference || `REC-REF-${log.id || 'BATCH'}`,
-    channel: log.channel || (log.accountNumber ? `NUBAN: ${log.accountNumber}` : 'Direct Debit Mandate'),
+    provider: log.provider || log.bankName || 'Unspecified',
+    rider: log.rider || 'Batch reconciliation',
+    amount: isNaN(amount) ? 0 : amount,
+    escrowSplit: Number(log.escrowSplit ?? 0),
+    reference: log.reference || log.jobId || log.id || '',
+    channel: log.channel || (log.accountNumber ? `NUBAN: ${log.accountNumber}` : 'Unspecified'),
     status: log.status === 'matched' || log.status === 'cleared' || log.totalFlagged === 0 ? 'matched' : 'pending',
     date: log.date || log.batchDate || log.startedAt || new Date().toISOString().split('T')[0],
   };
@@ -95,7 +48,7 @@ function normalizeLog(log: any) {
 
 export default function ReconciliationTab({ reconData }: ReconciliationTabProps) {
   const [reconciling, setReconciling] = useState(false);
-  const rawLogs = reconData?.logs && reconData.logs.length > 0 ? reconData.logs : DEFAULT_LOGS;
+  const rawLogs = reconData?.logs || [];
   const [items, setItems] = useState<any[]>(() => rawLogs.map(normalizeLog));
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -111,15 +64,25 @@ export default function ReconciliationTab({ reconData }: ReconciliationTabProps)
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  const handleRunRecon = () => {
+  const handleRunRecon = async () => {
     setReconciling(true);
-    setTimeout(() => {
-      setItems((prev) => prev.map((item) => ({ ...item, status: 'matched' })));
+    try {
+      const response = await fetch('/api/admin/reconciliation', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reconcile', reference: 'BATCH-ALL' }),
+      });
+      if (!response.ok) throw new Error('Reconciliation failed');
+      const refreshed = await fetch('/api/admin/reconciliation');
+      if (refreshed.ok) {
+        const data = await refreshed.json();
+        setItems((data.logs || []).map(normalizeLog));
+      }
+      triggerToast('Reconciliation completed and the audit log was updated.');
+    } catch {
+      triggerToast('Reconciliation could not be completed.');
+    } finally {
       setReconciling(false);
-      triggerToast(
-        'Auto-Match completed: 100% of Paystack, Mono & Virtual NUBAN settlements reconciled.'
-      );
-    }, 900);
+    }
   };
 
   const handleExportCsv = () => {

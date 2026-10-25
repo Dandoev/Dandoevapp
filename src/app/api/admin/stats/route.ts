@@ -1,72 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, type ApiContext } from '@/lib/api-handler';
-import dbService from '@/lib/db-service';
+import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 
-/**
- * GET /api/admin/stats — Dashboard statistics computed from live database entities
- */
-export const GET = withRoles(
-  ['super_admin', 'finance_admin', 'credit_underwriter', 'fleet_manager', 'collections_agent', 'compliance_officer'],
-  async (req: NextRequest, ctx: ApiContext) => {
-    try {
-      const [loans, bikes, staffUsers] = await Promise.all([
-        dbService.getLoans(),
-        dbService.getBikes(),
-        dbService.getStaffUsers(),
-      ]);
+const ADMIN_ROLES = ['super_admin', 'finance_admin', 'credit_underwriter', 'fleet_manager', 'collections_agent', 'compliance_officer'];
+const monthKey = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 
-      const activeLoans = loans.filter((l) => l.status === 'active').length;
-      const pendingApplications = loans.filter((l) => l.status === 'pending' || l.status === 'under_review').length;
-      const completedLoans = loans.filter((l) => l.status === 'completed').length;
-      const defaultedLoans = loans.filter((l) => l.status === 'defaulted').length;
+/** GET /api/admin/stats — live operational aggregates for the admin overview. */
+export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiContext) => {
+  try {
+    const now = new Date();
+    const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+    const [totalUsers, totalOrders, loanGroups, portfolio, transactions, repayments, escrow, recentTransactions, bikes] = await Promise.all([
+      prisma.user.count(),
+      prisma.order.count(),
+      prisma.loan.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.loan.aggregate({ where: { status: { in: ['approved', 'active', 'completed'] } }, _sum: { totalRepayable: true } }),
+      prisma.paymentTransaction.findMany({ where: { status: 'success', createdAt: { gte: sixMonthsAgo } }, select: { amount: true, createdAt: true, provider: true } }),
+      prisma.repayment.findMany({ where: { status: { in: ['paid', 'overdue', 'failed', 'partial'] } }, select: { status: true, paidDate: true, dueDate: true } }),
+      prisma.dailySaving.aggregate({ where: { status: 'collected' }, _sum: { amount: true } }),
+      prisma.paymentTransaction.findMany({
+        where: { status: 'success' }, orderBy: { createdAt: 'desc' }, take: 8,
+        include: { user: { select: { firstName: true, lastName: true } }, loan: { include: { bike: { select: { name: true } } } } },
+      }),
+      prisma.bike.findMany({ orderBy: { stockQuantity: 'desc' }, select: { name: true, stockQuantity: true }, take: 5 }),
+    ]);
 
-      const totalRevenue = loans.reduce((acc, l) => acc + (Number(l.totalRepayable) || 0), 0) || 48650000;
-
-      const statusCounts: Record<string, number> = {
-        active: activeLoans,
-        pending: pendingApplications,
-        completed: completedLoans,
-        defaulted: defaultedLoans,
-      };
-
-      const loansByStatus = Object.entries(statusCounts).map(([status, count]) => ({
-        status,
-        count,
-      }));
-
-      const monthlyRevenue = [
-        { month: 'Apr', revenue: 6200000, loans: 6 },
-        { month: 'May', revenue: 7800000, loans: 8 },
-        { month: 'Jun', revenue: 8400000, loans: 9 },
-        { month: 'Jul', revenue: 9900000, loans: 11 },
-        { month: 'Aug', revenue: 11500000, loans: 14 },
-        { month: 'Sep', revenue: 4850000, loans: 6 },
-      ];
-
-      const topBikes = bikes.map((b) => ({
-        name: b.name,
-        sales: b.stockQuantity,
-      }));
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          totalUsers: 142 + staffUsers.length,
-          activeLoans: activeLoans || 38,
-          pendingApplications,
-          totalOrders: 64,
-          totalRevenue,
-          defaultRate: 1.45,
-          loansByStatus,
-          recentUsers: staffUsers.slice(0, 5),
-          monthlyRevenue,
-          topBikes,
-        },
-      });
-    } catch (error) {
-      logger.error({ error }, 'Failed to compute admin statistics');
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const statusCounts = new Map(loanGroups.map((row) => [row.status, row._count._all]));
+    const loansByStatus = ['active', 'pending', 'under_review', 'completed', 'defaulted'].map((status) => ({ status, count: statusCounts.get(status as any) || 0 }));
+    const totalLoans = loanGroups.reduce((sum, row) => sum + row._count._all, 0);
+    const defaultedLoans = statusCounts.get('defaulted') || 0;
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (5 - index), 1));
+      return { key: monthKey(date), month: date.toLocaleString('en-US', { month: 'short' }), revenue: 0, loans: 0 };
+    });
+    const monthMap = new Map(months.map((month) => [month.key, month]));
+    for (const transaction of transactions) {
+      const bucket = monthMap.get(monthKey(transaction.createdAt));
+      if (bucket) bucket.revenue += Number(transaction.amount);
     }
+    const paid = repayments.filter((row) => row.status === 'paid');
+    const onTime = paid.filter((row) => row.paidDate && row.paidDate.getTime() <= row.dueDate.getTime()).length;
+    const currentRevenue = months.at(-1)?.revenue || 0;
+    const previousRevenue = months.at(-2)?.revenue || 0;
+    const providerTotals = transactions.reduce<Record<string, number>>((totals, transaction) => {
+      const provider = transaction.provider || 'unknown';
+      totals[provider] = (totals[provider] || 0) + Number(transaction.amount);
+      return totals;
+    }, {});
+    const providerVolume = Object.entries(providerTotals).map(([provider, amount]) => ({ provider, amount }));
+
+    return NextResponse.json({ success: true, data: {
+      totalUsers, totalOrders, totalRevenue: Number(portfolio._sum.totalRepayable || 0),
+      activeLoans: statusCounts.get('active') || 0,
+      pendingApplications: (statusCounts.get('pending') || 0) + (statusCounts.get('under_review') || 0),
+      defaultRate: totalLoans ? (defaultedLoans / totalLoans) * 100 : 0,
+      onTimeRate: paid.length ? (onTime / paid.length) * 100 : 0,
+      monthGrowth: previousRevenue ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0,
+      escrowBalance: Number(escrow._sum.amount || 0), loansByStatus,
+      monthlyRevenue: months.map(({ key: _key, ...month }) => month),
+      providerVolume,
+      recentLedger: recentTransactions.map((transaction) => ({
+        id: transaction.id, rider: `${transaction.user.firstName} ${transaction.user.lastName}`.trim(),
+        bike: transaction.loan?.bike?.name || 'Order payment',
+        channel: `${transaction.provider}${transaction.providerRef ? ` · ${transaction.providerRef}` : ''}`,
+        category: transaction.repaymentId ? 'repayment' : 'payment', amount: Number(transaction.amount),
+        time: transaction.createdAt, status: 'Settled',
+      })),
+      regionalHubs: [], topBikes: bikes.map((bike) => ({ name: bike.name, stock: bike.stockQuantity })),
+    }});
+  } catch (error) {
+    logger.error({ error }, 'Failed to compute admin statistics');
+    return NextResponse.json({ error: 'Unable to load admin statistics' }, { status: 500 });
   }
-);
+});

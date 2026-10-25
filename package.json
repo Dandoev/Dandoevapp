@@ -26,6 +26,7 @@
     "@sentry/nextjs": "^10.46.0",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.71.0",
     "class-variance-authority": "^0.7.1",

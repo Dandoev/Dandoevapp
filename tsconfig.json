@@ -35,5 +35,15 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "ebike-mobile", "ebike-temp"]
+  "exclude": [
+    "node_modules",
+    "ebike-mobile",
+    "ebike-temp",
+    "prisma",
+    "src/lib/__tests__",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
 }

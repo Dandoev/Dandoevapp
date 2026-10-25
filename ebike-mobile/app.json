@@ -2,7 +2,7 @@
   "expo": {
     "name": "DandoEv",
     "slug": "dandoev",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -22,7 +22,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#1E1B4B",
         "foregroundImage": "./assets/android-icon-foreground.png"

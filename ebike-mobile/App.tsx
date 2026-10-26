@@ -194,6 +194,7 @@ export default function App() {
         {currentScreen === 'Onboarding' && (
           <OnboardingScreen
             onComplete={() => setCurrentScreen('SignIn')}
+            onDemoLogin={handleDemoLogin}
             navigateTo={navigateTo}
           />
         )}

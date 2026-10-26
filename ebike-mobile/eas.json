@@ -16,7 +16,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://dandoevapp.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://dandoevapp.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ooomjwbtlfwfqvvdovgq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vb21qd2J0bGZ3ZnF2dmRvdmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2Njk0MTQsImV4cCI6MjEwODI0NTQxNH0.Ew7ln-5f2KIk3Tmy_379Np0ROwx_C0Z-ll0lmtghzWI"
       }
     },
     "production": {
@@ -26,7 +28,9 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://dandoevapp.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://dandoevapp.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ooomjwbtlfwfqvvdovgq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vb21qd2J0bGZ3ZnF2dmRvdmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2Njk0MTQsImV4cCI6MjEwODI0NTQxNH0.Ew7ln-5f2KIk3Tmy_379Np0ROwx_C0Z-ll0lmtghzWI"
       }
     }
   },

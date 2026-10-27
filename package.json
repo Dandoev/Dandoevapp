@@ -1,6 +1,6 @@
 {
   "name": "ebike-bnpl",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -63,7 +63,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vitest": "^4.0.18"
   },
   "overrides": {
     "react": "19.2.3",

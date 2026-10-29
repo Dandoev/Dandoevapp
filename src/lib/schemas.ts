@@ -89,6 +89,8 @@ export const createLoanSchema = z.object({
   bankName: z.string().max(100).trim().optional(),
   bankAccountNumber: z.string().max(10).regex(/^\d+$/).optional(),
   bankAccountName: z.string().max(200).trim().optional(),
+  agreementAccepted: z.literal(true),
+  agreementVersion: z.string().min(1).max(50).default('bnpl-v1'),
   accessories: z.array(z.any()).optional(),
   // Guarantors (submitted separately)
   guarantors: z.array(z.object({

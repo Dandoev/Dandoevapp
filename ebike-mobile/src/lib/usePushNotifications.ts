@@ -6,15 +6,17 @@ import Constants from 'expo-constants';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from './config';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 /**
  * Hook to manage Expo Push Tokens and notification registration.
@@ -25,22 +27,34 @@ export function usePushNotifications() {
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(token => {
-      setExpoPushToken(token);
-      if (token) {
-        syncTokenWithBackend(token);
-      }
-    });
+    let isMounted = true;
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Received notification:', notification);
-    });
+    // Push notifications are optional and unsupported in the web client.
+    if (Platform.OS !== 'web') {
+      registerForPushNotificationsAsync()
+        .then(token => {
+          if (!isMounted) return;
+          setExpoPushToken(token);
+          if (token) syncTokenWithBackend(token).catch(() => {});
+        })
+        .catch(error => {
+          // Never let notification setup block app launch.
+          console.warn('Push notification setup skipped:', error);
+        });
+    }
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Tapped notification:', response);
-    });
+    if (Platform.OS !== 'web') {
+      notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+        console.log('Received notification:', notification);
+      });
+
+      responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('Tapped notification:', response);
+      });
+    }
 
     return () => {
+      isMounted = false;
       if (notificationListener.current) {
         notificationListener.current.remove();
       }

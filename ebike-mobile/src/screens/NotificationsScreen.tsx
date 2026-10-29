@@ -17,21 +17,28 @@ import {
   Info,
 } from 'lucide-react-native';
 import { demoStore, DemoNotification } from '../lib/demo-data';
+import { MobileApi } from '../lib/api';
 
 interface NotificationsScreenProps {
   onBack: () => void;
+  token?: string | null;
 }
 
-export default function NotificationsScreen({ onBack }: NotificationsScreenProps) {
-  const [notifications, setNotifications] = useState<DemoNotification[]>(demoStore.getNotifications());
+export default function NotificationsScreen({ onBack, token }: NotificationsScreenProps) {
+  const isDemoUser = Boolean(token?.startsWith('demo-'));
+  const [notifications, setNotifications] = useState<DemoNotification[]>(isDemoUser ? demoStore.getNotifications() : []);
   const [filter, setFilter] = useState<'all' | 'payment' | 'message' | 'update'>('all');
 
   useEffect(() => {
+    if (token && !isDemoUser) {
+      MobileApi.getNotifications(token).then((res) => setNotifications(res.data.map((n) => ({ ...n, timestamp: new Date(n.createdAt).toLocaleDateString(), type: n.type === 'payment' ? 'payment' : 'update' })) as DemoNotification[])).catch(() => {});
+      return;
+    }
     const unsub = demoStore.subscribe(() => {
       setNotifications(demoStore.getNotifications());
     });
     return unsub;
-  }, []);
+  }, [token, isDemoUser]);
 
   const handleMarkAll = () => {
     demoStore.markAllNotificationsAsRead();

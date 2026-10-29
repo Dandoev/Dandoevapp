@@ -5,7 +5,7 @@
 // Powered by Mono Open Banking (1-Click Identity Confirmation)
 // ============================================================
 
-import React, { useState, use } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import {
@@ -60,9 +60,22 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     tier?: string;
   } | null>(null);
   const [isLinkingMono, setIsLinkingMono] = useState(false);
+  const [monoCode, setMonoCode] = useState('');
+  const [error, setError] = useState('');
+  const [inviteData, setInviteData] = useState<any>(null);
 
   // Buyer & loan summary resolved from invite token
-  const loanSummary = {
+  const loanSummary = inviteData ? {
+    referenceId: inviteData.loan.id,
+    buyerName: inviteData.loan.applicantName,
+    buyerPhone: 'Verified applicant',
+    bikeName: inviteData.loan.bikeName,
+    loanAmount: `₦${Number(inviteData.loan.loanAmount).toLocaleString()}`,
+    biDailyInstallment: `${inviteData.loan.deductionFrequency} schedule`,
+    monthlyEquivalent: `₦${Math.round(Number(inviteData.loan.totalRepayable) / inviteData.loan.tenure).toLocaleString()} / month`,
+    tenure: `${inviteData.loan.tenure} Months`,
+    escrowProtected: '100% Returnable Security Deposit',
+  } : {
     referenceId: `GUA-${(token || 'INV902').slice(0, 6).toUpperCase()}`,
     buyerName: 'Solomon Dunu',
     buyerPhone: '+234 803 •••• 921',
@@ -74,27 +87,71 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     escrowProtected: '100% Returnable Security Deposit',
   };
 
+  useEffect(() => {
+    fetch(`/api/guarantors/${encodeURIComponent(token)}`)
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Invitation unavailable');
+        return result.data;
+      })
+      .then((data) => {
+        setInviteData(data);
+        setFullName(data.guarantor.fullName || '');
+        setPhone(data.guarantor.phone || '');
+        setRelationship(data.guarantor.relationship || 'Colleague / Employer');
+      })
+      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Invitation unavailable'));
+
+    if (!document.querySelector('script[data-mono-connect]')) {
+      const script = document.createElement('script');
+      script.src = 'https://connect.withmono.com/connect.js';
+      script.async = true;
+      script.dataset.monoConnect = 'true';
+      document.body.appendChild(script);
+    }
+  }, [token]);
+
   const handleOpenMono = () => {
+    setError('');
     setIsLinkingMono(true);
-    setTimeout(() => {
-      setMonoLinked(true);
-      setMonoData({
-        name: fullName.trim() || 'Emeka Okafor',
-        bank: selectedBank,
-        bvnMasked: '223•••••411',
-        tier: 'Tier-3 CBN Verified Account',
-      });
+    const MonoConnect = (window as any).MonoConnect;
+    const publicKey = process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY;
+    if (!MonoConnect || !publicKey) {
+      setError('Mono Connect is unavailable. Please reload and try again.');
       setIsLinkingMono(false);
-    }, 1200);
+      return;
+    }
+    const instance = new MonoConnect({
+      key: publicKey,
+      onSuccess: ({ code }: { code: string }) => {
+        setMonoCode(code);
+        setMonoLinked(true);
+        setMonoData({ name: fullName.trim(), bank: selectedBank, bvnMasked: 'Verified', tier: 'Mono Verified' });
+        setIsLinkingMono(false);
+      },
+      onClose: () => setIsLinkingMono(false),
+    });
+    instance.setup();
+    instance.open();
   };
 
-  const handleAcceptCoSign = () => {
+  const handleAcceptCoSign = async () => {
     if (!agreedTerms) return;
     setIsSubmitting(true);
-    setTimeout(() => {
+    setError('');
+    try {
+      const response = await fetch(`/api/guarantors/${encodeURIComponent(token)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: monoCode, fullName, phone, relationship, agreementAccepted: true }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Verification failed');
       setIsSubmitting(false);
       setSuccess(true);
-    }, 1200);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Verification failed');
+      setIsSubmitting(false);
+    }
   };
 
   if (success) {
@@ -176,6 +233,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       <Navbar />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+        {error && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{error}</div>}
         {/* Header & Progress Stepper */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
           <div>

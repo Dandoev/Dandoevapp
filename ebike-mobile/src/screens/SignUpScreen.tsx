@@ -75,32 +75,19 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
           password,
         });
         if (apiData.success) {
-          // Success via backend
+          // Account creation succeeds, but authentication starts after a real sign-in.
           demoStore.setUser({
             firstName,
             lastName,
             email,
             phone: phone || '+234 800 000 0000',
           });
-          setToken(`registered-token-${email}`);
-          navigateTo('Dashboard');
+          navigateTo('SignIn');
           return;
         }
       } catch (backendError) {
-        // Backend unavailable, fallback to direct demo session
+        throw backendError;
       }
-
-      // 2. Direct Mock Registration fallback (ensures 100% button reliability)
-      demoStore.setUser({
-        firstName,
-        lastName,
-        email,
-        phone: phone || '+234 800 000 0000',
-        kycTier: 1,
-        kycStatus: 'pending',
-      });
-      setToken(`mock-buyer-token-${Date.now()}`);
-      navigateTo('Dashboard');
     } catch (err: any) {
       setErrorMessage(err.message || 'Signup failed. Please try again.');
     } finally {

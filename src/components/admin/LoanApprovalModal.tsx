@@ -95,7 +95,8 @@ export default function LoanApprovalModal({
         onClose();
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || 'The loan could not be approved.');
+        const blockerText = Array.isArray(data.blockers) ? `: ${data.blockers.join('; ')}` : '';
+        setError(`${data.error || 'The loan could not be approved'}${blockerText}`);
       }
     } catch {
       setError('Network error. The loan was not changed.');

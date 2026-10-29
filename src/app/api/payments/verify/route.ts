@@ -112,7 +112,7 @@ export const GET = withAuth(
         });
         const claimed = await tx.paymentTransaction.updateMany({
           where: { id: transaction.id, status: { in: ['initiated', 'pending'] } },
-          data: { status: 'success' },
+          data: { status: 'success', reconciledAt: new Date() },
         });
         if (claimed.count !== 1) throw new PaymentIntentError('Payment was already processed', 409);
         // ---- A. Confirm Outright Order (Bike / Batteries / Chargers) ----

@@ -28,6 +28,7 @@ import { usePushNotifications } from './src/lib/usePushNotifications';
 import { demoStore, DemoProduct } from './src/lib/demo-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/lib/supabase';
+import { MobileApi } from './src/lib/api';
 
 const TOKEN_STORAGE_KEY = '@dandoev_auth_token';
 
@@ -68,9 +69,14 @@ export default function App() {
       try {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
-          setToken(storedToken);
-          setCurrentScreen('Dashboard');
-          return;
+          try {
+            await MobileApi.getProfile(storedToken);
+            setToken(storedToken);
+            setCurrentScreen('Dashboard');
+            return;
+          } catch {
+            await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+          }
         }
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -214,6 +220,7 @@ export default function App() {
         {currentScreen === 'ProductDetail' && selectedProduct && (
           <ProductDetailScreen
             product={selectedProduct}
+            token={token}
             onBack={() => setCurrentScreen(prevScreenBeforeDetail)}
             onApplyBNPL={(_prod, _tenure) => {
               setCurrentScreen('Kyc');
@@ -241,7 +248,7 @@ export default function App() {
 
         {/* Notifications Screen */}
         {currentScreen === 'Notifications' && (
-          <NotificationsScreen onBack={() => setCurrentScreen('Dashboard')} />
+            <NotificationsScreen token={token} onBack={() => setCurrentScreen('Dashboard')} />
         )}
 
         {/* Authenticated Dashboard Shell with Docked Bottom Navbar */}

@@ -25,14 +25,12 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const cadence: MobileCadence = 'weekly';
 
-  const categories = ['All', 'E-Bikes', 'Batteries', 'Chargers'];
+  const categories = ['All', 'E-Bikes'];
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = products.filter((p) => p.type === 'bike').filter((p) => {
     const matchesCategory =
       selectedCategory === 'All' ||
-      (selectedCategory === 'E-Bikes' && p.category === 'E-Bikes') ||
-      (selectedCategory === 'Batteries' && p.category === 'Batteries') ||
-      (selectedCategory === 'Chargers' && p.category === 'Chargers');
+      (selectedCategory === 'E-Bikes' && p.type === 'bike');
 
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,7 +63,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
           <Search size={18} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search e-bikes, batteries, chargers..."
+            placeholder="Search e-bikes..."
             placeholderTextColor="#9CA3AF"
             accessibilityLabel="Search products"
             returnKeyType="search"

@@ -35,6 +35,9 @@ interface OverviewTabProps {
     recentLedger?: any[];
     regionalHubs?: any[];
     providerVolume?: Array<{ provider: string; amount: number }>;
+    outrightRevenue?: number;
+    outrightTransactions?: number;
+    outrightBuyers?: number;
   };
   delinquentData: {
     totalAtRisk: number;
@@ -52,7 +55,7 @@ export default function OverviewTab({
   bikesCount,
   onNavigateToTab,
 }: OverviewTabProps) {
-  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'repayment' | 'escrow'>('all');
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'outright' | 'repayment'>('all');
 
   const totalPortfolioNaira = stats?.totalRevenue || 0;
   const activeLoansCount = stats?.activeLoans || 0;
@@ -65,7 +68,7 @@ export default function OverviewTab({
 
   const maxMonthlyRev = Math.max(...monthlySeries.map((m) => m.revenue), 1);
 
-  // Live Naira Repayment & Escrow Sweep Ledger
+  // Live payment ledger including outright sales and repayments.
   const recentLedger = stats?.recentLedger || [];
 
   const filteredLedger = recentLedger.filter((item) => {
@@ -369,10 +372,10 @@ export default function OverviewTab({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-black text-[#0A1B46]">
-                Live Naira Repayment &amp; Escrow Feed
+                Live Payments &amp; Outright Sales
               </h2>
               <p className="text-xs text-slate-500">
-                Real-time bi-daily rider installments and compulsory ₦1,000/day escrow sweeps
+                Every initiated, pending, settled, failed, and reversed transaction
               </p>
             </div>
 
@@ -380,8 +383,8 @@ export default function OverviewTab({
               {(
                 [
                   { id: 'all', label: 'All' },
+                  { id: 'outright', label: 'Outright Sales' },
                   { id: 'repayment', label: 'Installments' },
-                  { id: 'escrow', label: 'Escrow Locks' },
                 ] as const
               ).map((tab) => (
                 <button
@@ -399,8 +402,23 @@ export default function OverviewTab({
             </div>
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Outright revenue</div>
+              <div className="text-sm font-black text-[#0A1B46]">{formatNaira(stats.outrightRevenue || 0)}</div>
+            </div>
+            <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Transactions</div>
+              <div className="text-sm font-black text-[#0A1B46]">{stats.outrightTransactions || 0}</div>
+            </div>
+            <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Buyers</div>
+              <div className="text-sm font-black text-[#0A1B46]">{stats.outrightBuyers || 0}</div>
+            </div>
+          </div>
+
           <div className="divide-y divide-slate-100">
-            {filteredLedger.length === 0 && <p className="py-8 text-center text-xs text-slate-500">No settled transactions found.</p>}
+            {filteredLedger.length === 0 && <p className="py-8 text-center text-xs text-slate-500">No transactions found.</p>}
             {filteredLedger.map((tx) => (
               <div
                 key={tx.id}
@@ -409,13 +427,13 @@ export default function OverviewTab({
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      tx.category === 'escrow'
+                      tx.category === 'outright'
                         ? 'bg-sky-50 text-[#087CA9] border border-sky-200'
                         : 'bg-indigo-50 text-[#0A1B46] border border-indigo-200'
                     }`}
                   >
-                    {tx.category === 'escrow' ? (
-                      <PiggyBank className="h-5 w-5" />
+                    {tx.category === 'outright' ? (
+                      <Bike className="h-5 w-5" />
                     ) : (
                       <Zap className="h-5 w-5" />
                     )}
@@ -431,8 +449,8 @@ export default function OverviewTab({
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-black text-emerald-700 tabular-nums">
-                    +{formatNaira(tx.amount)}
+                  <div className={`text-sm font-black tabular-nums ${tx.status === 'Settled' ? 'text-emerald-700' : tx.status === 'failed' || tx.status === 'reversed' ? 'text-rose-700' : 'text-amber-700'}`}>
+                    {formatNaira(tx.amount)}
                   </div>
                   <div className="text-[10px] font-bold text-slate-400">
                     {tx.status} · {timeAgo(tx.time)}

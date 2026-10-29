@@ -166,6 +166,47 @@ export async function notifyLoanStatusChanged(
 }
 
 /**
+ * Sends the branded approval packet after operations assigns the vehicle.
+ * The message deliberately contains the agreement, invoice and receipt
+ * references so the customer has an auditable record even before a PDF
+ * document service is configured.
+ */
+export async function notifyBikeAssigned(
+  user: UserContactInfo,
+  details: {
+    loanId: string;
+    bikeName: string;
+    bikeSerialNumber?: string | null;
+    chassisNumber?: string | null;
+    totalRepayable: number;
+    tenureMonths: number;
+    approvedAt: Date;
+  }
+) {
+  const invoiceRef = `DND-INV-${details.loanId.slice(0, 8).toUpperCase()}`;
+  const receiptRef = `DND-RCP-${details.loanId.slice(0, 8).toUpperCase()}`;
+  const agreementRef = `DND-AGR-${details.loanId.slice(0, 8).toUpperCase()}`;
+  const title = 'Your DandoEv bike has been approved and assigned';
+  const message = `${details.bikeName} is assigned to your account. Bike serial: ${details.bikeSerialNumber || 'Pending fleet entry'}. Agreement: ${agreementRef}. Invoice: ${invoiceRef}. Receipt: ${receiptRef}.`;
+
+  await createInAppNotification(user.id, title, message, 'loan');
+  if (!user.email) return;
+
+  await sendEmail(user.email, `[DandoEv] Bike assigned — ${details.bikeName}`, `
+    <div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#0A154F">
+      <div style="background:#0A154F;padding:24px;border-radius:12px 12px 0 0;color:#fff"><h1 style="margin:0">DandoEv</h1><p style="margin:6px 0 0;color:#B7F4E1">Approved mobility, delivered with confidence.</p></div>
+      <div style="padding:24px;border:1px solid #E2E8F0;border-top:0">
+        <h2>Congratulations, ${user.firstName || 'Customer'}!</h2>
+        <p>Your approved BNPL bike has now been assigned to your account.</p>
+        <table style="width:100%;border-collapse:collapse"><tr><td><b>Vehicle</b></td><td>${details.bikeName}</td></tr><tr><td><b>Serial</b></td><td>${details.bikeSerialNumber || 'Pending fleet entry'}</td></tr><tr><td><b>Chassis</b></td><td>${details.chassisNumber || 'Pending fleet entry'}</td></tr><tr><td><b>Term</b></td><td>${details.tenureMonths} months</td></tr><tr><td><b>Total repayable</b></td><td>₦${details.totalRepayable.toLocaleString()}</td></tr></table>
+        <hr style="border:0;border-top:1px solid #E2E8F0;margin:24px 0"/>
+        <p><b>Agreement:</b> ${agreementRef}<br/><b>Custom invoice:</b> ${invoiceRef}<br/><b>Payment receipt:</b> ${receiptRef}</p>
+        <p>Your agreement and assigned vehicle details are now available in the DandoEv app.</p>
+      </div>
+    </div>`).catch(() => {});
+}
+
+/**
  * 5. Repayment Successful Alert
  */
 export async function notifyRepaymentSuccess(

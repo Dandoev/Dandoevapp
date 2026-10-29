@@ -215,8 +215,7 @@ export default function FinancialInfoPage() {
     const MonoConnect = (window as any).MonoConnect;
     const publicKey = process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY;
 
-    // Use live Mono Connect widget if a real public key is configured; otherwise run direct Mono API sandbox exchange
-    if (MonoConnect && publicKey && !publicKey.includes('test_pk_qt_')) {
+    if (MonoConnect && publicKey) {
       try {
         const monoInstance = new MonoConnect({
           key: publicKey,
@@ -229,11 +228,11 @@ export default function FinancialInfoPage() {
         monoInstance.open();
         return;
       } catch {
-        // Fallback to direct API exchange
+        showToast('Unable to open Mono Connect. Please reload and try again.', 'error');
+        return;
       }
     }
-
-    executeMonoExchangeAndUnderwriting(`mono_demo_${Date.now()}`);
+    showToast('Mono Connect is not configured. Contact support.', 'error');
   };
 
   const handleUploadStatement = async (file: File) => {

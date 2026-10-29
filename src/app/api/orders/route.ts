@@ -4,6 +4,7 @@ import { createOrderSchema, type CreateOrderInput } from '@/lib/schemas';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { type TxClient } from '@/lib/prisma-types';
+import { calculateOutrightOrderTotal } from '@/lib/order-pricing';
 
 /**
  * GET /api/orders — List orders for authenticated user (or all for admins)
@@ -98,10 +99,9 @@ export const POST = withAuth(
 
           // Determine delivery option and fee (Outright buyers have option for Pickup: Free, Lagos: 20000, Outside Lagos: 50000)
           const deliveryType = data.deliveryType || (data.deliveryAddress === 'Pickup Hub' ? 'pickup' : (data.deliveryState === 'Lagos' ? 'delivery_lagos' : 'delivery_outside'));
-          const deliveryFee = deliveryType === 'pickup' ? 0 : deliveryType === 'delivery_lagos' ? 20000 : 50000;
-
-          // Outright total has NO insurance, NO plate registration, and NO GPS telematics fee
-          const totalAmount = bikeTotal + accessoriesTotal + deliveryFee;
+          const { deliveryFee, insuranceFee, totalAmount } = calculateOutrightOrderTotal({
+            bikeTotal, accessoriesTotal, deliveryType,
+          });
 
           // Verify loan ownership if loanId is provided
           if (data.loanId) {
@@ -159,7 +159,7 @@ export const POST = withAuth(
                 status: 'pending',
                 deliveryType,
                 deliveryFee,
-                insuranceFee: 0,
+                insuranceFee,
                 serviceFee: 0,
                 deliveryAddress: deliveryType === 'pickup' ? 'Lagos Central Pickup Hub' : data.deliveryAddress,
                 deliveryCity: deliveryType === 'pickup' ? 'Ikeja' : data.deliveryCity,

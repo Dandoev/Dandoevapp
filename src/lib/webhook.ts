@@ -69,7 +69,7 @@ export async function deduplicateWebhookEvent(
       return true;
     }
     logger.error({ error, eventId }, 'Webhook deduplication error');
-    return false;
+    throw error;
   }
 }
 

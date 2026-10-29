@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import prisma from './prisma';
 import logger from './logger';
 import { lockSavings, debitWalletForRepayment } from './wallet';
@@ -287,7 +288,7 @@ export async function collectRepaymentById(repayment: any) {
     const monoMandateId = loan?.monoMandateId || user?.monoMandateId;
     if (monoMandateId) {
       try {
-        const monoRef = `MONO-RPY-${repayment.id}-${Date.now()}`;
+        const monoRef = `RPY-${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
         const monoCharge = await chargeMonoMandate({
           mandateId: monoMandateId,
           amount,
@@ -296,18 +297,7 @@ export async function collectRepaymentById(repayment: any) {
         });
 
         if (monoCharge.status === 'successful' || monoCharge.status === 'pending') {
-          await prisma.$transaction(async (tx) => {
-            await tx.repayment.update({
-              where: { id: repayment.id },
-              data: {
-                status: 'paid',
-                paidDate: new Date(),
-                amountPaid: amount,
-                paymentReference: monoCharge.reference,
-              },
-            });
-
-            await tx.paymentTransaction.create({
+            await prisma.paymentTransaction.create({
               data: {
                 userId: user.id,
                 loanId: repayment.loanId,
@@ -316,7 +306,7 @@ export async function collectRepaymentById(repayment: any) {
                 providerRef: monoCharge.reference,
                 amount,
                 currency: 'NGN',
-                status: 'success',
+                status: 'pending',
                 metadata: {
                   mandateId: monoMandateId,
                   installmentNumber: repayment.installmentNumber,
@@ -324,19 +314,16 @@ export async function collectRepaymentById(repayment: any) {
                 },
               },
             });
-          });
-
-          await checkAndCompleteLoanTerm(repayment.loanId);
 
           await enqueueNotification({
             userId: user.id,
-            type: 'payment_success',
-            title: 'Mono Direct Debit Successful',
-            message: `Installment #${repayment.installmentNumber} (₦${amount.toLocaleString()}) was auto-deducted via your Mono NIBSS e-Mandate.`,
+            type: 'payment_reminder',
+            title: 'Mono Direct Debit Processing',
+            message: `Installment #${repayment.installmentNumber} (₦${amount.toLocaleString()}) was submitted to Mono. We will confirm it after settlement.`,
             channels: ['email', 'whatsapp'],
           });
 
-          return { success: true, method: 'mono_mandate', reference: monoCharge.reference };
+          return { success: true, method: 'mono_mandate_pending', reference: monoCharge.reference };
         }
       } catch (monoErr: any) {
         logger.warn(

@@ -45,7 +45,8 @@ async function resolveOptionalUser(req: NextRequest) {
 
 export const POST = withSecurityHeaders(async (req: NextRequest) => {
   const userCtx = await resolveOptionalUser(req);
-  const userId = userCtx?.sub || 'cust-01';
+  if (!userCtx) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  const userId = userCtx.sub;
   const log = logger.child({ route: 'kyc/mono', userId });
 
   try {
@@ -105,6 +106,11 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         lastName,
       });
 
+      if (!kycResult.verified || kycResult.confidenceScore < 80) {
+        return NextResponse.json({ error: 'Mono identity verification did not meet the required confidence threshold', data: kycResult }, { status: 422 });
+      }
+      await prisma.user.update({ where: { id: userId }, data: { kycStatus: 'verified' } });
+
       await dbService
         .logAudit({
           userId,
@@ -126,7 +132,8 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     // ---------------------------------------------------------
     // MODE 3: Full Mono Connect Exchange + Identity + 6-Month Statement
     // ---------------------------------------------------------
-    const authCode = code || `mono_demo_${Date.now()}`;
+    if (!code) return NextResponse.json({ error: 'Mono authorization code is required' }, { status: 400 });
+    const authCode = code;
 
     // Step 1: Exchange code for Mono Account ID
     log.info('Exchanging Mono auth code');
@@ -182,6 +189,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         accountName: accountDetails.accountName,
         bankName: accountDetails.bankName,
         bankCode: accountDetails.bankCode,
+        email: userCtx.email,
         amount: proposedMonthlyRepayment ? Number(proposedMonthlyRepayment) : 6555,
         tenureMonths: Number(tenureMonths) || 12,
         deductionFrequency: (deductionFrequency as DeductionInterval) || 'bidaily',
@@ -254,18 +262,9 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         'verified',
         'Your identity, 6-month bank statement, and account details have been verified via Mono Open Banking.'
       ).catch(() => null);
-    } catch {
-      // Fallback audit logging in JSON store when running in demo/local mode
-      await dbService
-        .logAudit({
-          userId,
-          actorName: accountDetails.accountName,
-          action: 'KYC_AND_STATEMENT_VERIFIED_MONO',
-          resource: 'User',
-          resourceId: userId,
-          details: `Verified ${accountDetails.bankName} (${accountDetails.accountNumber}) via Mono. Monthly Inflow: ₦${underwriting.verifiedMonthlyInflow.toLocaleString()}, DTI: ${underwriting.dtiRatioPercent}%, Score: ${underwriting.creditScore}.`,
-        })
-        .catch(() => null);
+    } catch (error) {
+      log.error({ error }, 'Failed to persist verified Mono KYC');
+      throw error;
     }
 
     return NextResponse.json({

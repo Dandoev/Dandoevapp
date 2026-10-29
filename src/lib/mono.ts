@@ -12,7 +12,7 @@ const MONO_API_V3 = 'https://api.withmono.com/v3';
 const MONO_PAYMENTS_V2 = 'https://api.withmono.com/v2/payments';
 const MONO_SECRET_KEY = process.env.MONO_SECRET_KEY || '';
 
-const isLiveMonoConfigured = Boolean(
+export const isLiveMonoConfigured = Boolean(
   MONO_SECRET_KEY &&
     !MONO_SECRET_KEY.includes('your_mono') &&
     !MONO_SECRET_KEY.includes('placeholder')
@@ -203,7 +203,7 @@ export interface MonoMandateResponse {
   id: string;
   status: 'pending' | 'approved' | 'rejected' | 'active' | 'paused' | 'cancelled';
   reference: string;
-  mandateType: 'emandate' | 'gsm' | 'signed';
+  mandateType: 'emandate' | 'sweep';
   debitType: 'variable' | 'fixed';
   amount: number; // Per-deduction amount in NGN
   mandateCapAmount: number; // Ceiling authorized in NGN
@@ -256,7 +256,10 @@ export interface MonoChargeResponse {
 export async function exchangeMonoToken(code: string): Promise<{ id: string }> {
   logger.info({ code }, 'Exchanging Mono public token');
 
-  if (!isLiveMonoConfigured || code.startsWith('mono_demo_') || code.startsWith('test_code_')) {
+  const isDemoCode = code.startsWith('mono_demo_') || code.startsWith('test_code_');
+  if (isDemoCode && !isDemoAllowed()) throw new Error('Demo Mono codes are disabled');
+  if (!isLiveMonoConfigured || isDemoCode) {
+    if (!isDemoAllowed()) throw new Error('Mono Connect is not configured');
     const deterministicHash = crypto
       .createHash('md5')
       .update(code)
@@ -271,6 +274,7 @@ export async function exchangeMonoToken(code: string): Promise<{ id: string }> {
       body: JSON.stringify({ code }),
     });
   } catch (err: any) {
+    if (!isDemoAllowed()) throw err;
     logger.warn({ err: err.message }, 'Mono live token exchange fallback activated');
     const deterministicHash = crypto
       .createHash('md5')
@@ -310,6 +314,7 @@ export async function getMonoIdentity(
         verified: true,
       };
     } catch (err: any) {
+      if (!isDemoAllowed()) throw err;
       logger.warn({ err: err.message, accountId }, 'Mono live identity fetch fallback');
     }
   }
@@ -374,6 +379,7 @@ export async function lookupMonoBvn(bvn: string): Promise<{
         };
       }
     } catch (err: any) {
+      if (!isDemoAllowed()) throw err;
       logger.warn({ err: err.message }, 'Mono v3 BVN lookup fallback');
     }
   }
@@ -426,6 +432,7 @@ export async function lookupMonoNin(nin: string): Promise<{
         };
       }
     } catch (err: any) {
+      if (!isDemoAllowed()) throw err;
       logger.warn({ err: err.message }, 'Mono v3 NIN lookup fallback');
     }
   }
@@ -561,6 +568,7 @@ export async function verifyMonoBankAccount(params: {
         };
       }
     } catch (err: any) {
+      if (!isDemoAllowed()) throw err;
       logger.warn({ err: err.message, cleanAcct, bankCode }, 'Mono NIP account lookup fallback');
     }
   }
@@ -625,6 +633,7 @@ export async function getMonoAccountDetails(
         verified: true,
       };
     } catch (err: any) {
+      if (!isDemoAllowed()) throw err;
       logger.warn({ err: err.message, accountId }, 'Mono account details fallback');
     }
   }
@@ -676,6 +685,7 @@ export async function getMonoStatement(
         category: t.category || undefined,
       }));
     } catch (err: any) {
+      if (!isDemoAllowed()) throw err;
       logger.warn({ err: err.message, accountId }, 'Mono live statement fetch fallback');
     }
   }
@@ -785,6 +795,7 @@ export async function getMonoCreditHistory(bvnOrAccountId: string): Promise<Mono
         };
       }
     } catch (error: any) {
+      if (!isDemoAllowed()) throw error;
       logger.warn({ error: error.message }, 'Mono Credit Bureau lookup fallback');
     }
   }
@@ -1116,31 +1127,37 @@ export async function setupMonoRecurringMandate(params: {
     'Setting up Mono Recurring Mandate Order'
   );
 
-  if (isLiveMonoConfigured && params.accountId && !params.accountId.startsWith('mono_acct_')) {
-    try {
-      const res = await monoFetch<{ data: any }>(
-        '/mandates',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            account_id: params.accountId,
-            mandate_type: 'emandate',
-            debit_type: 'variable',
-            amount: Math.round(computedTerms.mandateCapAmount * 100), // Kobo
-            interval,
-            description: params.description,
-            reference: params.reference,
-            start_date: startDate,
-            end_date: endDate,
-          }),
-        },
-        'payments'
-      );
+  if (isLiveMonoConfigured) {
+    if (!params.accountNumber || !params.email) {
+      throw new Error('Account number and customer email are required to create a Mono mandate');
+    }
+    const res = await monoFetch<{ data: any }>(
+      '/payments/mandates',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          debit_type: 'variable',
+          customer: params.email,
+          mandate_type: 'emandate',
+          // For variable mandates this is the total amount collectible for the mandate period.
+          amount: Math.round(totalRepayable * 100),
+          reference: ref.slice(0, 24),
+          account_number: params.accountNumber,
+          bank_code: bankCode,
+          fee_bearer: 'business',
+          description: desc.slice(0, 100),
+          start_date: startDate,
+          end_date: endDate,
+          meta: { account_id: params.accountId, deduction_frequency: deductionFrequency },
+        }),
+      },
+      'v3'
+    );
 
-      if (res?.data) {
+    if (res?.data) {
         return {
           id: res.data.id || res.data.mandate_id || `mnd_${Date.now()}`,
-          status: res.data.status || 'approved',
+          status: res.data.status || 'pending',
           reference: ref,
           mandateType: 'emandate',
           debitType: 'variable',
@@ -1161,11 +1178,11 @@ export async function setupMonoRecurringMandate(params: {
           authorizationUrl: res.data.authorization_url || res.data.payment_link,
           createdAt: new Date().toISOString(),
         };
-      }
-    } catch (err: any) {
-      logger.warn({ err: err.message }, 'Mono live mandate setup fallback activated');
     }
+    throw new Error('Mono returned an invalid mandate response');
   }
+
+  if (!isDemoAllowed()) throw new Error('Mono mandates are not configured');
 
   const deterministicSuffix = crypto
     .createHash('md5')
@@ -1206,18 +1223,16 @@ export async function getMonoMandateStatus(mandateId: string): Promise<{
   readyToDebit: boolean;
 }> {
   if (isLiveMonoConfigured && !mandateId.startsWith('mnd_live_')) {
-    try {
-      const res = await monoFetch<{ data: any }>(`/mandates/${mandateId}`, {}, 'payments');
+      const res = await monoFetch<{ data: any }>(`/payments/mandates/${encodeURIComponent(mandateId)}`, {}, 'v3');
       const st = res.data?.status || 'active';
       return {
         id: mandateId,
         status: st,
-        readyToDebit: st === 'active' || st === 'approved',
+        readyToDebit: st === 'active' || st === 'ready',
       };
-    } catch (err: any) {
-      logger.warn({ err: err.message, mandateId }, 'Mono mandate status lookup fallback');
-    }
   }
+
+  if (!isDemoAllowed()) throw new Error('Mono mandate status is not configured');
 
   return {
     id: mandateId,
@@ -1241,10 +1256,13 @@ export async function chargeMonoMandate(params: {
     'Charging Mono Direct Debit Mandate'
   );
 
+  if (!Number.isFinite(params.amount) || params.amount < 200) throw new Error('Mono mandate debit must be at least NGN 200');
+  if (!params.reference || params.reference.length > 24) throw new Error('Mono debit reference must be 1-24 characters');
+  if (!params.narration || params.narration.length > 100) throw new Error('Mono debit narration must be 1-100 characters');
+
   if (isLiveMonoConfigured && !params.mandateId.startsWith('mnd_live_')) {
-    try {
       const res = await monoFetch<{ data: any }>(
-        `/mandates/${params.mandateId}/charge`,
+        `/payments/mandates/${encodeURIComponent(params.mandateId)}/debit`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -1253,13 +1271,13 @@ export async function chargeMonoMandate(params: {
             narration: params.narration,
           }),
         },
-        'payments'
+        'v3'
       );
 
       if (res?.data) {
         return {
           id: res.data.id || `chg_${Date.now()}`,
-          status: res.data.status || 'successful',
+          status: res.data.status === 'successful' ? 'successful' : res.data.status === 'failed' ? 'failed' : 'pending',
           reference: res.data.reference || params.reference,
           amount: params.amount,
           mandateId: params.mandateId,
@@ -1268,10 +1286,10 @@ export async function chargeMonoMandate(params: {
           fee: res.data.fee || 100,
         };
       }
-    } catch (err: any) {
-      logger.warn({ err: err.message, mandateId: params.mandateId }, 'Mono live charge fallback');
-    }
+      throw new Error('Mono returned an invalid debit response');
   }
+
+  if (!isDemoAllowed()) throw new Error('Mono mandate debits are not configured');
 
   return {
     id: `mono_chg_${Date.now().toString(36)}`,
@@ -1299,12 +1317,8 @@ export function verifyMonoSignature(
   const secret = secretOverride || process.env.MONO_WEBHOOK_SECRET || fallbackSecret;
   if (!secret) return false;
 
-  // Support both direct secret header comparison (Mono v2 mono-webhook-secret) and HMAC-SHA512
-  if (signatureHeader === secret) return true;
-
-  const hash = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
   try {
-    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signatureHeader));
+    return crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(signatureHeader));
   } catch {
     return false;
   }

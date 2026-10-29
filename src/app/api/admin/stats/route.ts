@@ -11,7 +11,7 @@ export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiCon
   try {
     const now = new Date();
     const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
-    const [totalUsers, totalOrders, loanGroups, portfolio, transactions, repayments, escrow, recentTransactions, bikes] = await Promise.all([
+    const [totalUsers, totalOrders, loanGroups, portfolio, transactions, repayments, escrow, recentTransactions, bikes, outrightMetrics, outrightBuyers] = await Promise.all([
       prisma.user.count(),
       prisma.order.count(),
       prisma.loan.groupBy({ by: ['status'], _count: { _all: true } }),
@@ -20,10 +20,16 @@ export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiCon
       prisma.repayment.findMany({ where: { status: { in: ['paid', 'overdue', 'failed', 'partial'] } }, select: { status: true, paidDate: true, dueDate: true } }),
       prisma.dailySaving.aggregate({ where: { status: 'collected' }, _sum: { amount: true } }),
       prisma.paymentTransaction.findMany({
-        where: { status: 'success' }, orderBy: { createdAt: 'desc' }, take: 8,
-        include: { user: { select: { firstName: true, lastName: true } }, loan: { include: { bike: { select: { name: true } } } } },
+        orderBy: { createdAt: 'desc' }, take: 20,
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true } },
+          loan: { include: { bike: { select: { name: true } } } },
+          order: { include: { bike: { select: { name: true } } } },
+        },
       }),
       prisma.bike.findMany({ orderBy: { stockQuantity: 'desc' }, select: { name: true, stockQuantity: true }, take: 5 }),
+      prisma.paymentTransaction.aggregate({ where: { status: 'success', orderId: { not: null } }, _sum: { amount: true }, _count: { _all: true } }),
+      prisma.order.groupBy({ by: ['userId'], where: { status: { in: ['confirmed', 'processing', 'shipped', 'delivered'] } } }),
     ]);
 
     const statusCounts = new Map(loanGroups.map((row) => [row.status, row._count._all]));
@@ -52,6 +58,10 @@ export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiCon
 
     return NextResponse.json({ success: true, data: {
       totalUsers, totalOrders, totalRevenue: Number(portfolio._sum.totalRepayable || 0),
+      paymentVolume: transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+      outrightRevenue: Number(outrightMetrics._sum.amount || 0),
+      outrightTransactions: outrightMetrics._count._all,
+      outrightBuyers: outrightBuyers.length,
       activeLoans: statusCounts.get('active') || 0,
       pendingApplications: (statusCounts.get('pending') || 0) + (statusCounts.get('under_review') || 0),
       defaultRate: totalLoans ? (defaultedLoans / totalLoans) * 100 : 0,
@@ -62,10 +72,12 @@ export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiCon
       providerVolume,
       recentLedger: recentTransactions.map((transaction) => ({
         id: transaction.id, rider: `${transaction.user.firstName} ${transaction.user.lastName}`.trim(),
-        bike: transaction.loan?.bike?.name || 'Order payment',
+        bike: transaction.order?.bike?.name || transaction.loan?.bike?.name || 'Accessories order',
         channel: `${transaction.provider}${transaction.providerRef ? ` · ${transaction.providerRef}` : ''}`,
-        category: transaction.repaymentId ? 'repayment' : 'payment', amount: Number(transaction.amount),
-        time: transaction.createdAt, status: 'Settled',
+        category: transaction.orderId ? 'outright' : transaction.repaymentId ? 'repayment' : 'payment',
+        orderId: transaction.orderId, amount: Number(transaction.amount),
+        time: transaction.createdAt,
+        status: transaction.status === 'success' ? 'Settled' : transaction.status,
       })),
       regionalHubs: [], topBikes: bikes.map((bike) => ({ name: bike.name, stock: bike.stockQuantity })),
     }});

@@ -196,14 +196,14 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
       // 4% monthly * 12 months = 48% interest = 1,350,000 * 0.48 = 648,000
       expect(installmentTerms.totalInterest).toBe(648000);
       expect(installmentTerms.processingFee).toBe(20000);
-      expect(installmentTerms.healthInsuranceFee).toBe(60000);
+      expect(installmentTerms.healthInsuranceFee).toBe(135000); // 10% of financed principal
 
-      // Save-As-You-Ride compulsory savings: 12 months * 30 days * ₦1,000/day = ₦360,000
-      expect(installmentTerms.totalSavings).toBe(360000);
+      // Save-As-You-Ride uses the product's 28-day repayment month.
+      expect(installmentTerms.totalSavings).toBe(336000);
 
-      // Total repayable = 1,350,000 + 648,000 + 20,000 + 60,000 + 360,000 = 2,438,000
-      expect(installmentTerms.totalRepayable).toBe(2438000);
-      expect(installmentTerms.numberOfInstallments).toBe(180); // bi-daily
+      // Principal + interest + processing + insurance + returnable savings.
+      expect(installmentTerms.totalRepayable).toBe(2489000);
+      expect(installmentTerms.numberOfInstallments).toBe(48); // weekly over 12 product months
     });
 
     it('computes exact NIBSS e-Mandate schedules and buffer cap amount', () => {
@@ -284,7 +284,7 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
   describe('Journey 6: Mono Webhook Cryptographic Security & Deduplication', () => {
     const webhookSecret = 'dandoev_test_mono_secret_key_99182';
 
-    it('verifies genuine HMAC-SHA512 webhook payloads from Mono', () => {
+    it('verifies Mono webhooks using the exact configured secret header', () => {
       const payload = JSON.stringify({
         event: 'mono.events.payment_successful',
         data: {
@@ -295,12 +295,7 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
         },
       });
 
-      const signature = crypto
-        .createHmac('sha512', webhookSecret)
-        .update(payload)
-        .digest('hex');
-
-      expect(verifyMonoSignature(payload, signature, webhookSecret)).toBe(true);
+      expect(verifyMonoSignature(payload, webhookSecret, webhookSecret)).toBe(true);
     });
 
     it('rejects tampered or forged webhook payloads', () => {
@@ -309,17 +304,12 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
         data: { reference: 'TX-001', amount: 50000 },
       });
 
-      const signature = crypto
-        .createHmac('sha512', webhookSecret)
-        .update(genuinePayload)
-        .digest('hex');
-
       const tamperedPayload = JSON.stringify({
         event: 'mono.events.payment_successful',
         data: { reference: 'TX-001', amount: 100 }, // modified payload
       });
 
-      expect(verifyMonoSignature(tamperedPayload, signature, webhookSecret)).toBe(false);
+      expect(verifyMonoSignature(tamperedPayload, 'forged-secret', webhookSecret)).toBe(false);
     });
   });
 

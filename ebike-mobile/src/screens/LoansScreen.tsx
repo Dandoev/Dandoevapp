@@ -28,14 +28,16 @@ interface LoansScreenProps {
 }
 
 export default function LoansScreen({ token }: LoansScreenProps) {
-  const [loan, setLoan] = useState<DemoLoan>(demoStore.getLoan());
-  const [wallet, setWallet] = useState<DemoWallet>(demoStore.getWallet());
+  const isDemoUser = Boolean(token?.startsWith('demo-'));
+  const emptyLoan = { ...demoStore.getLoan(), id: 'no-loan', bikeName: '', status: 'under_review' as const, totalAmount: 0, loanAmount: 0, installmentsPaid: 0, totalInstallments: 0, repayments: [] };
+  const [loan, setLoan] = useState<DemoLoan>(isDemoUser ? demoStore.getLoan() : emptyLoan);
+  const [wallet, setWallet] = useState<DemoWallet>(isDemoUser ? demoStore.getWallet() : { ...demoStore.getWallet(), mainBalance: 0, lockedSaving: 0 });
   const [paying, setPaying] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
 
   useEffect(() => {
-    if (token && !token.startsWith('demo-')) {
+    if (token && !isDemoUser) {
       MobileApi.getMyLoans(token)
         .then((res) => {
           if (res.success && res.data && res.data.length > 0) {
@@ -65,12 +67,13 @@ export default function LoansScreen({ token }: LoansScreenProps) {
         .catch(() => {});
     }
 
+    if (!isDemoUser) return;
     const unsubscribe = demoStore.subscribe(() => {
       setLoan(demoStore.getLoan());
       setWallet(demoStore.getWallet());
     });
     return unsubscribe;
-  }, [token]);
+  }, [token, isDemoUser]);
 
   const handlePayNext = () => {
     setPaying(true);
@@ -112,8 +115,14 @@ export default function LoansScreen({ token }: LoansScreenProps) {
       )}
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {loan.id === 'no-loan' && (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>No BNPL plan yet</Text>
+            <Text style={styles.emptyStateText}>Approved loans and repayment schedules will appear here after your application is verified.</Text>
+          </View>
+        )}
         {/* Active Loan Card */}
-        <View style={styles.activeLoanCard}>
+        <View style={[styles.activeLoanCard, loan.id === 'no-loan' && { display: 'none' }]}>
           <View style={styles.cardTop}>
             <View>
               <Text style={styles.loanBadge}>ACTIVE BNPL LOAN</Text>
@@ -272,6 +281,9 @@ export default function LoansScreen({ token }: LoansScreenProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F7FC' },
+  emptyStateCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#DBE2F0', marginBottom: 16 },
+  emptyStateTitle: { fontSize: 18, fontWeight: '800', fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#0A154F' },
+  emptyStateText: { fontSize: 13, lineHeight: 20, color: '#66728A', fontFamily: 'Inter_400Regular' },
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,

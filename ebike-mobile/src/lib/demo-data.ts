@@ -61,6 +61,12 @@ export interface DemoLoan {
   status: 'active' | 'completed' | 'under_review';
   deductionFrequency: DeductionFrequency;
   repayments: DemoRepayment[];
+  bikeSerialNumber?: string;
+  chassisNumber?: string;
+  batteryNumber1?: string;
+  batteryNumber2?: string;
+  chargerNumber?: string;
+  approvedAt?: string;
 }
 
 export interface DemoUserProfile {
@@ -268,7 +274,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
       'Single 48V 20Ah Lithium-Ion Battery',
       'Full Throttle 85km / PAS 115km',
       'Max Load 240kg (Delivery Rack Ready)',
-      'USB Rapid Phone Charging Port',
+      'USB phone charger on the dashboard with phone holder',
     ],
   },
   {
@@ -302,7 +308,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
       'Hydraulic Front & Rear Brakes',
       '7-Speed Shimano Gear System',
       'Single 48V 20Ah Battery Pack',
-      'USB Rapid Phone Charger on Handlebar',
+      'USB phone charger on the dashboard with phone holder',
     ],
   },
   {
@@ -336,7 +342,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
       'Hydraulic Disc Brakes',
       'Front Suspension Fork',
       'Single 48V 20Ah Battery Pack',
-      'USB Charging Port',
+      'USB phone charger on the dashboard with phone holder',
     ],
   },
   {
@@ -352,7 +358,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     image: 'bike-x4',
     images: ['bike-x4'],
     motorPower: 500,
-    batteryCapacity: 15,
+    batteryCapacity: 16,
     voltage: 48,
     rangeKm: 70,
     topSpeed: 38,
@@ -361,16 +367,11 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     rating: 4.7,
     reviewCount: 31,
     inStock: true,
-    description: 'Rugged 29-inch utility e-bike with 500W motor, single 48V 15Ah battery, digital dashboard with NFC card, anti-theft motion alerts, and Google Maps. Extra 48V 15Ah battery available for ₦350,000.',
+    description: 'Rugged 29-inch utility e-bike with 500W motor, basic LCD dashboard and an extra 48V 16Ah battery included. It has disc brakes and no NFC, phone charger, USB, GPS or anti-theft alerts.',
     features: [
-      'Digital dashboard / NFC card',
-      'Anti-theft motion alerts',
-      'Google Maps navigation',
-      '29-inch All-Terrain Tyres',
-      'Front & Rear Disc Brakes',
-      'Single 48V 15Ah Battery Pack',
-      'Optional Extra Battery (+₦350,000)',
-      'USB Rapid Phone Charger',
+      'Basic LCD dashboard', 'Extra 48V 16Ah battery included',
+      '29-inch tyres', 'Front & rear disc brakes',
+      'No NFC, phone charger, USB, GPS or anti-theft alerts',
     ],
   },
   {
@@ -386,7 +387,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     image: 'bike-x5-lite',
     images: ['bike-x5-lite'],
     motorPower: 500,
-    batteryCapacity: 15,
+    batteryCapacity: 16,
     voltage: 48,
     rangeKm: 70,
     topSpeed: 38,
@@ -395,16 +396,11 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     rating: 4.8,
     reviewCount: 39,
     inStock: true,
-    description: 'Lightweight fat-tire e-bike designed for city navigation and delivery routes. 500W motor, single 48V 15Ah battery, 26x4 fat tyres, digital dashboard with NFC card, anti-theft motion alerts, and Google Maps. Extra battery available for ₦350,000.',
+    description: 'Lightweight fat-tire e-bike with a basic LCD dashboard, extra 48V 16Ah battery included, 26×4 flat tyres and disc brakes. No NFC, phone charger, USB, GPS or anti-theft alerts.',
     features: [
-      'Digital dashboard / NFC card',
-      'Anti-theft motion alerts',
-      'Google Maps navigation',
-      '26*4-inch Fat Tyres',
-      'Front & Rear Disc Brakes',
-      'Single 48V 15Ah Battery Pack',
-      'Optional Extra Battery (+₦350,000)',
-      'USB Rapid Phone Charger',
+      'Basic LCD dashboard', 'Extra 48V 16Ah battery included',
+      '26×4 flat tyres', 'Front & rear disc brakes',
+      'No NFC, phone charger, USB, GPS or anti-theft alerts',
     ],
   },
   {
@@ -420,7 +416,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     image: 'bike-x2',
     images: ['bike-x2'],
     motorPower: 350,
-    batteryCapacity: 15,
+    batteryCapacity: 16,
     voltage: 36,
     rangeKm: 60,
     topSpeed: 32,
@@ -429,16 +425,11 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     rating: 4.6,
     reviewCount: 22,
     inStock: true,
-    description: 'Accessible urban commuter e-bike featuring 350W motor, single 36V 15Ah battery, 26-inch tyres, digital dashboard with NFC card, anti-theft motion alerts, and Google Maps. Extra battery available for ₦250,000.',
+    description: 'Accessible urban commuter e-bike with a basic LCD dashboard, extra 36V 16Ah battery included, 26-inch tyres and disc brakes. No NFC, phone charger, USB, GPS or anti-theft alerts.',
     features: [
-      'Digital dashboard / NFC card',
-      'Anti-theft motion alerts',
-      'Google Maps navigation',
-      '26-inch Commuter Tyres',
-      'Mechanical Disc Brakes',
-      'Single 36V 15Ah Battery Pack',
-      'Optional Extra Battery (+₦250,000)',
-      'USB Rapid Phone Charger',
+      'Basic LCD dashboard', 'Extra 36V 16Ah battery included',
+      '26-inch tyres', 'Disc brakes',
+      'No NFC, phone charger, USB, GPS or anti-theft alerts',
     ],
   },
 
@@ -839,7 +830,7 @@ class DemoStore {
   }
 
   getProducts() {
-    return this.products;
+    return this.products.filter((p) => p.type === 'bike');
   }
 
   getBikes() {
@@ -847,11 +838,11 @@ class DemoStore {
   }
 
   getBatteries() {
-    return this.products.filter((p) => p.type === 'battery');
+    return [];
   }
 
   getChargers() {
-    return this.products.filter((p) => p.type === 'charger');
+    return [];
   }
 
   getProductById(id: string): DemoProduct | undefined {

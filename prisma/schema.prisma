@@ -279,6 +279,10 @@ model Loan {
   riskScore          Int?
   kycVerified        Boolean    @default(false)
   guarantorsVerified Boolean    @default(false)
+  agreementAcceptedAt DateTime?
+  agreementVersion    String?
+  agreementIpAddress  String?
+  agreementUserAgent  String?
   // ---- Mono Mandate & Auto-Deduction ----
   monoAccountId      String?
   monoMandateId      String?
@@ -358,6 +362,11 @@ model Guarantor {
   idDocumentUrl   String?
   signatureUrl    String?
   acceptedAt      DateTime?
+  monoAccountId   String?
+  verifiedAt      DateTime?
+  agreementAcceptedAt DateTime?
+  inviteTokenHash String?         @unique
+  inviteExpiresAt DateTime?
   createdAt       DateTime        @default(now())
 
   // Relations

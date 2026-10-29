@@ -77,6 +77,10 @@ export const MobileApi = {
     return apiRequest<{ success: boolean; data: any }>('/auth/me', { token });
   },
 
+  async getNotifications(token: string) {
+    return apiRequest<{ success: boolean; data: any[] }>('/notifications', { token });
+  },
+
   // 2. Bikes & Marketplace
   async getBikes() {
     return apiRequest<{ success: boolean; data: any[] }>('/bikes');
@@ -153,5 +157,18 @@ export const MobileApi = {
       body: orderData,
       token,
     });
+  },
+
+  async initializePayment(paymentData: { amount: number; orderId: string; callbackUrl: string; provider?: 'mono' }, token: string) {
+    return apiRequest<{ success: boolean; data: { authorizationUrl: string; reference: string; transactionId: string; provider: string } }>('/payments/initialize', {
+      method: 'POST', body: paymentData, token,
+    });
+  },
+
+  async verifyPayment(reference: string, token: string) {
+    return apiRequest<{ success: boolean; data: { status: string; amount: number; reference: string } }>(
+      `/payments/verify?reference=${encodeURIComponent(reference)}`,
+      { token }
+    );
   },
 };

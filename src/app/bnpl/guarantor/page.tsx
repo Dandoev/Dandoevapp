@@ -120,7 +120,7 @@ export default function GuarantorPage() {
                                 </div>
                             )}
                             <button className={`btn ${g.invited ? 'btn-ghost' : 'btn-primary'} btn-full`} onClick={() => handleInvite(index)} disabled={!g.fullName || !g.phone || (index === 1 && !g.relationship)}>
-                                {g.invited ? `✓ Invite Sent to ${index === 0 ? 'Civil Servant' : 'Family Member'}` : `📩 Send ${index === 0 ? 'Civil Servant' : 'Family Member'} Invite`}
+                                {g.invited ? `✓ ${index === 0 ? 'Civil Servant' : 'Family Member'} Added` : `Add ${index === 0 ? 'Civil Servant' : 'Family Member'}`}
                             </button>
                         </div>
                     </div>
@@ -130,8 +130,8 @@ export default function GuarantorPage() {
                     <div className="alert alert-success animate-fade-in-up" style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem' }}>
                         <span style={{ display: 'flex', color: 'var(--success)' }}><CheckCircle2 size={18} /></span>
                         <div>
-                            <strong>{guarantors[0].invited && guarantors[1].invited ? 'Invites sent successfully!' : 'Invite sent successfully!'}</strong>
-                            <p style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>Your guarantors will receive an invitation to verify their identity and upload their <strong>Work ID</strong> (for Civil Servant) or <strong>National ID</strong>.</p>
+                            <strong>{guarantors[0].invited && guarantors[1].invited ? 'Both guarantors are ready.' : 'Guarantor added.'}</strong>
+                            <p style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>Secure verification links are generated only after the application is successfully submitted.</p>
                         </div>
                     </div>
                 )}

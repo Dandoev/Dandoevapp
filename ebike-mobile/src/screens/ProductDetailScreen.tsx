@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import {
   ArrowLeft,
   Share2,
@@ -34,12 +35,14 @@ import { MobileApi } from '../lib/api';
 
 interface ProductDetailScreenProps {
   product?: DemoProduct;
+  token: string | null;
   onBack: () => void;
   onApplyBNPL: (product: DemoProduct, tenureMonths: number) => void;
 }
 
 export default function ProductDetailScreen({
   product = demoStore.getSelectedProduct(),
+  token,
   onBack,
   onApplyBNPL,
 }: ProductDetailScreenProps) {
@@ -49,6 +52,8 @@ export default function ProductDetailScreen({
   const [showOutrightModal, setShowOutrightModal] = useState<boolean>(false);
   const [outrightSuccess, setOutrightSuccess] = useState<boolean>(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const isBike = product.type === 'bike';
   const breakdown = getProductPriceBreakdown(product, selectedTenure, deliveryType);
@@ -63,22 +68,40 @@ export default function ProductDetailScreen({
   };
 
   const handleBuyOutright = async () => {
-    demoStore.fundWallet(-breakdown.totalOutright, `Outright Purchase: ${product.name}`);
-    setOutrightSuccess(true);
+    if (!token || token.startsWith('demo-token')) {
+      setPurchaseError('Sign in with your customer account to complete a real purchase.');
+      return;
+    }
+    setPurchaseLoading(true);
+    setPurchaseError(null);
     try {
-      await MobileApi.createOrder({
+      const order = await MobileApi.createOrder({
         bikeId: product.type === 'bike' ? product.id : undefined,
         quantity: 1,
-        paymentMethod: 'wallet',
+        paymentMethod: 'bank_transfer',
         deliveryType,
         deliveryAddress: deliveryType === 'pickup' ? 'Lagos Central Pickup Hub' : '24 Sandstrip Oworoshoki',
         deliveryCity: 'Lagos',
         deliveryState: deliveryType === 'delivery_outside' ? 'Abuja' : 'Lagos',
         deliveryPhone: '08099001122',
         accessories: product.type !== 'bike' ? [{ id: product.id, quantity: 1 }] : undefined,
-      });
-    } catch {
-      // Local demo store already updated
+      }, token);
+      if (!order.orderId) throw new Error('The order could not be created.');
+
+      const payment = await MobileApi.initializePayment({
+        amount: breakdown.totalOutright,
+        orderId: order.orderId,
+        provider: 'mono',
+        callbackUrl: 'dandoev://payment-callback',
+      }, token);
+      await WebBrowser.openAuthSessionAsync(payment.data.authorizationUrl, 'dandoev://payment-callback');
+      const verification = await MobileApi.verifyPayment(payment.data.reference, token);
+      if (verification.data.status !== 'success') throw new Error('Payment is still pending. It will appear after Mono confirms settlement.');
+      setOutrightSuccess(true);
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : 'Unable to complete this purchase.');
+    } finally {
+      setPurchaseLoading(false);
     }
   };
 
@@ -111,7 +134,7 @@ export default function ProductDetailScreen({
           </View>
           <Image
             source={getProductAsset(product.id)}
-            style={styles.heroImage}
+            style={[styles.heroImage, product.id === 'bike-g90' && styles.heroImageLarge]}
             resizeMode="contain"
           />
           <View style={styles.stockBadge}>
@@ -127,7 +150,7 @@ export default function ProductDetailScreen({
           </Text>
 
           <View style={styles.pricingCard}>
-            <View>
+            <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
               <Text style={styles.cashLabel}>Base Item Price</Text>
               <Text style={styles.cashPrice}>₦{product.price.toLocaleString()}</Text>
               <Text style={styles.cashSub}>10% compulsory insurance included on checkout</Text>
@@ -622,13 +645,16 @@ export default function ProductDetailScreen({
                   ⚡ Payment will be completed via Mono DirectPay (Pay with Bank / Card / Transfer) or Wallet Balance.
                 </Text>
 
+                {purchaseError ? <Text style={{ color: '#B91C1C', marginBottom: 10, fontFamily: 'Inter_600SemiBold' }}>{purchaseError}</Text> : null}
+
                 <TouchableOpacity
                   style={styles.confirmBuyBtn}
                   onPress={handleBuyOutright}
+                  disabled={purchaseLoading}
                   activeOpacity={0.85}
                 >
                   <Text style={styles.confirmBuyBtnText}>
-                    Confirm & Pay ₦{breakdown.totalOutright.toLocaleString()}
+                    {purchaseLoading ? 'Opening secure payment…' : `Confirm & Pay ₦${breakdown.totalOutright.toLocaleString()}`}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -694,6 +720,10 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '90%',
     height: '90%',
+  },
+  heroImageLarge: {
+    width: '135%',
+    height: '135%',
   },
   categoryBadge: {
     position: 'absolute',
@@ -886,7 +916,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   calcTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#92400E',
@@ -901,7 +931,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   calcSubtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#B45309',
     fontFamily: 'Inter_400Regular',
     marginBottom: 12,
@@ -949,7 +979,7 @@ const styles = StyleSheet.create({
     borderColor: '#FDE68A',
   },
   calcResultLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#78350F',
     fontFamily: 'Inter_600SemiBold',
   },
@@ -961,7 +991,7 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   calcResultSub: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#92400E',
     fontFamily: 'Inter_400Regular',
   },
@@ -1120,18 +1150,24 @@ const styles = StyleSheet.create({
   bnplDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 8,
   },
   bnplDetailLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#92400E',
     fontFamily: 'Inter_500Medium',
+    flex: 1,
+    flexShrink: 1,
   },
   bnplDetailVal: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#78350F',
+    flexShrink: 1,
+    textAlign: 'right',
   },
 
   /* Modal Styles */

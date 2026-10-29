@@ -34,6 +34,7 @@ import { getProductAsset, BIKE_ASSETS } from '../lib/bike-assets';
 import { TabType } from '../components/BottomNavBar';
 import FinancialStatementModal from '../components/FinancialStatementModal';
 import BrandMark from '../components/BrandMark';
+import { MobileApi } from '../lib/api';
 
 interface DashboardScreenProps {
   onSwitchTab: (tab: TabType) => void;
@@ -46,14 +47,19 @@ interface DashboardScreenProps {
 
 export default function DashboardScreen({
   onSwitchTab,
+  token,
   onNavigateToNotifications,
   onNavigateToFundWallet,
   onNavigateToKyc,
   onSelectProduct,
 }: DashboardScreenProps) {
-  const [wallet, setWallet] = useState<DemoWallet>(demoStore.getWallet());
-  const [loan, setLoan] = useState<DemoLoan>(demoStore.getLoan());
-  const [user, setUser] = useState<DemoUserProfile>(demoStore.getUser());
+  const isDemoUser = Boolean(token?.startsWith('demo-'));
+  const emptyWallet: DemoWallet = { mainBalance: 0, lockedSaving: 0, lockedUntil: '', weeklySavingAmount: 0, dailySavingAmount: 0, dailySavingsEnabled: false, collectedWeeks: 0, totalWeeks: 0, missedWeeks: 0, virtualCard: demoStore.getWallet().virtualCard };
+  const emptyLoan: DemoLoan = { id: 'no-loan', bikeName: '', bikeModel: '', bikeImage: '', totalAmount: 0, loanAmount: 0, downPayment: 0, weeklyRepayment: 0, monthlyRepayment: 0, tenureMonths: 0, installmentsPaid: 0, totalInstallments: 0, nextDueDate: '', nextDueAmount: 0, daysRemaining: 0, status: 'under_review', deductionFrequency: 'weekly', repayments: [] };
+  const emptyUser: DemoUserProfile = { id: '', firstName: 'there', lastName: '', email: '', phone: '', address: '', city: '', state: '', employmentStatus: '', employer: '', monthlyIncome: 0, kycTier: 1, kycStatus: 'pending', bvnVerified: false, ninVerified: false };
+  const [wallet, setWallet] = useState<DemoWallet>(isDemoUser ? demoStore.getWallet() : emptyWallet);
+  const [loan, setLoan] = useState<DemoLoan>(isDemoUser ? demoStore.getLoan() : emptyLoan);
+  const [user, setUser] = useState<DemoUserProfile>(isDemoUser ? demoStore.getUser() : emptyUser);
   const [products, setProducts] = useState<DemoProduct[]>(demoStore.getProducts());
   const [unreadCount, setUnreadCount] = useState<number>(demoStore.getUnreadNotificationCount());
   const [hasAttachedCard, setHasAttachedCard] = useState<boolean>(demoStore.getHasAttachedCard());
@@ -63,6 +69,20 @@ export default function DashboardScreen({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (token && !isDemoUser) {
+      Promise.all([
+        MobileApi.getProfile(token),
+        MobileApi.getMyLoans(token),
+        MobileApi.getWalletBalance(token),
+      ]).then(([profileRes, loansRes, walletRes]) => {
+        const profile = (profileRes as any).user || (profileRes as any).data;
+        if (profile) setUser((prev) => ({ ...prev, ...profile, kycTier: profile.kycStatus === 'verified' ? 2 : 1, kycStatus: profile.kycStatus === 'verified' ? 'verified' : 'pending' }));
+        const remoteLoan = loansRes.data?.[0];
+        if (remoteLoan) setLoan((prev) => ({ ...prev, id: remoteLoan.id, bikeName: remoteLoan.bike?.name || 'BNPL e-bike', totalAmount: Number(remoteLoan.totalRepayable || remoteLoan.loanAmount || 0), monthlyRepayment: Number(remoteLoan.monthlyRepayment || 0), status: remoteLoan.status, repayments: remoteLoan.repayments || [], bikeSerialNumber: remoteLoan.bikeSerialNumber, chassisNumber: remoteLoan.chassisNumber, batteryNumber1: remoteLoan.batteryNumber1, batteryNumber2: remoteLoan.batteryNumber2, chargerNumber: remoteLoan.chargerNumber, approvedAt: remoteLoan.approvedAt }));
+        if (walletRes.data) setWallet((prev) => ({ ...prev, ...walletRes.data, mainBalance: Number(walletRes.data.mainBalance || 0), lockedSaving: Number(walletRes.data.lockedSaving || 0) }));
+      }).catch(() => {});
+      return;
+    }
     const unsubscribe = demoStore.subscribe(() => {
       setWallet(demoStore.getWallet());
       setLoan(demoStore.getLoan());
@@ -74,7 +94,9 @@ export default function DashboardScreen({
       setAttachedBank(demoStore.getAttachedBank());
     });
     return unsubscribe;
-  }, []);
+  }, [token, isDemoUser]);
+
+  const hasLoan = isDemoUser || loan.id !== 'no-loan';
 
   const handleQuickPay = () => {
     const res = demoStore.payNextInstallment();
@@ -138,9 +160,9 @@ export default function DashboardScreen({
       )}
 
       {/* My Assigned Vehicle Asset Card (User Showcase Card with Light Blue Badge) */}
-      <View style={styles.assignedBikeCard}>
+      <View style={[styles.assignedBikeCard, !hasLoan && styles.hiddenCard]}>
         <View style={styles.assignedBikeHeader}>
-          <Text style={styles.assignedBikeTitle}>My DandoEv G90</Text>
+          <Text style={styles.assignedBikeTitle}>My {loan.bikeName || 'DandoEv bike'}</Text>
           <View style={styles.assignedBadge}>
             <Text style={styles.assignedBadgeText}>Assigned</Text>
           </View>
@@ -165,13 +187,13 @@ export default function DashboardScreen({
               }}
             >
               <Text style={styles.assignedInfoLabel}>Bike ID: </Text>
-              <Text style={styles.assignedInfoValue}>DEV-G90-0001</Text>
+              <Text style={styles.assignedInfoValue}>{loan.bikeSerialNumber || 'Fleet ID pending'}</Text>
               <Copy size={13} color="#64748B" style={{ marginLeft: 5 }} />
             </TouchableOpacity>
 
             <View style={styles.assignedInfoRow}>
               <Text style={styles.assignedInfoLabel}>Financing: </Text>
-              <Text style={styles.assignedInfoValue}>18 months</Text>
+              <Text style={styles.assignedInfoValue}>{loan.tenureMonths || '—'} months</Text>
             </View>
 
             <View style={styles.assignedInfoRow}>
@@ -205,9 +227,6 @@ export default function DashboardScreen({
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.assignedBikeFootnote}>
-          Illustrative example. Actual information comes from the rider&apos;s approved financing and assigned bicycle record.
-        </Text>
       </View>
 
       {/* Linked Autopayment Card or Bank Mandate */}
@@ -356,8 +375,17 @@ export default function DashboardScreen({
       </View>
 
       <View style={styles.content}>
+        {!hasLoan && (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>No active BNPL plan</Text>
+            <Text style={styles.emptyStateText}>Your account is ready. Choose an e-bike from the catalog to start a verified BNPL application, or make an outright purchase.</Text>
+            <TouchableOpacity style={styles.emptyStateButton} onPress={() => onSwitchTab('bikes')}>
+              <Text style={styles.emptyStateButtonText}>Browse e-bikes</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {/* Weekly Deductions Active Loan Card */}
-        <View style={styles.loanCard}>
+        <View style={[styles.loanCard, !hasLoan && styles.hiddenCard]}>
           <View style={styles.loanCardHeader}>
             <View>
               <View style={styles.deductionFreqBadge}>
@@ -413,7 +441,7 @@ export default function DashboardScreen({
         )}
 
         {/* Compulsory Savings Vault Card */}
-        <View style={styles.savingsCard}>
+        <View style={[styles.savingsCard, !hasLoan && styles.hiddenCard]}>
           <View style={styles.savingsTop}>
             <View style={styles.savingsTitleRow}>
               <PiggyBank size={20} color="#2E3192" />
@@ -493,7 +521,7 @@ export default function DashboardScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Featured Products Section (E-Bikes, Batteries, Chargers) */}
+        {/* Featured E-Bike Catalog */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Featured Mobility Catalog</Text>
           <TouchableOpacity onPress={() => onSwitchTab('bikes')}>
@@ -541,6 +569,12 @@ export default function DashboardScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F7FC' },
+  hiddenCard: { display: 'none' },
+  emptyStateCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#DBE2F0', marginBottom: 16 },
+  emptyStateTitle: { fontSize: 18, fontWeight: '800', fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#0A154F' },
+  emptyStateText: { fontSize: 13, lineHeight: 20, color: '#66728A', fontFamily: 'Inter_400Regular', marginTop: 6 },
+  emptyStateButton: { alignSelf: 'flex-start', backgroundColor: '#2E3192', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginTop: 14 },
+  emptyStateButtonText: { color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' },
   topHeader: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,

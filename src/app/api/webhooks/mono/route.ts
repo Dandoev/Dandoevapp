@@ -9,6 +9,7 @@ import { deduplicateWebhookEvent, updateWebhookEventStatus } from '@/lib/webhook
 import prisma from '@/lib/prisma';
 import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   const log = logger.child({ route: 'webhooks/mono' });
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // Enforce signature verification (reject missing signature in production)
     if (!signature) {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === 'production' || process.env.MONO_WEBHOOK_SECRET) {
         log.warn('Rejected Mono webhook: missing signature header in production');
         return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
       }
@@ -29,20 +30,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    let payload: { event: string; data: Record<string, any> };
+    let payload: { event_id?: string; event: string; data: Record<string, any> };
     try {
       payload = JSON.parse(rawBody);
     } catch {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const eventId = `mono:${payload.event}:${
-      payload.data?.id ||
-      payload.data?.reference ||
-      payload.data?.mandate_id ||
-      payload.data?.account?._id ||
-      Date.now()
-    }`;
+    if (!payload.event || !payload.data || typeof payload.data !== 'object') {
+      return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
+    }
+    const eventId = payload.event_id || `mono:${crypto.createHash('sha256').update(rawBody).digest('hex')}`;
     log.info({ event: payload.event, eventId }, 'Mono webhook received');
 
     // Deduplicate event
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
       eventId,
       payload.event,
       payload.data
-    ).catch(() => false);
+    );
     if (isDuplicate) {
       return NextResponse.json({ received: true, deduplicated: true });
     }
@@ -104,20 +102,21 @@ export async function POST(req: NextRequest) {
       case 'events.mandates.approved': {
         const mandateId = data.id || data.mandate_id;
         const reference = data.reference;
-        log.info({ mandateId, reference }, 'Mono Direct Debit Mandate approved & active');
+        const mandateStatus = payload.event === 'events.mandates.ready' || payload.event === 'mono.events.mandate.active' ? 'active' : 'approved';
+        log.info({ mandateId, reference, mandateStatus }, 'Mono Direct Debit Mandate state updated');
 
         if (mandateId) {
           await prisma.user
             .updateMany({
               where: { monoMandateId: mandateId },
-              data: { monoMandateStatus: 'active' },
+              data: { monoMandateStatus: mandateStatus },
             })
             .catch(() => null);
 
           await prisma.loan
             .updateMany({
               where: { monoMandateId: mandateId },
-              data: { monoMandateStatus: 'active' },
+              data: { monoMandateStatus: mandateStatus },
             })
             .catch(() => null);
         }
@@ -139,9 +138,11 @@ export async function POST(req: NextRequest) {
       case 'events.mandates.debit.successful':
       case 'direct_debit.payment_successful': {
         const mandateId = data.mandate_id || data.mandate || data.id;
-        const reference = data.reference || `MONO-WH-${Date.now()}`;
-        const amountNgn =
-          typeof data.amount === 'number' ? Math.round(data.amount / 100) : 6555;
+        const reference = data.reference;
+        const amountNgn = typeof data.amount === 'number' ? data.amount / 100 : NaN;
+        if (!mandateId || !reference || !Number.isFinite(amountNgn) || amountNgn <= 0) {
+          throw new Error('Invalid successful mandate debit payload');
+        }
 
         log.info(
           { mandateId, reference, amountNgn },
@@ -149,77 +150,37 @@ export async function POST(req: NextRequest) {
         );
 
         try {
-          const loan = await prisma.loan.findFirst({
-            where: {
-              OR: [
-                { monoMandateId: mandateId },
-                { monoMandateRef: reference },
-              ],
-            },
+          const transaction = await prisma.paymentTransaction.findFirst({
+            where: { provider: 'mono', providerRef: reference, status: { in: ['initiated', 'pending'] } },
           });
-
-          if (loan) {
-            const nextRepayment = await prisma.repayment.findFirst({
-              where: {
-                loanId: loan.id,
-                status: { in: ['upcoming', 'overdue', 'failed'] },
-              },
-              orderBy: { installmentNumber: 'asc' },
-            });
-
-            if (nextRepayment) {
-              await prisma.repayment.update({
-                where: { id: nextRepayment.id },
+          if (!transaction?.repaymentId || Math.round(Number(transaction.amount) * 100) !== Math.round(amountNgn * 100)) {
+            throw new Error('Mono debit does not match a pending repayment transaction');
+          }
+          await prisma.$transaction(async (tx) => {
+              const claimed = await tx.paymentTransaction.updateMany({
+                where: { id: transaction.id, status: { in: ['initiated', 'pending'] } },
+                data: { status: 'success', reconciledAt: new Date(), metadata: data },
+              });
+              if (claimed.count !== 1) return;
+              await tx.repayment.update({
+                where: { id: transaction.repaymentId! },
                 data: {
                   status: 'paid',
                   paidDate: new Date(),
-                  amountPaid: amountNgn,
+                  amountPaid: { increment: amountNgn },
                   paymentReference: reference,
                 },
               });
-
-              await prisma.paymentTransaction.create({
-                data: {
-                  userId: loan.userId,
-                  loanId: loan.id,
-                  repaymentId: nextRepayment.id,
-                  provider: 'mono',
-                  providerRef: reference,
-                  amount: amountNgn,
-                  currency: 'NGN',
-                  status: 'success',
-                  reconciledAt: new Date(),
-                  metadata: data,
-                },
+              const remaining = await tx.repayment.count({
+                where: { loanId: transaction.loanId!, status: { not: 'paid' } },
               });
-
-              const remaining = await prisma.repayment.count({
-                where: { loanId: loan.id, status: { not: 'paid' } },
-              });
-
-              if (remaining === 0) {
-                await prisma.loan.update({
-                  where: { id: loan.id },
-                  data: {
-                    status: 'completed',
-                    completedAt: new Date(),
-                    monoMandateStatus: 'completed',
-                  },
-                });
-              }
-            }
-          }
-        } catch {
-          // Fallback to dbService
+              if (remaining === 0 && transaction.loanId) await tx.loan.update({ where: { id: transaction.loanId }, data: { status: 'completed', completedAt: new Date(), monoMandateStatus: 'completed' } });
+          });
+        } catch (error) {
+          log.error({ error, reference }, 'Failed to reconcile Mono mandate debit');
+          throw error;
         }
 
-        await dbService
-          .recordMandateAutoDeduction({
-            mandateId: mandateId || 'mnd_webhook',
-            amount: amountNgn,
-            reference,
-          })
-          .catch(() => null);
         break;
       }
 
@@ -228,8 +189,14 @@ export async function POST(req: NextRequest) {
       case 'events.mandates.debit.failed':
       case 'direct_debit.payment_failed': {
         const mandateId = data.mandate_id || data.mandate || data.id;
-        const reference = data.reference || `MONO-FAIL-${Date.now()}`;
+        const reference = data.reference;
+        if (!reference) throw new Error('Invalid failed mandate debit payload');
         log.warn({ mandateId, reference }, 'Mono Mandate auto-deduction failed');
+
+        await prisma.paymentTransaction.updateMany({
+          where: { provider: 'mono', providerRef: reference, status: { in: ['initiated', 'pending'] } },
+          data: { status: 'failed', reconciledAt: new Date(), metadata: data },
+        });
 
         await dbService
           .logAudit({
@@ -265,6 +232,9 @@ export async function POST(req: NextRequest) {
 
           if (transaction) {
             const finalAmount = amountNgn || Number(transaction.amount);
+            if (Math.round(finalAmount * 100) !== Math.round(Number(transaction.amount) * 100)) {
+              throw new Error('Mono DirectPay amount does not match the pending transaction');
+            }
 
             await prisma.paymentTransaction.update({
               where: { id: transaction.id },
@@ -304,7 +274,8 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch (err: any) {
-          log.warn({ err: err.message, reference }, 'Error reconciling Mono DirectPay webhook');
+          log.error({ err: err.message, reference }, 'Error reconciling Mono DirectPay webhook');
+          throw err;
         }
         break;
       }
@@ -313,10 +284,10 @@ export async function POST(req: NextRequest) {
         log.info({ event: payload.event }, 'Unhandled Mono webhook event');
     }
 
-    await updateWebhookEventStatus(eventId, 'processed').catch(() => null);
+    await updateWebhookEventStatus(eventId, 'processed');
     return NextResponse.json({ received: true, event: payload.event });
   } catch (error: any) {
     log.error({ error: error.message }, 'Mono webhook processing error');
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }

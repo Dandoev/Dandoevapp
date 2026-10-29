@@ -1,9 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, ClipboardList, UserCheck, Wallet } from 'lucide-react';
 
 export default function SubmitPage() {
+    const [invites, setInvites] = useState<string[]>([]);
+    useEffect(() => {
+        try {
+            const submission = JSON.parse(sessionStorage.getItem('bnpl_submission') || '{}');
+            setInvites(Array.isArray(submission.guarantorInvites) ? submission.guarantorInvites : []);
+        } catch {}
+    }, []);
     return (
         <div style={{ minHeight: '100vh', background: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div className="container-sm animate-scale-in" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
@@ -44,6 +52,14 @@ export default function SubmitPage() {
                         ))}
                     </div>
                 </div>
+
+                {invites.length > 0 && (
+                    <div className="card" style={{ padding: 'var(--space-5)', marginBottom: '1.5rem', textAlign: 'left' }}>
+                        <h3 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>Share guarantor verification links</h3>
+                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>Approval remains locked until both guarantors complete Mono verification and sign.</p>
+                        {invites.map((invite, index) => <a key={invite} href={invite} target="_blank" rel="noreferrer" className="btn btn-outline btn-full" style={{ marginTop: '0.5rem' }}>Open Guarantor {index + 1} Link</a>)}
+                    </div>
+                )}
 
                 <div className="flex flex-col gap-3" style={{ maxWidth: '300px', margin: '0 auto' }}>
                     <Link href="/dashboard" className="btn btn-primary btn-full">Go to Dashboard</Link>

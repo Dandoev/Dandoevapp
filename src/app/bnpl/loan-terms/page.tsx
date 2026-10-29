@@ -454,29 +454,7 @@ export default function LoanTermsPage() {
                 const saved = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
                 const token = document.cookie.split('token=')[1]?.split(';')[0];
 
-                // 1. Create / Confirm Mono Direct Debit Mandate Order for selected loan term
-                const mandateRes = await fetch('/api/payments/mono/mandate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    accountId: saved.financial?.monoAccountId,
-                    accountNumber: saved.financial?.accountNumber,
-                    accountName: saved.financial?.accountName,
-                    bankName: saved.financial?.bankName,
-                    bankCode: saved.financial?.bankCode,
-                    amount: perDeductionAmount,
-                    totalRepayable: totalRepayableWithDelivery,
-                    tenureMonths: selectedTenure,
-                    deductionFrequency,
-                    startDate: startDateStr,
-                  }),
-                })
-                  .then((r) => r.json())
-                  .catch(() => null);
-
-                const createdMandate = mandateRes?.data;
-
-                // 2. Submit BNPL Loan Application linked to the Mono Mandate Order
+                // Submit the application; the server creates the mandate from verified KYC data.
                 const payload = {
                   bikeId: bike.id,
                   bikeName: bike.name,
@@ -489,10 +467,7 @@ export default function LoanTermsPage() {
                   deductionFrequency,
                   monthlyRepayment: Math.round(totalRepayableWithDelivery / selectedTenure),
                   totalRepayable: totalRepayableWithDelivery,
-                  monoAccountId: saved.financial?.monoAccountId || createdMandate?.accountId,
-                  monoMandateId: createdMandate?.id || saved.financial?.monoMandate?.id,
-                  monoMandateRef: createdMandate?.reference || saved.financial?.monoMandate?.reference,
-                  monoMandateStatus: createdMandate?.status || 'active',
+                  monoAccountId: saved.financial?.monoAccountId,
                   mandateStartDate: startDateStr,
                   mandateEndDate: endDateStr,
                   dateOfBirth: saved.personalInfo?.dateOfBirth,
@@ -523,6 +498,8 @@ export default function LoanTermsPage() {
                         phone: g.phone,
                         relationship: g.relationship || 'Colleague',
                       })) || [],
+                  agreementAccepted: true,
+                  agreementVersion: 'bnpl-v1',
                 };
 
                 const res = await fetch('/api/loans', {
@@ -534,17 +511,13 @@ export default function LoanTermsPage() {
                   body: JSON.stringify(payload),
                 });
 
-                if (res.ok) {
-                  sessionStorage.removeItem('bnpl_data');
-                  router.push('/bnpl/submit');
-                } else {
-                  // Graceful fallback in preview mode so user reaches submission confirmation
-                  sessionStorage.removeItem('bnpl_data');
-                  router.push('/bnpl/submit');
-                }
-              } catch {
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Application submission failed');
+                sessionStorage.setItem('bnpl_submission', JSON.stringify(result.data || { loanId: result.loanId }));
                 sessionStorage.removeItem('bnpl_data');
                 router.push('/bnpl/submit');
+              } catch (error) {
+                alert(error instanceof Error ? error.message : 'Application submission failed. Please try again.');
               } finally {
                 setLoading(false);
               }

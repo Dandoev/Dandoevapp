@@ -1469,9 +1469,4 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontFamily: 'Inter_500Medium',
   },
-    color: '#2E3192',
-    fontWeight: '700',
-    fontFamily: 'PlusJakartaSans_700Bold',
-    marginTop: 1,
-  },
 });

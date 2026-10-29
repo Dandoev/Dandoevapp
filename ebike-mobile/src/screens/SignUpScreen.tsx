@@ -53,6 +53,10 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
       setErrorMessage('Please enter a valid email address.');
       return;
     }
+    if (!phone || phone.trim().length < 8) {
+      setErrorMessage('Please enter a valid phone number for rider delivery & verification.');
+      return;
+    }
     if (!password || password.length < 6) {
       setErrorMessage('Password must be at least 6 characters.');
       return;
@@ -173,7 +177,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
             </View>
 
             {/* Phone Input */}
-            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.label}>Phone Number (WhatsApp Contact)</Text>
             <View style={styles.inputContainer}>
               <Phone size={16} color="#9CA3AF" />
               <TextInput
@@ -185,6 +189,9 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
                 onChangeText={setPhone}
               />
             </View>
+            <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter_400Regular', marginTop: -8, marginBottom: 12 }}>
+              Used for delivery coordination and account notifications.
+            </Text>
 
             {/* Password Input */}
             <Text style={styles.label}>Create Password</Text>

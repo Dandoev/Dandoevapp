@@ -302,12 +302,12 @@ export default function ProductDetailScreen({
                   <Text style={styles.deliveryOptionPrice}>₦20,000</Text>
                 </View>
                 <Text style={styles.deliveryOptionDesc}>
-                  Doorstep courier & pre-assembly across all Lagos State zones (1–2 days).
+                  Doorstep courier across Lagos Mainland, Lagos Island & Lekki axis, and Badagry (1–2 days).
                 </Text>
               </View>
             </TouchableOpacity>
 
-            {/* Option 3: Outside Lagos */}
+            {/* Option 3: Hauling / Outside Lagos */}
             <TouchableOpacity
               style={[
                 styles.deliveryOptionCard,
@@ -326,15 +326,43 @@ export default function ProductDetailScreen({
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.deliveryTitleRow}>
-                  <Text style={styles.deliveryOptionName}>🚛 Delivery Outside Lagos</Text>
+                  <Text style={styles.deliveryOptionName}>🚛 Interstate Hauling & Delivery</Text>
                   <Text style={styles.deliveryOptionPrice}>₦50,000</Text>
                 </View>
                 <Text style={styles.deliveryOptionDesc}>
-                  Tracked nationwide interstate courier with protective crating (3–5 days).
+                  Tracked nationwide freight hauling with protective crating (3–5 days).
                 </Text>
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* Detailed Lagos Delivery Zones Reference */}
+          {deliveryType === 'delivery_lagos' && (
+            <View style={styles.zonesBox}>
+              <Text style={styles.zonesHeader}>Covered Delivery Locations for Riders:</Text>
+              
+              <View style={styles.zoneGroup}>
+                <Text style={styles.zoneGroupTitle}>• Lagos Mainland:</Text>
+                <Text style={styles.zoneGroupText}>
+                  Ikeja, Ogba, Agege, Alimosho, Egbeda, Ipaja, Iyana-Ipaja, Abule-Egba, Ikotun, Oshodi, Isolo, Ejigbo, Mushin, Surulere, Yaba, Ebute-Metta, Apapa, Festac, Mile 2, Amuwo-Odofin, Maryland, Anthony, Gbagada, Somolu, Bariga, Ketu, Mile 12, Magodo, Ojodu, Berger, and Ikorodu.
+                </Text>
+              </View>
+
+              <View style={styles.zoneGroup}>
+                <Text style={styles.zoneGroupTitle}>• Lagos Island & Lekki axis:</Text>
+                <Text style={styles.zoneGroupText}>
+                  Lagos Island, Marina, CMS, Ikoyi, Victoria Island, Lekki Phase 1, Chevron, VGC, Ajah, Sangotedo, Awoyaya, Epe, and Ibeju-Lekki.
+                </Text>
+              </View>
+
+              <View style={styles.zoneGroup}>
+                <Text style={styles.zoneGroupTitle}>• Other parts of Lagos State:</Text>
+                <Text style={styles.zoneGroupText}>
+                  Badagry and surrounding areas.
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Outright Itemized Price & Delivery Breakdown */}
@@ -1441,6 +1469,35 @@ const styles = StyleSheet.create({
     color: '#66728A',
     fontFamily: 'Inter_400Regular',
     lineHeight: 14,
+  },
+  zonesBox: {
+    marginTop: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  zonesHeader: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#0A154F',
+    marginBottom: 8,
+  },
+  zoneGroup: {
+    marginBottom: 6,
+  },
+  zoneGroupTitle: {
+    fontSize: 10.5,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#1E1B4B',
+    marginBottom: 2,
+  },
+  zoneGroupText: {
+    fontSize: 10,
+    fontFamily: 'Inter_400Regular',
+    color: '#475569',
+    lineHeight: 15,
   },
   bnplDetailHint: {
     fontSize: 10,

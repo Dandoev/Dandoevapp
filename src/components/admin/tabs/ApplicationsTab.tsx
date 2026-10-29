@@ -90,13 +90,18 @@ export default function ApplicationsTab({
         </div>
       </div>
 
+      <div className="mb-5 rounded-2xl border border-sky-100 bg-sky-50/60 p-4 text-sm text-slate-600">
+        <p className="font-bold text-[#0A1B46]">How to review an application</p>
+        <p className="mt-1">Open an application to check identity, bank activity, repayment affordability, and guarantor status before choosing Approve or Reject.</p>
+      </div>
+
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
-          { id: 'all', label: 'All Applications', count: counts.all },
-          { id: 'pending', label: 'Pending Adjudication', count: counts.pending, alert: counts.pending > 0 },
-          { id: 'approved', label: 'Approved & Allocated', count: counts.approved },
-          { id: 'rejected', label: 'Adverse Action / Rejected', count: counts.rejected },
+          { id: 'all', label: 'All', count: counts.all },
+          { id: 'pending', label: 'Needs review', count: counts.pending, alert: counts.pending > 0 },
+          { id: 'approved', label: 'Approved', count: counts.approved },
+          { id: 'rejected', label: 'Rejected', count: counts.rejected },
         ].map((f) => (
           <button
             key={f.id}

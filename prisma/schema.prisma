@@ -183,6 +183,7 @@ model User {
   guarantorsCreated Guarantor[]    @relation("ApplicantGuarantors")
   wallet            Wallet?
   guarantorAccount  Guarantor?    @relation("GuarantorUser")
+  monoAssessments   MonoFinancialAssessment[]
 
   @@index([email])
   @@index([role])
@@ -317,10 +318,45 @@ model Loan {
   dailySavings DailySaving[]
   documents    KycDocument[]
   recoveryCase RecoveryCase?
+  monoAssessment MonoFinancialAssessment?
 
   @@index([userId])
   @@index([status])
   @@map("loans")
+}
+
+model MonoFinancialAssessment {
+  id                         String   @id @default(uuid())
+  userId                     String   @unique
+  loanId                     String?  @unique
+  provider                   String   @default("mono")
+  monoAccountId              String?
+  verifiedMonthlyInflow      Decimal  @db.Decimal(15, 2)
+  verifiedMonthlyOutflow     Decimal  @db.Decimal(15, 2)
+  netMonthlyCashflow         Decimal  @db.Decimal(15, 2)
+  existingMonthlyDebt        Decimal  @db.Decimal(15, 2)
+  maxAffordableInstallment   Decimal  @db.Decimal(15, 2)
+  dtiRatioPercent            Decimal  @db.Decimal(6, 2)
+  creditScore                Int
+  riskTier                   String
+  underwritingDecision       String
+  detectedLenders            Json
+  decisionReasons            Json
+  statementMonthsAnalysed    Int
+  statementPeriodStart       String?
+  statementPeriodEnd         String?
+  totalCredits               Decimal  @db.Decimal(15, 2)
+  totalDebits                Decimal  @db.Decimal(15, 2)
+  source                     String   @default("mono")
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  loan Loan? @relation(fields: [loanId], references: [id])
+
+  @@index([underwritingDecision])
+  @@index([createdAt])
+  @@map("mono_financial_assessments")
 }
 
 model Repayment {

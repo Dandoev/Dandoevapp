@@ -190,7 +190,7 @@ export const POST = withAuth(
           log.info({ orderId: order.id }, 'Order created');
 
           return NextResponse.json(
-            { success: true, orderId: order.id, message: 'Order created successfully' },
+            { success: true, orderId: order.id, totalAmount: Number(order.totalAmount), message: 'Order created successfully' },
             { status: 201 }
           );
         } catch (error) {

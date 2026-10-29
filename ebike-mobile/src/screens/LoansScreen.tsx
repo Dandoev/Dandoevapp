@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
   FileDown,
+  Zap,
 } from 'lucide-react-native';
 import { demoStore, DemoLoan, DemoWallet } from '../lib/demo-data';
 import { MobileApi } from '../lib/api';

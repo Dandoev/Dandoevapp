@@ -19,6 +19,7 @@ import {
   verifyMonoBankAccount,
   validateMonoKycIdentity,
   setupMonoRecurringMandate,
+  isLiveMonoConfigured,
   type DeductionInterval,
 } from '@/lib/mono';
 import { encryptField } from '@/lib/encryption';
@@ -178,6 +179,53 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       proposedMonthlyRepayment: proposedMonthlyRepayment
         ? Number(proposedMonthlyRepayment)
         : undefined,
+    });
+
+    // Persist the complete provider-backed assessment for credit operations.
+    await prisma.monoFinancialAssessment.upsert({
+      where: { userId },
+      create: {
+        userId,
+        provider: 'mono',
+        monoAccountId: accountId,
+        verifiedMonthlyInflow: underwriting.verifiedMonthlyInflow,
+        verifiedMonthlyOutflow: underwriting.verifiedMonthlyOutflow,
+        netMonthlyCashflow: underwriting.netMonthlyCashflow,
+        existingMonthlyDebt: underwriting.existingMonthlyDebt,
+        maxAffordableInstallment: underwriting.maxAffordableMonthlyInstallment,
+        dtiRatioPercent: underwriting.dtiRatioPercent,
+        creditScore: underwriting.creditScore,
+        riskTier: underwriting.riskTier,
+        underwritingDecision: underwriting.underwritingDecision,
+        detectedLenders: underwriting.detectedLenders,
+        decisionReasons: underwriting.decisionReasons,
+        statementMonthsAnalysed: statement.monthsAnalysed,
+        statementPeriodStart: statement.periodStart,
+        statementPeriodEnd: statement.periodEnd,
+        totalCredits: statement.totalCredits,
+        totalDebits: statement.totalDebits,
+        source: isLiveMonoConfigured ? 'mono_live' : 'mono_demo',
+      },
+      update: {
+        monoAccountId: accountId,
+        verifiedMonthlyInflow: underwriting.verifiedMonthlyInflow,
+        verifiedMonthlyOutflow: underwriting.verifiedMonthlyOutflow,
+        netMonthlyCashflow: underwriting.netMonthlyCashflow,
+        existingMonthlyDebt: underwriting.existingMonthlyDebt,
+        maxAffordableInstallment: underwriting.maxAffordableMonthlyInstallment,
+        dtiRatioPercent: underwriting.dtiRatioPercent,
+        creditScore: underwriting.creditScore,
+        riskTier: underwriting.riskTier,
+        underwritingDecision: underwriting.underwritingDecision,
+        detectedLenders: underwriting.detectedLenders,
+        decisionReasons: underwriting.decisionReasons,
+        statementMonthsAnalysed: statement.monthsAnalysed,
+        statementPeriodStart: statement.periodStart,
+        statementPeriodEnd: statement.periodEnd,
+        totalCredits: statement.totalCredits,
+        totalDebits: statement.totalDebits,
+        source: isLiveMonoConfigured ? 'mono_live' : 'mono_demo',
+      },
     });
 
     // Step 6: Optional Direct Debit Mandate Order Setup based on Loan Term

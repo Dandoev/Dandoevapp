@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   UserCheck,
@@ -32,6 +32,15 @@ export default function ApplicationDetailDrawer({
   onApproveClick,
   onRejectClick,
 }: ApplicationDetailDrawerProps) {
+  const [assessment, setAssessment] = useState<any | null>(null);
+  useEffect(() => {
+    if (!loan?.userId && !loan?.user?.id) return;
+    const userId = loan.userId || loan.user.id;
+    fetch(`/api/admin/credit-assessments?userId=${encodeURIComponent(userId)}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((json) => setAssessment(json?.data?.[0] || null))
+      .catch(() => setAssessment(null));
+  }, [loan?.id, loan?.userId, loan?.user?.id]);
   if (!isOpen || !loan) return null;
 
   const applicantName = loan.user
@@ -43,9 +52,9 @@ export default function ApplicationDetailDrawer({
   const phone = loan.user?.phone || loan.personalInfo?.phone || loan.userPhone || 'Not provided';
   const address = loan.deliveryAddress || loan.personalInfo?.address || 'Not provided';
 
-  const monthlyInflow = Number(loan.monthlyInflow || 0);
+  const monthlyInflow = Number(assessment?.verifiedMonthlyInflow || loan.monthlyInflow || loan.user?.monthlyIncome || 0);
   const loanMonthly = Number(loan.monthlyRepayment || 0);
-  const dtiRatio = monthlyInflow > 0 ? Math.round((loanMonthly / monthlyInflow) * 100) : null;
+  const dtiRatio = assessment ? Number(assessment.dtiRatioPercent) : monthlyInflow > 0 ? Math.round((loanMonthly / monthlyInflow) * 100) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-fade-in">
@@ -123,7 +132,7 @@ export default function ApplicationDetailDrawer({
               <div className="p-3 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                 <div className="text-xs text-neutral-400">Credit Bureau Score</div>
                 <div className="text-sm font-bold text-emerald-500 mt-0.5">
-                  {loan.riskScore == null ? 'Unavailable' : `${loan.riskScore} / 850`}
+                  {assessment?.creditScore == null ? 'Unavailable' : `${assessment.creditScore} / 850`}
                 </div>
               </div>
             </div>
@@ -131,22 +140,24 @@ export default function ApplicationDetailDrawer({
             <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-neutral-500">BVN Match Status:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> 100% Name &amp; Phone Match (Mono Identity)
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" /> {loan.user?.kycStatus === 'verified' ? 'Verified via Mono' : 'Not verified'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-500">Direct Debit Mandate:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Active (Authorized via Mono DirectPay)
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  {loan.monoMandateStatus === 'active' ? 'Active' : (loan.monoMandateStatus || 'Not active')}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-500">Active Multi-Lender Debt:</span>
                 <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                  None detected in 6-month statement scan
+                  {assessment ? (Array.isArray(assessment.detectedLenders) && assessment.detectedLenders.length ? assessment.detectedLenders.join(', ') : 'None detected') : 'Unavailable'}
                 </span>
               </div>
+              <div className="flex justify-between"><span className="text-neutral-500">Underwriting decision:</span><span className="font-semibold">{assessment?.underwritingDecision || 'Unavailable'}</span></div>
+              <div className="flex justify-between"><span className="text-neutral-500">Assessment source:</span><span className="font-semibold">{assessment?.source || 'Unavailable'}</span></div>
             </div>
           </div>
 

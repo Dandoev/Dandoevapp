@@ -83,6 +83,16 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6 pb-12 font-sans text-slate-800">
+      <div className="rounded-2xl border border-[#BDECF5] bg-linear-to-r from-[#EFFBFF] to-white p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-wider text-[#087CA9]">Today at a glance</p>
+          <h1 className="text-xl font-black text-[#0A1B46] mt-1">Here’s what needs your attention</h1>
+          <p className="text-sm text-slate-500 mt-1">Review new applications first, then check payments and overdue accounts.</p>
+        </div>
+        <button onClick={() => onNavigateToTab(pendingCount ? 'applications' : 'payments')} className="rounded-xl bg-[#0A1B46] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#17469D]">
+          {pendingCount ? `Review ${pendingCount} application${pendingCount === 1 ? '' : 's'}` : 'View recent payments'}
+        </button>
+      </div>
       {/* =========================================================================
           TOP ROW: 4 Executive KPI Cards in Nigerian Naira (₦)
           ========================================================================= */}
@@ -92,7 +102,7 @@ export default function OverviewTab({
           <div className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full bg-[#65D9FA]/10 blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold uppercase tracking-wider text-[#65D9FA]">
-              Gross BNPL Portfolio
+              Money currently financed
             </span>
             <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#65D9FA]">
               <Wallet className="h-4.5 w-4.5" />
@@ -122,7 +132,7 @@ export default function OverviewTab({
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-              Underwriting Queue
+              Applications to review
             </span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
               <Target className="h-4.5 w-4.5" />
@@ -135,11 +145,11 @@ export default function OverviewTab({
                 {pendingCount}
               </span>
               <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                Awaiting Adjudication
+                Need your decision
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Mono BVN &amp; 6-month bank cashflow statements verified
+              Applicants waiting for approval or rejection
             </p>
           </div>
 
@@ -147,7 +157,7 @@ export default function OverviewTab({
             onClick={() => onNavigateToTab('applications')}
             className="text-xs font-extrabold text-[#087CA9] hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
-            <span>Review &amp; Allocate VIN Serials</span>
+            <span>Open applications</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -156,7 +166,7 @@ export default function OverviewTab({
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-              Rider Escrow Savings Vault
+              Customer savings held
             </span>
             <div className="w-9 h-9 rounded-xl bg-sky-50 text-[#087CA9] border border-sky-200 flex items-center justify-center">
               <PiggyBank className="h-4.5 w-4.5" />
@@ -168,7 +178,7 @@ export default function OverviewTab({
               {formatNaira(totalEscrowVault)}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              100% returnable 10% deposits + ₦1,000/day rider sweeps
+              Funds reserved for customers’ repayment plans
             </p>
           </div>
 
@@ -176,7 +186,7 @@ export default function OverviewTab({
             onClick={() => onNavigateToTab('reconciliation')}
             className="text-xs font-extrabold text-[#0A1B46] hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
-            <span>Verify Gateway Settlements</span>
+            <span>Check payment settlement</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -185,7 +195,7 @@ export default function OverviewTab({
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-              Capital at Risk (PAR &gt; 3D)
+              Overdue payments
             </span>
             <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center">
               <ShieldAlert className="h-4.5 w-4.5" />
@@ -202,7 +212,7 @@ export default function OverviewTab({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Well below CBN 2.5% micro-asset risk threshold
+              Payments that need follow-up
             </p>
           </div>
 
@@ -210,7 +220,7 @@ export default function OverviewTab({
             onClick={() => onNavigateToTab('defaults')}
             className="text-xs font-extrabold text-rose-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
-            <span>Trigger Direct-Debit Recovery</span>
+            <span>View overdue accounts</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -225,21 +235,21 @@ export default function OverviewTab({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#087CA9]">
-                 Portfolio Cashflow Velocity
+                 Money coming into the business
               </span>
               <h2 className="text-base font-black text-[#0A1B46]">
-                Monthly BNPL Collections &amp; Escrow Growth (₦)
+                Monthly collections and savings (₦)
               </h2>
             </div>
 
             <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#0A1B46]" />
-                <span>Principal + EMI</span>
+                  <span>Repayments</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#087CA9]" />
-                <span>Escrow Savings</span>
+                  <span>Customer savings</span>
               </span>
             </div>
           </div>
@@ -300,14 +310,14 @@ export default function OverviewTab({
                   Fleet &amp; Swap Network
                 </span>
                 <h2 className="text-base font-black text-[#0A1B46]">
-                  Regional Hub Telemetry ({bikesCount} Models)
+                  Fleet overview ({bikesCount} bike models)
                 </h2>
               </div>
               <button
                 onClick={() => onNavigateToTab('bikes')}
                 className="text-xs font-bold text-[#087CA9] hover:underline cursor-pointer"
               >
-                Manage Fleet &rarr;
+                Manage bikes &rarr;
               </button>
             </div>
 
@@ -346,10 +356,10 @@ export default function OverviewTab({
               <FileCheck className="w-5 h-5 text-[#087CA9] shrink-0" />
               <div>
                 <div className="text-xs font-extrabold text-[#0A1B46]">
-                  KYC &amp; Guarantor Co-Sign Queue
+                  Identity and guarantor checks
                 </div>
                 <div className="text-[11px] text-slate-600">
-                  Review identity documents and guarantor verification records
+                  Make sure applicants have completed their required checks
                 </div>
               </div>
             </div>
@@ -357,7 +367,7 @@ export default function OverviewTab({
               onClick={() => onNavigateToTab('compliance')}
               className="px-3 py-1.5 rounded-lg bg-[#0A1B46] text-white text-xs font-bold hover:opacity-95 shrink-0 cursor-pointer"
             >
-              Audit KYC
+              Review checks
             </button>
           </div>
         </div>
@@ -375,7 +385,7 @@ export default function OverviewTab({
                 Live Payments &amp; Outright Sales
               </h2>
               <p className="text-xs text-slate-500">
-                Every initiated, pending, settled, failed, and reversed transaction
+                See what customers have paid and what still needs attention
               </p>
             </div>
 
@@ -466,7 +476,7 @@ export default function OverviewTab({
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Activity className="h-4.5 w-4.5 text-[#087CA9]" />
-              <h2 className="text-base font-black text-[#0A1B46]">Security &amp; Audit Stream</h2>
+              <h2 className="text-base font-black text-[#0A1B46]">Recent staff activity</h2>
             </div>
             <button
               onClick={() => onNavigateToTab('activity')}

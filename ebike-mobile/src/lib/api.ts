@@ -95,10 +95,10 @@ export const MobileApi = {
   },
 
   // 3. Mono Open Banking & KYC
-  async verifyMonoKyc(code: string, token: string) {
+  async verifyMonoKyc(data: string | { bvn: string; nin: string }, token: string) {
     return apiRequest<{ success: boolean; message: string; data: any }>('/kyc/mono', {
       method: 'POST',
-      body: { code },
+      body: typeof data === 'string' ? { code: data } : { action: 'verify_kyc', ...data },
       token,
     });
   },
@@ -156,7 +156,7 @@ export const MobileApi = {
 
   // 8. Outright Orders & Checkout
   async createOrder(orderData: any, token?: string | null) {
-    return apiRequest<{ success: boolean; orderId?: string; data?: any }>('/orders', {
+    return apiRequest<{ success: boolean; orderId?: string; totalAmount?: number; data?: any }>('/orders', {
       method: 'POST',
       body: orderData,
       token,

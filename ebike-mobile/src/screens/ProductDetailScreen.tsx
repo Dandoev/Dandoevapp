@@ -89,7 +89,7 @@ export default function ProductDetailScreen({
       if (!order.orderId) throw new Error('The order could not be created.');
 
       const payment = await MobileApi.initializePayment({
-        amount: breakdown.totalOutright,
+        amount: Number(order.totalAmount ?? breakdown.totalOutright),
         orderId: order.orderId,
         provider: 'mono',
         callbackUrl: 'dandoev://payment-callback',

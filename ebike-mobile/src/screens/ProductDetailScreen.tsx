@@ -433,11 +433,18 @@ export default function ProductDetailScreen({
                     onPress={() => setSelectedTenure(months)}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.tenureChipNum, isSelected && styles.tenureChipNumActive]}>
+                    <Text
+                      style={[styles.tenureChipNum, isSelected && styles.tenureChipNumActive]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
                       {months} Months
                     </Text>
-                    <Text style={[styles.tenureChipWeeks, isSelected && styles.tenureChipWeeksActive]}>
-                      ({Math.round(months * 4.33)} Weeks)
+                    <Text
+                      style={[styles.tenureChipWeeks, isSelected && styles.tenureChipWeeksActive]}
+                      numberOfLines={1}
+                    >
+                      ({Math.round(months * 4.33)} Wks)
                     </Text>
                   </TouchableOpacity>
                 );
@@ -534,8 +541,11 @@ export default function ProductDetailScreen({
               onPress={() => setShowOutrightModal(true)}
               activeOpacity={0.85}
             >
-              <Text style={styles.outrightSecondaryBtnText}>
-                Buy Outright (₦{breakdown.totalOutright.toLocaleString()})
+              <Text style={styles.outrightSecondaryBtnText} numberOfLines={1} adjustsFontSizeToFit>
+                Buy Outright
+              </Text>
+              <Text style={styles.outrightSecondaryBtnSub} numberOfLines={1}>
+                ₦{breakdown.totalOutright.toLocaleString()}
               </Text>
             </TouchableOpacity>
 
@@ -544,10 +554,15 @@ export default function ProductDetailScreen({
               onPress={() => onApplyBNPL(product, selectedTenure)}
               activeOpacity={0.85}
             >
-              <CreditCard size={18} color="#FFFFFF" />
-              <Text style={styles.applyBtnText}>
-                Apply BNPL (₦{activeCadenceAmount.toLocaleString()}{activeCadenceSuffix})
-              </Text>
+              <CreditCard size={16} color="#FFFFFF" />
+              <View style={{ alignItems: 'center' }}>
+                <Text style={styles.applyBtnText} numberOfLines={1} adjustsFontSizeToFit>
+                  Apply BNPL
+                </Text>
+                <Text style={styles.applyBtnSub} numberOfLines={1}>
+                  ₦{activeCadenceAmount.toLocaleString()}{activeCadenceSuffix}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         ) : (
@@ -557,7 +572,7 @@ export default function ProductDetailScreen({
             activeOpacity={0.85}
           >
             <ShoppingBag size={18} color="#FFFFFF" />
-            <Text style={styles.applyBtnText}>
+            <Text style={styles.applyBtnText} numberOfLines={1}>
               Buy Outright Now (₦{breakdown.totalOutright.toLocaleString()})
             </Text>
           </TouchableOpacity>
@@ -945,17 +960,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingVertical: 10,
+    paddingHorizontal: 4,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#FCD34D',
   },
   tenureChipActive: {
-    backgroundColor: '#2E3192',
-    borderColor: '#2E3192',
+    backgroundColor: '#1E1B4B',
+    borderColor: '#1E1B4B',
   },
   tenureChipNum: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#78350F',
@@ -964,9 +981,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   tenureChipWeeks: {
-    fontSize: 9,
+    fontSize: 9.5,
     color: '#92400E',
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Inter_600SemiBold',
+    marginTop: 1,
   },
   tenureChipWeeksActive: {
     color: '#E0E7FF',
@@ -1012,25 +1030,33 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   applyBtn: {
-    backgroundColor: '#2E3192',
+    backgroundColor: '#1E1B4B',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 16,
-    shadowColor: '#2E3192',
+    shadowColor: '#1E1B4B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
     flex: 1,
   },
   applyBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
+    lineHeight: 16,
+  },
+  applyBtnSub: {
+    color: '#E0E7FF',
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    lineHeight: 14,
   },
   dualBtnRow: {
     flexDirection: 'row',
@@ -1038,20 +1064,27 @@ const styles = StyleSheet.create({
   },
   outrightSecondaryBtn: {
     flex: 1,
-    backgroundColor: '#EDF2FA',
+    backgroundColor: '#F1F5F9',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#CBD5E1',
   },
   outrightSecondaryBtnText: {
-    color: '#1E293B',
-    fontSize: 12,
+    color: '#0F172A',
+    fontSize: 13,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
+    lineHeight: 16,
+  },
+  outrightSecondaryBtnSub: {
+    color: '#475569',
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    lineHeight: 14,
   },
 
   /* Itemized Breakdown Card */

@@ -538,39 +538,46 @@ function DemoDashboardScreen({
 
         {/* Featured E-Bike Catalog */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Mobility Catalog</Text>
+          <Text style={styles.sectionTitle}>Featured Mobility</Text>
           <TouchableOpacity onPress={() => onSwitchTab('bikes')}>
-            <Text style={styles.seeAllText}>View All ({products.length}) →</Text>
+            <Text style={styles.seeAllText}>View all {products.length} →</Text>
           </TouchableOpacity>
         </View>
 
-        {products.slice(0, 3).map((product) => (
-          <TouchableOpacity
-            key={product.id}
-            style={styles.featuredCard}
-            activeOpacity={0.85}
-            onPress={() => onSelectProduct ? onSelectProduct(product) : onSwitchTab('bikes')}
-          >
-            <View style={styles.featuredImgWrapper}>
-              <Image
-                source={getProductAsset(product.id)}
-                style={styles.featuredImg}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.featuredInfo}>
-              <View style={styles.featuredCategoryBadge}>
-                <Text style={styles.featuredCategoryText}>{product.category}</Text>
+        {products.slice(0, 3).map((product) => {
+          const isFlagship = product.name.includes('G90') && !product.name.includes('Lite');
+          const isFatTire = product.name.includes('X5');
+          const isAllTerrain = product.name.includes('X6');
+          const badgeText = isFlagship ? 'FLAGSHIP COMMUTER' : isFatTire ? 'FAT-TIRE' : isAllTerrain ? 'ALL-TERRAIN' : product.category.toUpperCase();
+
+          return (
+            <TouchableOpacity
+              key={product.id}
+              style={styles.featuredCard}
+              activeOpacity={0.88}
+              onPress={() => onSelectProduct ? onSelectProduct(product) : onSwitchTab('bikes')}
+            >
+              <View style={styles.featuredImgWrapper}>
+                <Image
+                  source={getProductAsset(product.model || product.name || product.id)}
+                  style={styles.featuredImg}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.featuredBikeName}>{product.name}</Text>
-              <Text style={styles.featuredPrice}>₦{product.price.toLocaleString()}</Text>
-              <Text style={styles.featuredDaily}>
-                Weekly BNPL available • 0% Down
-              </Text>
-            </View>
-            <ArrowRight size={16} color="#94A3B8" />
-          </TouchableOpacity>
-        ))}
+              <View style={styles.featuredInfo}>
+                <View style={styles.featuredCategoryBadge}>
+                  <Text style={styles.featuredCategoryText}>{badgeText}</Text>
+                </View>
+                <Text style={styles.featuredBikeName}>{product.name}</Text>
+                <Text style={styles.featuredPrice}>₦{product.price.toLocaleString()}</Text>
+                <Text style={styles.featuredDaily}>
+                  Weekly payments available • 0% down
+                </Text>
+              </View>
+              <ArrowRight size={20} color="#64748B" />
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Official Financial Statement Modal */}
@@ -1380,74 +1387,88 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+    marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 22,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
+    letterSpacing: -0.3,
   },
   seeAllText: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#2E3192',
+    color: '#1E1B4B',
   },
   featuredCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#DBE2F0',
+    borderColor: '#E6ECF5',
+    shadowColor: '#0A154F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   featuredImgWrapper: {
-    width: 76,
-    height: 76,
-    backgroundColor: '#F6F7FC',
-    borderRadius: 12,
+    width: 90,
+    height: 90,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   featuredImg: {
-    width: '90%',
-    height: '90%',
+    width: '92%',
+    height: '92%',
   },
   featuredInfo: {
     flex: 1,
   },
   featuredCategoryBadge: {
-    backgroundColor: '#E8F6FE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     alignSelf: 'flex-start',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   featuredCategoryText: {
-    color: '#4A50AE',
-    fontSize: 9,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#3730A3',
+    fontSize: 9.5,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.6,
   },
   featuredBikeName: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
     marginBottom: 2,
+    letterSpacing: -0.3,
   },
   featuredPrice: {
-    fontSize: 14,
+    fontSize: 19,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#2E3192',
+    color: '#1E1B4B',
+    marginBottom: 2,
+    letterSpacing: -0.2,
   },
   featuredDaily: {
-    fontSize: 11,
+    fontSize: 12,
+    color: '#475569',
+    fontFamily: 'Inter_500Medium',
+  },
     color: '#2E3192',
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',

@@ -107,7 +107,7 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
             onPress={() => setShowStatementModal(true)}
             activeOpacity={0.85}
           >
-            <FileDown size={14} color="#2E3192" />
+            <FileDown size={16} color="#1E1B4B" />
             <Text style={styles.downloadReportText}>Statement</Text>
           </TouchableOpacity>
         </View>
@@ -130,12 +130,13 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
         {/* Active Loan Card */}
         <View style={[styles.activeLoanCard, loan.id === 'no-loan' && { display: 'none' }]}>
           <View style={styles.cardTop}>
-            <View>
+            <View style={{ flex: 1, paddingRight: 8 }}>
               <Text style={styles.loanBadge}>ACTIVE BNPL LOAN</Text>
               <Text style={styles.loanBikeName}>{loan.bikeName}</Text>
               <Text style={styles.loanContractId}>Contract: {loan.id.toUpperCase()}</Text>
             </View>
             <View style={styles.statusBadge}>
+              <View style={styles.statusDot} />
               <Text style={styles.statusBadgeText}>Good Standing</Text>
             </View>
           </View>
@@ -159,15 +160,18 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
               <Text style={styles.freqTitle}>Repayment Deduction Frequency</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 4 }}>
-              <View style={[styles.freqBtn, styles.freqBtnActive, { flex: 0, paddingHorizontal: 16 }]}>
+              <View style={[styles.freqBtn, styles.freqBtnActive]}>
                 <Text style={[styles.freqBtnText, styles.freqBtnTextActive]}>
                   Weekly Deduction
                 </Text>
               </View>
             </View>
-            <Text style={styles.freqSub}>
-              ⚡ ₦{loan.weeklyRepayment.toLocaleString()} auto-swept every Monday. 0% penalty when funded on time.
-            </Text>
+            <View style={styles.freqNoticeRow}>
+              <Zap size={14} color="#F59E0B" />
+              <Text style={styles.freqSub}>
+                ₦{loan.weeklyRepayment.toLocaleString()} auto-swept every Monday. 0% penalty when funded on time.
+              </Text>
+            </View>
           </View>
 
           {/* Next Due Alert Box */}
@@ -180,7 +184,7 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
                 ₦{loan.weeklyRepayment.toLocaleString()}
               </Text>
               <View style={styles.dateRow}>
-                <Calendar size={13} color="#D97706" />
+                <Calendar size={15} color="#D97706" />
                 <Text style={styles.dueDateText}>Due: {loan.nextDueDate} (In {loan.daysRemaining} days)</Text>
               </View>
             </View>
@@ -191,7 +195,7 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
               disabled={paying || loan.status === 'completed'}
             >
               <Text style={styles.payBtnText}>
-                {loan.status === 'completed' ? 'Completed' : paying ? 'Processing...' : 'Pay Now'}
+                {loan.status === 'completed' ? 'Paid' : paying ? 'Processing...' : 'Pay Now'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -208,7 +212,7 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
             </View>
             <View style={styles.breakdownCol}>
               <Text style={styles.breakdownLabel}>Frequency</Text>
-              <Text style={[styles.breakdownValue, { color: '#2E3192' }]}>
+              <Text style={[styles.breakdownValue, { color: '#1E1B4B' }]}>
                 WEEKLY
               </Text>
             </View>
@@ -356,13 +360,13 @@ const styles = StyleSheet.create({
   },
   activeLoanCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#DBE2F0',
+    borderColor: '#E2E8F0',
     shadowColor: '#0A154F',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
     elevation: 3,
     marginBottom: 16,
@@ -374,38 +378,49 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loanBadge: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#4A50AE',
-    backgroundColor: '#E8F6FE',
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#3730A3',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   loanBikeName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
+    letterSpacing: -0.4,
   },
   loanContractId: {
-    fontSize: 14,
-    color: '#66728A',
+    fontSize: 13,
+    color: '#64748B',
     fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   statusBadge: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#DCFCE7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#16A34A',
   },
   statusBadgeText: {
-    color: '#2E3192',
+    color: '#15803D',
     fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -418,94 +433,82 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressLabel: {
-    fontSize: 12,
-    color: '#66728A',
+    fontSize: 13,
+    color: '#475569',
     fontFamily: 'Inter_600SemiBold',
   },
   progressValue: {
-    fontSize: 12,
-    color: '#1E293B',
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 13,
+    color: '#0F172A',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   progressBarBg: {
-    height: 10,
-    backgroundColor: '#EDF2FA',
-    borderRadius: 5,
+    height: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#2E3192',
-    borderRadius: 5,
+    backgroundColor: '#1E1B4B',
+    borderRadius: 4,
   },
   frequencySection: {
-    backgroundColor: '#F6F7FC',
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#DBE2F0',
+    borderColor: '#E2E8F0',
     marginBottom: 16,
   },
   freqHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  freqTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#1E293B',
-  },
-  freqBadge: {
-    fontSize: 9,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#4A50AE',
-    backgroundColor: '#E8F6FE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  freqSelector: {
-    flexDirection: 'row',
-    gap: 6,
     marginBottom: 6,
   },
-  freqBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DBE2F0',
-    alignItems: 'center',
-  },
-  freqBtnActive: {
-    backgroundColor: '#2E3192',
-    borderColor: '#2E3192',
-  },
-  freqBtnText: {
-    fontSize: 11,
+  freqTitle: {
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#66728A',
+    color: '#0F172A',
+  },
+  freqBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#1E1B4B',
+  },
+  freqBtnActive: {
+    backgroundColor: '#1E1B4B',
+  },
+  freqBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#FFFFFF',
   },
   freqBtnTextActive: {
     color: '#FFFFFF',
   },
+  freqNoticeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
   freqSub: {
-    fontSize: 10,
-    color: '#66728A',
+    fontSize: 11,
+    color: '#475569',
     fontFamily: 'Inter_500Medium',
-    marginTop: 2,
+    flex: 1,
   },
   dueBox: {
     backgroundColor: '#FFFBEB',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#FEF08A',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -515,31 +518,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dueLabel: {
-    fontSize: 11,
-    color: '#B45309',
+    fontSize: 12,
+    color: '#92400E',
     fontFamily: 'Inter_600SemiBold',
   },
   dueAmount: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#92400E',
+    color: '#D97706',
     marginVertical: 2,
+    letterSpacing: -0.5,
   },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
   dueDateText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#B45309',
     fontFamily: 'Inter_500Medium',
   },
   payBtn: {
     backgroundColor: '#D97706',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
   },
   payBtnDisabled: {
@@ -547,7 +551,7 @@ const styles = StyleSheet.create({
   },
   payBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -555,62 +559,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#EDF2FA',
-    paddingTop: 12,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 14,
   },
   breakdownCol: {
     flex: 1,
   },
   breakdownLabel: {
-    fontSize: 10,
-    color: '#66728A',
+    fontSize: 11,
+    color: '#64748B',
     fontFamily: 'Inter_500Medium',
   },
   breakdownValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#1E293B',
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0F172A',
     marginTop: 2,
   },
   savingsCard: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F0FDF4',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#DCFCE7',
     marginBottom: 20,
   },
   savingsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   savingsIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#D1FAE5',
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
   },
   savingsTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#065F46',
   },
   savingsAmount: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#047857',
     marginVertical: 1,
   },
   savingsNote: {
-    fontSize: 10,
-    color: '#087F75',
-    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: '#047857',
+    fontFamily: 'Inter_500Medium',
   },
   scheduleSection: {
     marginBottom: 20,

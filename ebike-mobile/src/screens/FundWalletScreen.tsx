@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import { demoStore, DemoWallet } from '../lib/demo-data';
 import { MobileApi } from '../lib/api';
+import RealWalletScreen from './RealWalletScreen';
 
 interface FundWalletScreenProps {
   token?: string | null;
@@ -30,6 +31,11 @@ interface FundWalletScreenProps {
 }
 
 export default function FundWalletScreen({ token, onBack, onSuccess }: FundWalletScreenProps) {
+  if (token && !token.startsWith('demo-')) return <RealWalletScreen token={token} onBack={onBack} />;
+  return <DemoWalletScreen token={token} onBack={onBack} onSuccess={onSuccess} />;
+}
+
+function DemoWalletScreen({ token, onBack, onSuccess }: FundWalletScreenProps) {
   const [wallet, setWallet] = useState<DemoWallet>(demoStore.getWallet());
   const [amount, setAmount] = useState<string>('20000');
   const [selectedMethod, setSelectedMethod] = useState<'transfer' | 'card' | 'ussd'>('transfer');

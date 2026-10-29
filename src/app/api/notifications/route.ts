@@ -8,3 +8,8 @@ export const GET = withAuth(async (_req: NextRequest, ctx: ApiContext) => {
   });
   return NextResponse.json({ success: true, data: notifications });
 });
+
+export const PATCH = withAuth(async (_req: NextRequest, ctx: ApiContext) => {
+  await prisma.notification.updateMany({ where: { userId: ctx.user.sub, isRead: false }, data: { isRead: true } });
+  return NextResponse.json({ success: true });
+});

@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import { demoStore, DemoUserProfile } from '../lib/demo-data';
+import RealKycScreen from './RealKycScreen';
 
 interface KycScreenProps {
   token?: string | null;
@@ -28,7 +29,12 @@ interface KycScreenProps {
   onKycComplete: () => void;
 }
 
-export default function KycScreen({ token, onBack, onKycComplete }: KycScreenProps) {
+export default function KycScreen(props: KycScreenProps) {
+  if (props.token && !props.token.startsWith('demo-')) return <RealKycScreen token={props.token} onBack={props.onBack} />;
+  return <DemoKycScreen {...props} />;
+}
+
+function DemoKycScreen({ token, onBack, onKycComplete }: KycScreenProps) {
   const [user, setUser] = useState<DemoUserProfile>(demoStore.getUser());
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState(false);

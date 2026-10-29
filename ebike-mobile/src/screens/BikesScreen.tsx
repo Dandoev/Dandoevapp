@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,25 @@ import {
 import { Search, Zap, Gauge, Battery, ShieldCheck, ArrowRight, X, Sparkles } from 'lucide-react-native';
 import { demoStore, DemoProduct } from '../lib/demo-data';
 import { getProductAsset } from '../lib/bike-assets';
+import { getLiveBikes } from '../lib/catalog';
 
 interface BikesScreenProps {
   onSelectProduct?: (product: DemoProduct) => void;
+  token?: string | null;
 }
 
 type MobileCadence = 'daily' | 'bidaily' | 'weekly' | 'monthly';
 
-export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
-  const products = demoStore.getProducts();
+export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps) {
+  const isDemo = Boolean(token?.startsWith('demo-'));
+  const [products, setProducts] = useState<DemoProduct[]>(isDemo ? demoStore.getProducts() : []);
+  const [catalogError, setCatalogError] = useState(false);
+  useEffect(() => {
+    if (isDemo) return;
+    let active = true;
+    getLiveBikes().then((bikes) => { if (active) setProducts(bikes); }).catch(() => { if (active) setCatalogError(true); });
+    return () => { active = false; };
+  }, [isDemo]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const cadence: MobileCadence = 'weekly';
@@ -108,6 +118,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
 
       {/* Product Cards List */}
       <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
+        {catalogError && <Text style={styles.emptyDescription}>The live catalog is unavailable. Please try again later.</Text>}
         <View style={styles.countRow}>
           <Text style={styles.countText}>{filteredProducts.length} pieces to explore</Text>
           <Text style={styles.tagText}>BUILT TO MOVE</Text>
@@ -169,7 +180,7 @@ export default function BikesScreen({ onSelectProduct }: BikesScreenProps) {
               {/* Product Image */}
               <View style={styles.imageWrapper}>
                 <Image
-                  source={getProductAsset(product.id)}
+                  source={getProductAsset(product.model || product.name)}
                   style={styles.bikeImage}
                   resizeMode="contain"
                 />

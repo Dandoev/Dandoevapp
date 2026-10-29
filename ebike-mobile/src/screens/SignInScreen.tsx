@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
-import { demoStore } from '../lib/demo-data';
 import { MobileApi } from '../lib/api';
 import { ScreenType } from '../../App';
 import BrandMark from '../components/BrandMark';
@@ -37,32 +36,13 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
 
     setLoading(true);
     try {
-      // Check if user is signing in with demo credentials (dev/demo mode only)
-      const isDemoMode = !process.env.NODE_ENV || process.env.NODE_ENV === 'development' || process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
-      if (isDemoMode && (email.toLowerCase() === 'solomon.dunu@demo.com' || email.toLowerCase() === 'adebayo@demo.com')) {
-        demoStore.resetDemo();
-        setToken('demo-token-customer');
-        navigateTo('Dashboard');
-        return;
-      }
-
       // 1. Attempt sign-in via Backend API (Render)
       try {
         const resData = await MobileApi.signIn({ email: email.trim(), password });
         if (resData.success && (resData.accessToken || resData.session?.access_token || resData.token)) {
           const authToken = resData.accessToken || resData.session?.access_token || resData.token;
+          await MobileApi.getProfile(authToken);
           setToken(authToken);
-          if (resData.user) {
-            const u = resData.user;
-            demoStore.setUser({
-              id: u.id,
-              email: u.email,
-              firstName: u.firstName || u.user_metadata?.firstName || 'Rider',
-              lastName: u.lastName || u.user_metadata?.lastName || '',
-              phone: u.phone || u.user_metadata?.phone || '',
-              kycTier: u.kycTier || 2,
-            });
-          }
           navigateTo('Dashboard');
           return;
         }
@@ -86,6 +66,7 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
       }
 
       if (data.session) {
+        await MobileApi.getProfile(data.session.access_token);
         setToken(data.session.access_token);
         navigateTo('Dashboard');
       }

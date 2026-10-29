@@ -22,12 +22,18 @@ import {
 import { demoStore, DemoLoan, DemoWallet } from '../lib/demo-data';
 import { MobileApi } from '../lib/api';
 import FinancialStatementModal from '../components/FinancialStatementModal';
+import RealLoansScreen from './RealLoansScreen';
 
 interface LoansScreenProps {
   token?: string | null;
 }
 
 export default function LoansScreen({ token }: LoansScreenProps) {
+  if (token && !token.startsWith('demo-')) return <RealLoansScreen token={token} />;
+  return <DemoLoansScreen token={token} />;
+}
+
+function DemoLoansScreen({ token }: LoansScreenProps) {
   const isDemoUser = Boolean(token?.startsWith('demo-'));
   const emptyLoan = { ...demoStore.getLoan(), id: 'no-loan', bikeName: '', status: 'under_review' as const, totalAmount: 0, loanAmount: 0, installmentsPaid: 0, totalInstallments: 0, repayments: [] };
   const [loan, setLoan] = useState<DemoLoan>(isDemoUser ? demoStore.getLoan() : emptyLoan);

@@ -4,13 +4,18 @@
 // from environment variables (EXPO_PUBLIC_*) with NO hardcoded domains.
 // ============================================================
 
+import { Platform } from 'react-native';
+
 export const APP_CONFIG = {
   /**
    * Base Backend URL without trailing slash or /api suffix.
    * Dynamically resolved from EXPO_PUBLIC_API_URL (set in .env or eas.json).
    */
   get apiBaseUrl(): string {
-    const raw = process.env.EXPO_PUBLIC_API_URL || '';
+    const localWebUrl = Platform.OS === 'web' && process.env.NODE_ENV === 'development'
+      ? process.env.EXPO_PUBLIC_WEB_DEV_API_URL
+      : undefined;
+    const raw = localWebUrl || process.env.EXPO_PUBLIC_API_URL || '';
     return raw.replace(/\/+$/, '').replace(/\/api$/, '');
   },
 

@@ -81,6 +81,10 @@ export const MobileApi = {
     return apiRequest<{ success: boolean; data: any[] }>('/notifications', { token });
   },
 
+  async markNotificationsRead(token: string) {
+    return apiRequest<{ success: boolean }>('/notifications', { method: 'PATCH', token });
+  },
+
   // 2. Bikes & Marketplace
   async getBikes() {
     return apiRequest<{ success: boolean; data: any[] }>('/bikes');

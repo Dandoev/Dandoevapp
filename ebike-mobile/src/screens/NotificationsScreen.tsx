@@ -27,11 +27,15 @@ interface NotificationsScreenProps {
 export default function NotificationsScreen({ onBack, token }: NotificationsScreenProps) {
   const isDemoUser = Boolean(token?.startsWith('demo-'));
   const [notifications, setNotifications] = useState<DemoNotification[]>(isDemoUser ? demoStore.getNotifications() : []);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState<'all' | 'payment' | 'message' | 'update'>('all');
 
   useEffect(() => {
     if (token && !isDemoUser) {
-      MobileApi.getNotifications(token).then((res) => setNotifications(res.data.map((n) => ({ ...n, timestamp: new Date(n.createdAt).toLocaleDateString(), type: n.type === 'payment' ? 'payment' : 'update' })) as DemoNotification[])).catch(() => {});
+      MobileApi.getNotifications(token).then((res) => {
+        setNotifications(res.data.map((n) => ({ ...n, timestamp: new Date(n.createdAt).toLocaleDateString(), type: n.type === 'payment' ? 'payment' : 'update' })) as DemoNotification[]);
+        setLoadError(false);
+      }).catch(() => setLoadError(true));
       return;
     }
     const unsub = demoStore.subscribe(() => {
@@ -41,7 +45,11 @@ export default function NotificationsScreen({ onBack, token }: NotificationsScre
   }, [token, isDemoUser]);
 
   const handleMarkAll = () => {
-    demoStore.markAllNotificationsAsRead();
+    if (token && !isDemoUser) {
+      MobileApi.markNotificationsRead(token).then(() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))).catch(() => {});
+    } else {
+      demoStore.markAllNotificationsAsRead();
+    }
   };
 
   const filtered = notifications.filter((n) => {
@@ -110,6 +118,7 @@ export default function NotificationsScreen({ onBack, token }: NotificationsScre
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {loadError && <Text style={styles.notifMessage}>Notifications are unavailable. Please reopen this screen to retry.</Text>}
         {filtered.length === 0 ? (
           <View style={styles.emptyBox}>
             <Bell size={40} color="#94A3B8" />

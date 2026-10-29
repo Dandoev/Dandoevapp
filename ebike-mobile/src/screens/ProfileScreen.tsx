@@ -30,14 +30,21 @@ import {
 import { demoStore, DemoUserProfile } from '../lib/demo-data';
 import FinancialStatementModal from '../components/FinancialStatementModal';
 import { APP_CONFIG } from '../lib/config';
+import RealProfileScreen from './RealProfileScreen';
 
 interface ProfileScreenProps {
+  token?: string | null;
   onLogout: () => void;
   onNavigateToTerms: () => void;
   onNavigateToKyc?: () => void;
 }
 
-export default function ProfileScreen({ onLogout, onNavigateToTerms, onNavigateToKyc }: ProfileScreenProps) {
+export default function ProfileScreen(props: ProfileScreenProps) {
+  if (props.token && !props.token.startsWith('demo-')) return <RealProfileScreen token={props.token} onLogout={props.onLogout} onNavigateToKyc={props.onNavigateToKyc} onNavigateToTerms={props.onNavigateToTerms} />;
+  return <DemoProfileScreen {...props} />;
+}
+
+function DemoProfileScreen({ onLogout, onNavigateToTerms, onNavigateToKyc }: ProfileScreenProps) {
   const [user, setUser] = useState<DemoUserProfile>(demoStore.getUser());
   const [loan, setLoan] = useState(demoStore.getLoan());
   const [pushEnabled, setPushEnabled] = useState(true);

@@ -70,6 +70,7 @@ export default function App() {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
           try {
+            if (storedToken.startsWith('demo-')) throw new Error('Demo session retired');
             await MobileApi.getProfile(storedToken);
             setToken(storedToken);
             setCurrentScreen('Dashboard');
@@ -81,6 +82,7 @@ export default function App() {
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
+          await MobileApi.getProfile(session.access_token);
           setToken(session.access_token);
           await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
           setCurrentScreen('Dashboard');
@@ -129,13 +131,6 @@ export default function App() {
     setCurrentScreen('SignIn');
   };
 
-  const handleDemoLogin = () => {
-    demoStore.resetDemo();
-    updateToken('demo-token-solomon-customer');
-    setCurrentScreen('Dashboard');
-    setCurrentTab('home');
-  };
-
   if (!fontsLoaded) {
     return null;
   }
@@ -164,12 +159,13 @@ export default function App() {
           />
         );
       case 'bikes':
-        return <BikesScreen onSelectProduct={handleOpenProductDetail} />;
+        return <BikesScreen token={token} onSelectProduct={handleOpenProductDetail} />;
       case 'loans':
         return <LoansScreen token={token} />;
       case 'profile':
         return (
           <ProfileScreen
+            token={token}
             onLogout={handleLogout}
             onNavigateToTerms={() => setCurrentScreen('Terms')}
             onNavigateToKyc={() => setCurrentScreen('Kyc')}
@@ -200,7 +196,6 @@ export default function App() {
         {currentScreen === 'Onboarding' && (
           <OnboardingScreen
             onComplete={() => setCurrentScreen('SignIn')}
-            onDemoLogin={handleDemoLogin}
             navigateTo={navigateTo}
           />
         )}

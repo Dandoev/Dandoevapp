@@ -12,6 +12,22 @@ import { isDemoAllowed } from './lib/env';
 export async function proxy(request: NextRequest) {
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID();
   const { pathname } = request.nextUrl;
+  const origin = request.headers.get('origin');
+  const isApi = pathname === '/api' || pathname.startsWith('/api/');
+  const allowedWebOrigins = (process.env.MOBILE_WEB_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean);
+  const isLocalWebOrigin = origin ? /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin) : false;
+  const allowedOrigin = origin && (isLocalWebOrigin || allowedWebOrigins.includes(origin)) ? origin : null;
+
+  if (isApi && request.method === 'OPTIONS' && origin) {
+    if (!allowedOrigin) return new NextResponse(null, { status: 403 });
+    const preflight = new NextResponse(null, { status: 204 });
+    preflight.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    preflight.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    preflight.headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Idempotency-Key');
+    preflight.headers.set('Access-Control-Max-Age', '600');
+    preflight.headers.set('Vary', 'Origin');
+    return preflight;
+  }
 
   // ---- Read session token ----
   const token =
@@ -88,6 +104,11 @@ export async function proxy(request: NextRequest) {
       }),
     },
   });
+
+  if (isApi && allowedOrigin) {
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    response.headers.set('Vary', 'Origin');
+  }
 
   // ---- Security Headers ----
   response.headers.set('X-Request-ID', requestId);

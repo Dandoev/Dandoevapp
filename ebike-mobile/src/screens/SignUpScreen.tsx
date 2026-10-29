@@ -76,12 +76,6 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
         });
         if (apiData.success) {
           // Account creation succeeds, but authentication starts after a real sign-in.
-          demoStore.setUser({
-            firstName,
-            lastName,
-            email,
-            phone: phone || '+234 800 000 0000',
-          });
           navigateTo('SignIn');
           return;
         }

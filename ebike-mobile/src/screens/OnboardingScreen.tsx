@@ -315,19 +315,8 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
             <ArrowRight size={22} color="#0A154F" strokeWidth={2.4} />
           </Pressable>
 
-          {/* Footer Demo / Back Actions */}
+          {/* Footer Back Action */}
           <View style={{ alignItems: 'center', gap: 6, paddingTop: 2 }}>
-            <Pressable
-              onPress={onDemoLogin || onComplete}
-              accessibilityRole="button"
-              hitSlop={10}
-              style={{ paddingVertical: 6 }}
-            >
-              <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 }}>
-                Explore demo
-              </Text>
-            </Pressable>
-
             {index > 0 && (
               <Pressable
                 onPress={() => setIndex(index - 1)}

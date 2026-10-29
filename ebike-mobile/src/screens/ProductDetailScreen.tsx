@@ -133,7 +133,7 @@ export default function ProductDetailScreen({
             <Text style={styles.categoryBadgeText}>{product.category.toUpperCase()}</Text>
           </View>
           <Image
-            source={getProductAsset(product.id)}
+            source={getProductAsset(product.model || product.name)}
             style={[styles.heroImage, product.id === 'bike-g90' && styles.heroImageLarge]}
             resizeMode="contain"
           />

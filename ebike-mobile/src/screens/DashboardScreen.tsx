@@ -35,6 +35,7 @@ import { TabType } from '../components/BottomNavBar';
 import FinancialStatementModal from '../components/FinancialStatementModal';
 import BrandMark from '../components/BrandMark';
 import { MobileApi } from '../lib/api';
+import RealDashboardScreen from './RealDashboardScreen';
 
 interface DashboardScreenProps {
   onSwitchTab: (tab: TabType) => void;
@@ -46,6 +47,20 @@ interface DashboardScreenProps {
 }
 
 export default function DashboardScreen({
+  onSwitchTab,
+  token,
+  onNavigateToNotifications,
+  onNavigateToFundWallet,
+  onNavigateToKyc,
+  onSelectProduct,
+}: DashboardScreenProps) {
+  if (token && !token.startsWith('demo-')) {
+    return <RealDashboardScreen token={token} onSwitchTab={onSwitchTab} onNavigateToNotifications={onNavigateToNotifications} onNavigateToKyc={onNavigateToKyc} onSelectProduct={onSelectProduct} />;
+  }
+  return <DemoDashboardScreen onSwitchTab={onSwitchTab} token={token} onNavigateToNotifications={onNavigateToNotifications} onNavigateToFundWallet={onNavigateToFundWallet} onNavigateToKyc={onNavigateToKyc} onSelectProduct={onSelectProduct} />;
+}
+
+function DemoDashboardScreen({
   onSwitchTab,
   token,
   onNavigateToNotifications,

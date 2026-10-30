@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       if (payload) {
         authUserId = payload.sub;
         if (!email && payload.email) email = payload.email;
-        if (!phone && payload.phone) phone = payload.phone;
+        if (!phone && (payload as any).phone) phone = (payload as any).phone;
       }
     }
 

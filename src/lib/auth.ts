@@ -10,6 +10,8 @@ export interface JwtPayload {
   sub: string;      // user ID (Supabase UUID)
   email: string;
   role: string;
+  phone?: string;
+  [key: string]: any;
 }
 
 /**

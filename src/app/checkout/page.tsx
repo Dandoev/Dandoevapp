@@ -548,7 +548,7 @@ function CheckoutContent() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Compulsory Insurance (10%)</span>
+                  <span className="text-slate-500">Comprehensive Insurance (10%)</span>
                   <span className="font-bold text-slate-800 tabular-nums">
                     {formatNaira(insuranceFee)}
                   </span>

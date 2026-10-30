@@ -10,13 +10,52 @@ import { isDemoAllowed } from './env';
 const MONO_API_V2 = 'https://api.withmono.com/v2';
 const MONO_API_V3 = 'https://api.withmono.com/v3';
 const MONO_PAYMENTS_V2 = 'https://api.withmono.com/v2/payments';
-const MONO_SECRET_KEY = process.env.MONO_SECRET_KEY || '';
+type MonoProduct = 'connect' | 'lookup' | 'prove' | 'payments';
 
-export const isLiveMonoConfigured = Boolean(
-  MONO_SECRET_KEY &&
-    !MONO_SECRET_KEY.includes('your_mono') &&
-    !MONO_SECRET_KEY.includes('placeholder')
-);
+export function getMonoProductKey(product: MonoProduct): string {
+  switch (product) {
+    case 'connect':
+      return process.env.MONO_CONNECT_SECRET_KEY || process.env.MONO_SECRET_KEY || '';
+    case 'lookup':
+      return process.env.MONO_LOOKUP_SECRET_KEY || process.env.MONO_SECRET_KEY || '';
+    case 'prove':
+      return process.env.MONO_PROVE_SECRET_KEY || process.env.MONO_SECRET_KEY || '';
+    case 'payments':
+      return process.env.MONO_PAYMENTS_SECRET_KEY || process.env.MONO_SECRET_KEY || '';
+  }
+}
+
+export function isMonoProductConfigured(product: MonoProduct): boolean {
+  return /^(live|test)_sk_/.test(getMonoProductKey(product));
+}
+
+function requireMonoKey(product: MonoProduct): string {
+  if (!isMonoProductConfigured(product)) throw new Error(`Mono ${product} credentials are not configured`);
+  return getMonoProductKey(product);
+}
+const MONO_PROVE_URL = 'https://api.withmono.com/v1/prove';
+
+export const isLiveMonoConfigured = isMonoProductConfigured('connect');
+
+export async function initiateMonoProve(params: { reference: string; redirectUrl: string; customer: { name: string; email: string; phone?: string; address?: string } }) {
+  if (isMonoProductConfigured('prove')) {
+    const secret = requireMonoKey('prove');
+    const res = await fetch(`${MONO_PROVE_URL}/initiate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'mono-sec-key': secret },
+      body: JSON.stringify({ customer: params.customer, reference: params.reference, redirect_url: params.redirectUrl, kyc_level: 'tier_1', bank_accounts: false }),
+    });
+    const body = await res.json();
+    if (!res.ok || !body?.data?.mono_url) throw new Error(body?.message || 'Mono Prove session could not be created');
+    return { url: body.data.mono_url, reference: body.data.reference || params.reference, id: body.data.id };
+  }
+
+  if (!isDemoAllowed()) throw new Error('Mono prove credentials are not configured');
+  return {
+    url: `https://prove.withmono.com/demo?reference=${encodeURIComponent(params.reference)}`,
+    reference: params.reference,
+    id: `prove_${params.reference}`,
+  };
+}
 
 // ---- Nigerian CBN / NIP Bank Code Directory ----
 export const NIGERIAN_BANK_CODES: Record<string, string> = {
@@ -72,7 +111,8 @@ export function resolveBankCode(bankNameOrCode?: string): string {
 async function monoFetch<T>(
   endpoint: string,
   options: RequestInit = {},
-  baseType: 'v2' | 'v3' | 'payments' = 'v2'
+  baseType: 'v2' | 'v3' | 'payments' = 'v2',
+  product: MonoProduct = 'connect'
 ): Promise<T> {
   const baseUrl =
     baseType === 'payments'
@@ -86,7 +126,7 @@ async function monoFetch<T>(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'mono-sec-key': MONO_SECRET_KEY,
+      'mono-sec-key': requireMonoKey(product),
       ...(options.headers || {}),
     },
   });
@@ -254,7 +294,7 @@ export interface MonoChargeResponse {
  * Includes resilient sandbox fallback when running in demo/test mode.
  */
 export async function exchangeMonoToken(code: string): Promise<{ id: string }> {
-  logger.info({ code }, 'Exchanging Mono public token');
+  logger.info('Exchanging Mono public token');
 
   const isDemoCode = code.startsWith('mono_demo_') || code.startsWith('test_code_');
   if (isDemoCode && !isDemoAllowed()) throw new Error('Demo Mono codes are disabled');
@@ -273,16 +313,7 @@ export async function exchangeMonoToken(code: string): Promise<{ id: string }> {
       method: 'POST',
       body: JSON.stringify({ code }),
     });
-  } catch (err: any) {
-    if (!isDemoAllowed()) throw err;
-    logger.warn({ err: err.message }, 'Mono live token exchange fallback activated');
-    const deterministicHash = crypto
-      .createHash('md5')
-      .update(code)
-      .digest('hex')
-      .slice(0, 16);
-    return { id: `mono_acct_${deterministicHash}` };
-  }
+  } catch (err) { throw err; }
 }
 
 /**
@@ -300,7 +331,7 @@ export async function getMonoIdentity(
       const d = res.data || res;
       return {
         id: accountId,
-        name: d.fullName || d.full_name || d.name || 'VERIFIED ACCOUNT HOLDER',
+        name: d.fullName || d.full_name || d.name || '',
         firstName: d.firstName || d.first_name,
         lastName: d.lastName || d.last_name,
         email: d.email || hint?.email,
@@ -313,12 +344,10 @@ export async function getMonoIdentity(
         addressLine2: d.addressLine2 || d.address_line2,
         verified: true,
       };
-    } catch (err: any) {
-      if (!isDemoAllowed()) throw err;
-      logger.warn({ err: err.message, accountId }, 'Mono live identity fetch fallback');
-    }
+    } catch (err) { throw err; }
   }
 
+  if (isLiveMonoConfigured || !isDemoAllowed()) throw new Error('Mono identity is unavailable');
   const fullName =
     hint?.firstName && hint?.lastName
       ? `${hint.firstName} ${hint.lastName}`.toUpperCase()
@@ -357,7 +386,7 @@ export async function lookupMonoBvn(bvn: string): Promise<{
     throw new Error('BVN must be exactly 11 digits');
   }
 
-  if (isLiveMonoConfigured) {
+  if (isMonoProductConfigured('lookup')) {
     try {
       const res = await monoFetch<{ data: any }>(
         '/lookup/bvn',
@@ -365,25 +394,31 @@ export async function lookupMonoBvn(bvn: string): Promise<{
           method: 'POST',
           body: JSON.stringify({ bvn: cleanBvn }),
         },
-        'v3'
+        'v3', 'lookup'
       );
       if (res?.data) {
+        const d = res.data;
+        const firstName = d.firstname || d.first_name || '';
+        const middleName = d.middlename || d.middle_name || '';
+        const lastName = d.surname || d.last_name || '';
+        const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').toUpperCase();
         return {
           verified: true,
           bvn: cleanBvn,
           bvnMasked: `${cleanBvn.slice(0, 3)}*****${cleanBvn.slice(-3)}`,
-          fullName: `${res.data.first_name || ''} ${res.data.last_name || ''}`.trim().toUpperCase(),
-          dob: res.data.dob || '1994-06-15',
-          phone: res.data.phone_number || '08030000000',
-          watchlistListed: Boolean(res.data.watch_listed),
+          fullName: fullName || 'VERIFIED BVN HOLDER',
+          dob: d.birthdate || d.dob || '',
+          phone: d.telephoneno || d.phone || '',
+          watchlistListed: Boolean(d.watchlist),
         };
       }
     } catch (err: any) {
-      if (!isDemoAllowed()) throw err;
+      if (isMonoProductConfigured('lookup')) throw err;
       logger.warn({ err: err.message }, 'Mono v3 BVN lookup fallback');
     }
   }
 
+  if (isMonoProductConfigured('lookup') || !isDemoAllowed()) throw new Error('Mono BVN lookup is unavailable');
   return {
     verified: true,
     bvn: cleanBvn,
@@ -411,7 +446,7 @@ export async function lookupMonoNin(nin: string): Promise<{
     throw new Error('NIN must be exactly 11 digits');
   }
 
-  if (isLiveMonoConfigured) {
+  if (isMonoProductConfigured('lookup')) {
     try {
       const res = await monoFetch<{ data: any }>(
         '/lookup/nin',
@@ -419,7 +454,7 @@ export async function lookupMonoNin(nin: string): Promise<{
           method: 'POST',
           body: JSON.stringify({ nin: cleanNin }),
         },
-        'v3'
+        'v3', 'lookup'
       );
       if (res?.data) {
         return {
@@ -427,16 +462,17 @@ export async function lookupMonoNin(nin: string): Promise<{
           nin: cleanNin,
           ninMasked: `${cleanNin.slice(0, 3)}*****${cleanNin.slice(-3)}`,
           fullName: `${res.data.firstname || ''} ${res.data.surname || ''}`.trim().toUpperCase(),
-          dob: res.data.birthdate || '1994-06-15',
-          phone: res.data.telephoneno || '08030000000',
+          dob: res.data.birthdate || '',
+          phone: res.data.telephoneno || '',
         };
       }
     } catch (err: any) {
-      if (!isDemoAllowed()) throw err;
+      if (isMonoProductConfigured('lookup')) throw err;
       logger.warn({ err: err.message }, 'Mono v3 NIN lookup fallback');
     }
   }
 
+  if (isMonoProductConfigured('lookup') || !isDemoAllowed()) throw new Error('Mono NIN lookup is unavailable');
   return {
     verified: true,
     nin: cleanNin,
@@ -542,7 +578,7 @@ export async function verifyMonoBankAccount(params: {
   const bankCode = resolveBankCode(params.bankCode || params.bankName);
   const bankName = params.bankName || 'Guaranty Trust Bank (GTBank)';
 
-  if (isLiveMonoConfigured) {
+  if (isMonoProductConfigured('lookup')) {
     try {
       const res = await monoFetch<{ data: any }>(
         '/lookup/account-number',
@@ -553,26 +589,29 @@ export async function verifyMonoBankAccount(params: {
             nip_code: bankCode,
           }),
         },
-        'v3'
+        'v3', 'lookup'
       );
 
       if (res?.data) {
-        const bvnRaw = String(res.data.bvn || '22384910294');
+        const bvnRaw = String(res.data.bvn || '');
+        const accountName = String(res.data.name || res.data.account_name || '').trim();
+        if (!accountName) throw new Error('Mono did not return a verified account name');
         return {
           verified: true,
           accountNumber: cleanAcct,
-          accountName: String(res.data.name || res.data.account_name || '').toUpperCase(),
+          accountName: accountName.toUpperCase(),
           bankName,
           bankCode,
-          bvnMasked: `${bvnRaw.slice(0, 3)}*****${bvnRaw.slice(-3)}`,
+          bvnMasked: bvnRaw.length === 11 ? `${bvnRaw.slice(0, 3)}*****${bvnRaw.slice(-3)}` : '',
         };
       }
     } catch (err: any) {
-      if (!isDemoAllowed()) throw err;
+      if (isMonoProductConfigured('lookup')) throw err;
       logger.warn({ err: err.message, cleanAcct, bankCode }, 'Mono NIP account lookup fallback');
     }
   }
 
+  if (isMonoProductConfigured('lookup') || !isDemoAllowed()) throw new Error('Mono account lookup is unavailable');
   // Deterministic account name resolution for sandbox/test mode
   const demoNamesBySuffix: Record<string, string> = {
     '0': 'SOLOMON DUNU',
@@ -618,26 +657,25 @@ export async function getMonoAccountDetails(
       const res = await monoFetch<{ data: any }>(`/accounts/${accountId}`);
       const acct = res.data?.account || res.data || {};
       const meta = res.data?.meta || {};
-      const bvnRaw = String(acct.bvn || '22384910294');
+      const bvnRaw = String(acct.bvn || '');
+      if (!acct.name || !(acct.accountNumber || acct.account_number)) throw new Error('Mono returned incomplete bank account details');
       return {
         accountId,
-        accountName: String(acct.name || hint?.accountName || 'SOLOMON DUNU').toUpperCase(),
-        accountNumber: String(acct.accountNumber || acct.account_number || hint?.accountNumber || '0123456789'),
-        bankName: acct.institution?.name || hint?.bankName || 'Guaranty Trust Bank (GTBank)',
+        accountName: String(acct.name).toUpperCase(),
+        accountNumber: String(acct.accountNumber || acct.account_number),
+        bankName: acct.institution?.name || hint?.bankName || '',
         bankCode: acct.institution?.bankCode || acct.institution?.bank_code || resolveBankCode(hint?.bankName),
         accountType: acct.type || 'SAVINGS_ACCOUNT',
         currency: acct.currency || 'NGN',
-        balance: typeof acct.balance === 'number' ? Math.round(acct.balance / 100) : 148500,
-        bvnMasked: `${bvnRaw.slice(0, 3)}*****${bvnRaw.slice(-3)}`,
+        balance: typeof acct.balance === 'number' ? Math.round(acct.balance / 100) : 0,
+        bvnMasked: bvnRaw.length === 11 ? `${bvnRaw.slice(0, 3)}*****${bvnRaw.slice(-3)}` : '',
         dataStatus: meta.data_status || 'AVAILABLE',
         verified: true,
       };
-    } catch (err: any) {
-      if (!isDemoAllowed()) throw err;
-      logger.warn({ err: err.message, accountId }, 'Mono account details fallback');
-    }
+    } catch (err) { throw err; }
   }
 
+  if (isLiveMonoConfigured || !isDemoAllowed()) throw new Error('Mono account details are unavailable');
   return {
     accountId,
     accountName: (hint?.accountName || 'SOLOMON DUNU').toUpperCase(),
@@ -691,7 +729,7 @@ export async function getMonoStatement(
   }
 
   // Generate realistic 6-month commercial rider / salary inflow & outflow statement if in sandbox mode
-  if (txns.length === 0) {
+  if (txns.length === 0 && !isLiveMonoConfigured && isDemoAllowed()) {
     let runningBalance = 95000;
     for (let m = months - 1; m >= 0; m--) {
       const monthDate = new Date(now);
@@ -748,7 +786,8 @@ export async function getMonoStatement(
   const totalCredits = credits.reduce((s, t) => s + t.amount, 0);
   const averageMonthlyDebit = Math.round(totalDebits / months);
   const averageMonthlyCredit = Math.round(totalCredits / months);
-  const closingBalance = txns.length > 0 ? txns[txns.length - 1].balance : 184500;
+  if (txns.length === 0) throw new Error('Mono returned no statement transactions; financial assessment is unavailable');
+  const closingBalance = txns[txns.length - 1].balance;
 
   const uniqueCreditMonths = new Set(
     credits.map((c) => (c.date ? c.date.slice(0, 7) : ''))
@@ -773,42 +812,41 @@ export async function getMonoStatement(
  * Step 4: Query CBN Credit Bureau history & active loan defaults via Mono.
  */
 export async function getMonoCreditHistory(bvnOrAccountId: string): Promise<MonoCreditReport> {
-  logger.info({ identifier: bvnOrAccountId }, 'Querying Credit Bureau history via Mono');
+  if (!/^\d{11}$/.test(bvnOrAccountId)) throw new Error('Credit history lookup requires an 11-digit BVN');
 
-  if (isLiveMonoConfigured && !bvnOrAccountId.startsWith('mono_acct_')) {
-    try {
-      const res = await monoFetch<{ data: any }>(`/accounts/${bvnOrAccountId}/credit-history`).catch(
-        () => null
-      );
-
-      if (res?.data) {
-        return {
-          creditScore: res.data.score || 680,
-          rating: res.data.score > 700 ? 'GOOD' : res.data.score > 550 ? 'FAIR' : 'POOR',
-          activeLoansCount: res.data.active_facilities_count || 0,
-          totalActiveDebt: res.data.total_outstanding_balance || 0,
-          totalOverdueAmount: res.data.total_overdue_balance || 0,
-          delinquentAccountsCount: res.data.delinquent_facilities_count || 0,
-          dishonoredDirectDebitsCount: res.data.dishonored_mandates_count || 0,
-          summary:
-            res.data.summary || 'Credit record evaluated via Mono Open Banking Credit Bureau partner.',
-        };
-      }
-    } catch (error: any) {
-      if (!isDemoAllowed()) throw error;
-      logger.warn({ error: error.message }, 'Mono Credit Bureau lookup fallback');
-    }
+  if (isMonoProductConfigured('lookup')) {
+    const response = await monoFetch<{ data: any }>(
+      '/lookup/credit-history/all',
+      { method: 'POST', body: JSON.stringify({ bvn: bvnOrAccountId }) },
+      'v3', 'lookup'
+    );
+    const data = response.data;
+    if (!data || !Array.isArray(data.credit_history)) throw new Error('Mono credit history was unavailable');
+    const facilities = data.credit_history.flatMap((institution: any) => Array.isArray(institution.history) ? institution.history : []);
+    const active = facilities.filter((item: any) => item.loan_status === 'open');
+    const delinquent = active.filter((item: any) => /late|default|delinquent|non.performing/i.test(String(item.performance_status || '')));
+    return {
+      creditScore: 0, // Mono's credit-history response does not include a bureau score.
+      rating: delinquent.length > 0 ? 'POOR' : active.length > 3 ? 'FAIR' : 'GOOD',
+      activeLoansCount: active.length,
+      totalActiveDebt: active.reduce((sum: number, item: any) => sum + Number(item.outstanding_balance || 0) / 100, 0),
+      totalOverdueAmount: delinquent.reduce((sum: number, item: any) => sum + Number(item.overdue_amount || 0) / 100, 0),
+      delinquentAccountsCount: delinquent.length,
+      dishonoredDirectDebitsCount: 0,
+      summary: `Mono returned ${facilities.length} credit facilities across ${data.providers?.join(', ') || 'credit bureaus'}. No bureau score was supplied.`,
+    };
   }
 
+  if (!isDemoAllowed()) throw new Error('Mono credit history lookup is unavailable');
   return {
-    creditScore: 762,
+    creditScore: 740,
     rating: 'EXCELLENT',
     activeLoansCount: 0,
     totalActiveDebt: 0,
     totalOverdueAmount: 0,
     delinquentAccountsCount: 0,
     dishonoredDirectDebitsCount: 0,
-    summary: 'No adverse default history or unresolved dishonored mandates found across CBN CRC & FirstCentral registries.',
+    summary: 'Clean credit history across credit bureaus. Zero active defaults detected.',
   };
 }
 
@@ -876,7 +914,7 @@ export function analyzeFinancialHealth(params: {
   const dtiRatioPercent = Number(((totalMonthlyDebt / monthlyInflow) * 100).toFixed(1));
 
   const decisionReasons: string[] = [];
-  let underwritingDecision: 'APPROVED' | 'MANUAL_REVIEW' | 'DECLINED' = 'APPROVED';
+  let underwritingDecision: 'APPROVED' | 'MANUAL_REVIEW' | 'DECLINED' = 'MANUAL_REVIEW';
 
   if (creditReport.delinquentAccountsCount > 0 || creditReport.dishonoredDirectDebitsCount > 1) {
     underwritingDecision = 'DECLINED';
@@ -884,12 +922,15 @@ export function analyzeFinancialHealth(params: {
   } else if (dtiRatioPercent > 45) {
     underwritingDecision = 'MANUAL_REVIEW';
     decisionReasons.push(`Debt-to-Income ratio (${dtiRatioPercent}%) exceeds automated 35% threshold.`);
-  } else {
+  } else if (creditReport.creditScore >= 700 && dtiRatioPercent <= 35 && statement.consistentInflowMonths >= 4) {
+    underwritingDecision = 'APPROVED';
     decisionReasons.push(
       `Consistent ${statement.consistentInflowMonths}/${statement.monthsAnalysed}-month bank inflow (${monthlyInflow.toLocaleString()} NGN/mo).`,
       `Healthy DTI ratio (${dtiRatioPercent}%) within 35% CBN affordability cap.`,
       creditReport.summary
     );
+  } else {
+    decisionReasons.push('Staff credit officer manual review required.');
   }
 
   const riskTier =
@@ -931,7 +972,7 @@ export async function initiateMonoPayment(params: {
 }): Promise<MonoPaymentInitiation> {
   logger.info({ reference: params.reference, amount: params.amount }, 'Initiating Mono DirectPay session');
 
-  if (!isLiveMonoConfigured) {
+  if (!isMonoProductConfigured('payments')) {
     if (!isDemoAllowed()) throw new Error('Mono payments are not configured');
     return {
       payment_link: `${
@@ -958,8 +999,11 @@ export async function initiateMonoPayment(params: {
           'https://dashboard.dandoev.com/checkout/callback',
       }),
     },
-    'payments'
+    'payments', 'payments'
   );
+  if (!res.data?.mono_url || res.data.reference !== params.reference) {
+    throw new Error('Mono returned an invalid payment session');
+  }
 
   return {
     payment_link: res.data.mono_url,
@@ -975,7 +1019,7 @@ export async function verifyMonoPayment(reference: string): Promise<{
 }> {
   logger.info({ reference }, 'Verifying Mono payment');
 
-  if (!isLiveMonoConfigured || reference.startsWith('MONO-DEMO-')) {
+  if (!isMonoProductConfigured('payments') || reference.startsWith('MONO-DEMO-')) {
     if (!isDemoAllowed()) throw new Error('Mono payment verification is not configured');
     return {
       status: 'successful',
@@ -984,9 +1028,16 @@ export async function verifyMonoPayment(reference: string): Promise<{
     };
   }
 
-  const res = await monoFetch<{ data: any }>(`/verify/${reference}`, {}, 'payments');
+  const response = await fetch(`${MONO_PAYMENTS_V2}/verify/${encodeURIComponent(reference)}`, {
+    headers: { Accept: 'application/json', 'mono-sec-key': requireMonoKey('payments') },
+  });
+  if (response.status === 404) return { status: 'pending', amount: 0, reference };
+  if (!response.ok) throw new Error(`Mono payment verification failed [${response.status}]`);
+  const res = await response.json();
+  if (!res.data?.status || !res.data?.reference) throw new Error('Mono returned an invalid payment verification response');
+  const gatewayStatus = String(res.data.status);
   return {
-    status: res.data.status,
+    status: gatewayStatus === 'successful' ? 'successful' : gatewayStatus === 'pending' || gatewayStatus === 'processing' ? 'pending' : 'failed',
     amount: res.data.amount / 100,
     reference: res.data.reference,
   };
@@ -1087,6 +1138,9 @@ export async function setupMonoRecurringMandate(params: {
   email?: string;
   phone?: string;
   bvn?: string;
+  firstName?: string;
+  lastName?: string;
+  address?: string;
   amount?: number; // Installment deduction amount in NGN
   tenureMonths?: number;
   deductionFrequency?: DeductionInterval;
@@ -1127,18 +1181,28 @@ export async function setupMonoRecurringMandate(params: {
     'Setting up Mono Recurring Mandate Order'
   );
 
-  if (isLiveMonoConfigured) {
-    if (!params.accountNumber || !params.email) {
-      throw new Error('Account number and customer email are required to create a Mono mandate');
+  if (isMonoProductConfigured('payments')) {
+    if (!params.accountNumber || !params.email || !params.bvn || !params.firstName || !params.lastName || !params.phone || !params.address) {
+      throw new Error('Account, BVN and complete customer details are required for biometric mandate verification');
     }
+    const customer = await monoFetch<{ data: { id: string } }>(
+      '/customers',
+      { method: 'POST', body: JSON.stringify({
+        identity: { type: 'bvn', number: params.bvn }, email: params.email,
+        type: 'individual', first_name: params.firstName, last_name: params.lastName,
+        phone: params.phone, address: params.address,
+      }) }, 'v2', 'payments'
+    );
+    if (!customer.data?.id) throw new Error('Mono did not return a customer ID');
     const res = await monoFetch<{ data: any }>(
       '/payments/mandates',
       {
         method: 'POST',
         body: JSON.stringify({
           debit_type: 'variable',
-          customer: params.email,
+          customer: customer.data.id,
           mandate_type: 'emandate',
+          verification_method: 'selfie_verification',
           // For variable mandates this is the total amount collectible for the mandate period.
           amount: Math.round(totalRepayable * 100),
           reference: ref.slice(0, 24),
@@ -1151,12 +1215,12 @@ export async function setupMonoRecurringMandate(params: {
           meta: { account_id: params.accountId, deduction_frequency: deductionFrequency },
         }),
       },
-      'v3'
+      'v3', 'payments'
     );
 
     if (res?.data) {
         return {
-          id: res.data.id || res.data.mandate_id || `mnd_${Date.now()}`,
+          id: res.data.id || res.data.mandate_id,
           status: res.data.status || 'pending',
           reference: ref,
           mandateType: 'emandate',
@@ -1175,7 +1239,7 @@ export async function setupMonoRecurringMandate(params: {
           accountName: params.accountName,
           bankName: params.bankName,
           bankCode,
-          authorizationUrl: res.data.authorization_url || res.data.payment_link,
+          authorizationUrl: res.data.mono_url || res.data.authorization_url || res.data.payment_link,
           createdAt: new Date().toISOString(),
         };
     }
@@ -1222,13 +1286,13 @@ export async function getMonoMandateStatus(mandateId: string): Promise<{
   status: 'active' | 'approved' | 'pending' | 'paused' | 'cancelled';
   readyToDebit: boolean;
 }> {
-  if (isLiveMonoConfigured && !mandateId.startsWith('mnd_live_')) {
-      const res = await monoFetch<{ data: any }>(`/payments/mandates/${encodeURIComponent(mandateId)}`, {}, 'v3');
-      const st = res.data?.status || 'active';
+  if (isMonoProductConfigured('payments') && !mandateId.startsWith('mnd_live_')) {
+      const res = await monoFetch<{ data: any }>(`/payments/mandates/${encodeURIComponent(mandateId)}`, {}, 'v3', 'payments');
+      const st = res.data?.status || 'pending';
       return {
         id: mandateId,
-        status: st,
-        readyToDebit: st === 'active' || st === 'ready',
+        status: st === 'active' || st === 'approved' || st === 'paused' || st === 'cancelled' ? st : 'pending',
+        readyToDebit: res.data?.ready_to_debit === true,
       };
   }
 
@@ -1260,7 +1324,7 @@ export async function chargeMonoMandate(params: {
   if (!params.reference || params.reference.length > 24) throw new Error('Mono debit reference must be 1-24 characters');
   if (!params.narration || params.narration.length > 100) throw new Error('Mono debit narration must be 1-100 characters');
 
-  if (isLiveMonoConfigured && !params.mandateId.startsWith('mnd_live_')) {
+  if (isMonoProductConfigured('payments') && !params.mandateId.startsWith('mnd_live_')) {
       const res = await monoFetch<{ data: any }>(
         `/payments/mandates/${encodeURIComponent(params.mandateId)}/debit`,
         {
@@ -1271,7 +1335,7 @@ export async function chargeMonoMandate(params: {
             narration: params.narration,
           }),
         },
-        'v3'
+        'v3', 'payments'
       );
 
       if (res?.data) {
@@ -1318,7 +1382,24 @@ export function verifyMonoSignature(
   if (!secret) return false;
 
   try {
-    return crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(signatureHeader));
+    const sigBuf = Buffer.from(signatureHeader);
+    const secBuf = Buffer.from(secret);
+    if (sigBuf.length === secBuf.length && crypto.timingSafeEqual(secBuf, sigBuf)) {
+      return true;
+    }
+    // Check HMAC-SHA512
+    const hmac512 = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
+    const hmac512Buf = Buffer.from(hmac512);
+    if (sigBuf.length === hmac512Buf.length && crypto.timingSafeEqual(hmac512Buf, sigBuf)) {
+      return true;
+    }
+    // Check HMAC-SHA256
+    const hmac256 = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    const hmac256Buf = Buffer.from(hmac256);
+    if (sigBuf.length === hmac256Buf.length && crypto.timingSafeEqual(hmac256Buf, sigBuf)) {
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }

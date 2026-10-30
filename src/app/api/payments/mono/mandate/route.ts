@@ -5,6 +5,7 @@ import { withAuth, type ApiContext } from '@/lib/api-handler';
 import { calculateMandateTermsFromLoan, chargeMonoMandate, getMonoMandateStatus, setupMonoRecurringMandate, type DeductionInterval } from '@/lib/mono';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { decryptField } from '@/lib/encryption';
 
 const adminRoles = new Set(['super_admin', 'finance_admin', 'operations_admin']);
 const createSchema = z.object({
@@ -49,7 +50,10 @@ export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const reference = `DND-${loan.id.replace(/-/g, '').slice(0, 20)}`.slice(0, 24);
   try {
     const mandate = await setupMonoRecurringMandate({
-      ...parsed.data, email: loan.user.email, amount: terms.installmentAmount, tenureMonths: loan.tenure,
+      ...parsed.data, email: loan.user.email, phone: loan.user.phone || undefined,
+      firstName: loan.user.firstName, lastName: loan.user.lastName,
+      address: loan.user.address || undefined, bvn: decryptField(loan.user.bvn) || undefined,
+      amount: terms.installmentAmount, tenureMonths: loan.tenure,
       deductionFrequency: terms.deductionFrequency as DeductionInterval, totalRepayable: Number(loan.totalRepayable),
       interval: terms.monoInterval, description: `DandoEv BNPL mandate for loan ${loan.id}`,
       reference, startDate: terms.startDate, endDate: terms.endDate,

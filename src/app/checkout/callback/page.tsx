@@ -30,6 +30,7 @@ function CallbackContent() {
       return;
     }
 
+
     async function verifyPayment() {
       try {
         const token =

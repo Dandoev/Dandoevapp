@@ -20,7 +20,7 @@ describe('BNPL Loan Calculations & Terms', () => {
     // Expected calculations:
     // Interest = 1,000,000 * (4 / 100) * 6 = 240,000
     expect(terms.totalInterest).toBe(240000);
-    expect(terms.healthInsuranceFee).toBe(100000); // 10% compulsory insurance
+    expect(terms.healthInsuranceFee).toBe(100000); // 10% insurance
     expect(terms.processingFee).toBe(20000);
 
     // Compulsory savings: 6 months * 4 weeks * 7,000 NGN = 168,000

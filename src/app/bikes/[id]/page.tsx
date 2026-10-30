@@ -454,7 +454,7 @@ export default function BikeDetailPage() {
                       {formatNaira(grossAssetPrice + Math.round(grossAssetPrice * 0.10))}
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Includes 10% compulsory insurance + 1-year motor & battery warranty + free Lagos delivery.
+                      Includes 10% comprehensive insurance + 1-year motor & battery warranty + free Lagos delivery.
                     </p>
                   </div>
                   <button

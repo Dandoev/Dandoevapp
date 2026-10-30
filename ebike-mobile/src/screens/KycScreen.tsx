@@ -8,17 +8,26 @@ import {
   TextInput,
   SafeAreaView,
   ActivityIndicator,
+  Image,
+  Platform,
 } from 'react-native';
 import {
   ArrowLeft,
   ShieldCheck,
   CheckCircle2,
   Building,
-  UserCheck,
   CreditCard,
   Lock,
   Sparkles,
   ChevronRight,
+  Upload,
+  Briefcase,
+  Camera,
+  ScanFace,
+  FileText,
+  AlertCircle,
+  X,
+  Calendar,
 } from 'lucide-react-native';
 import { demoStore, DemoUserProfile } from '../lib/demo-data';
 import RealKycScreen from './RealKycScreen';
@@ -34,34 +43,97 @@ export default function KycScreen(props: KycScreenProps) {
   return <DemoKycScreen {...props} />;
 }
 
+const GIG_PLATFORMS = [
+  'Bolt',
+  'Chowdeck',
+  'Glovo',
+  'Indrive',
+  'Uber',
+  'Lagride',
+  'Gokada',
+  'Fez Delivery',
+  'Independent Courier',
+  'Corporate Dispatch',
+];
+
+const ID_TYPES = [
+  { id: 'nin', label: 'NIN (National ID Number / Slip)', digits: 11 },
+  { id: 'driver_license', label: "Driver's License (FRSC)", digits: 12 },
+  { id: 'voters_card', label: "Voter's Card (INEC PVC)", digits: 19 },
+  { id: 'passport', label: 'International Passport', digits: 9 },
+];
+
 function DemoKycScreen({ token, onBack, onKycComplete }: KycScreenProps) {
   const [user, setUser] = useState<DemoUserProfile>(demoStore.getUser());
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Step 1 Form
-  const [bvn, setBvn] = useState('22233344455');
-  const [nin, setNin] = useState('11223344556');
-  const [address, setAddress] = useState(user.address);
+  // Step 1: Personal & Residential
+  const [fullName, setFullName] = useState(`${user.firstName} ${user.lastName}`);
+  const [phone, setPhone] = useState(user.phone || '+234 812 345 6789');
+  const [residentialAddress, setResidentialAddress] = useState(user.address || '12 Admiralty Way, Lekki Phase 1, Lagos');
 
-  // Step 2 Form (Financial)
-  const [monthlyIncome, setMonthlyIncome] = useState('350000');
-  const [bankName, setBankName] = useState('Providus Bank');
-  const [bankAccount, setBankAccount] = useState('9928172635');
-  const [openBankingLinked, setOpenBankingLinked] = useState(true);
+  // Step 2: Gig Work & Earnings (comes BEFORE ID upload)
+  const [selectedPlatform, setSelectedPlatform] = useState('Chowdeck');
+  const [joinedDate, setJoinedDate] = useState('March 2023');
+  const [weeklyEarnings, setWeeklyEarnings] = useState('45000');
+  const [earningsScreenshot, setEarningsScreenshot] = useState<string | null>(
+    'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=400&q=80'
+  );
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
 
-  // Step 3 Form (Guarantor)
-  const [guarantorName, setGuarantorName] = useState(user.guarantorName || 'Chief Babatunde Johnson');
-  const [guarantorPhone, setGuarantorPhone] = useState(user.guarantorPhone || '+234 802 334 5566');
-  const [guarantorRelation, setGuarantorRelation] = useState('Uncle / Business Partner');
+  // Step 3: Government ID Upload
+  const [selectedIdType, setSelectedIdType] = useState('nin');
+  const [idNumber, setIdNumber] = useState('22334455667');
+  const [idDocUploaded, setIdDocUploaded] = useState(true);
 
-  // Step completion
-  const handleStep1 = () => {
+  // Step 4: Selfie Liveness Check
+  const [selfieCaptured, setSelfieCaptured] = useState(false);
+  const [selfieAnalyzing, setSelfieAnalyzing] = useState(false);
+
+  // Step Navigations
+  const handleNextStep1 = () => {
+    setErrorMessage(null);
+    if (!fullName.trim() || !residentialAddress.trim()) {
+      setErrorMessage('Please provide your full legal name and address.');
+      return;
+    }
     setCurrentStep(2);
   };
 
-  const handleStep2 = () => {
+  const handleNextStep2 = () => {
+    setErrorMessage(null);
+    if (!joinedDate.trim()) {
+      setErrorMessage(`Please specify when you joined ${selectedPlatform} (e.g. March 2023).`);
+      return;
+    }
+    if (!weeklyEarnings.trim() || Number(weeklyEarnings) <= 0) {
+      setErrorMessage('Please enter your average weekly earnings.');
+      return;
+    }
+    if (!earningsScreenshot) {
+      setErrorMessage('Please upload a screenshot of your courier earning dashboard.');
+      return;
+    }
     setCurrentStep(3);
+  };
+
+  const handleNextStep3 = () => {
+    setErrorMessage(null);
+    if (!idNumber.trim() || idNumber.length < 8) {
+      setErrorMessage('Please enter a valid government identification number.');
+      return;
+    }
+    setCurrentStep(4);
+  };
+
+  const handleSimulateSelfie = () => {
+    setSelfieAnalyzing(true);
+    setTimeout(() => {
+      setSelfieAnalyzing(false);
+      setSelfieCaptured(true);
+    }, 1200);
   };
 
   const handleFinalSubmit = () => {
@@ -69,12 +141,20 @@ function DemoKycScreen({ token, onBack, onKycComplete }: KycScreenProps) {
     setTimeout(() => {
       setLoading(false);
       demoStore.submitTier3Kyc({
-        guarantorName,
-        guarantorPhone,
-        relationship: guarantorRelation,
+        guarantorName: 'Chief Babatunde Johnson',
+        guarantorPhone: '+234 802 334 5566',
+        relationship: 'Uncle',
       });
-      setCurrentStep(4); // Success screen
-    }, 900);
+      setCurrentStep(5); // Success confirmation
+    }, 1000);
+  };
+
+  const simulateUploadScreenshot = () => {
+    setUploadingScreenshot(true);
+    setTimeout(() => {
+      setUploadingScreenshot(false);
+      setEarningsScreenshot('https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=400&q=80');
+    }, 800);
   };
 
   return (
@@ -82,240 +162,415 @@ function DemoKycScreen({ token, onBack, onKycComplete }: KycScreenProps) {
       {/* Top Header */}
       <View style={styles.topNav}>
         <TouchableOpacity style={styles.navBtn} onPress={onBack} activeOpacity={0.7}>
-          <ArrowLeft size={20} color="#1E293B" />
+          <ArrowLeft size={20} color="#0A154F" />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>BNPL KYC Verification</Text>
+        <Text style={styles.navTitle}>Rider Verification & KYC</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      {/* 3-Step Progress Indicators */}
-      <View style={styles.stepsRow}>
-        {[1, 2, 3].map((step) => {
-          const isActive = currentStep === step;
-          const isDone = currentStep > step;
-          return (
-            <View key={step} style={styles.stepItem}>
-              <View
-                style={[
-                  styles.stepBubble,
-                  isActive && styles.stepBubbleActive,
-                  isDone && styles.stepBubbleDone,
-                ]}
-              >
-                {isDone ? (
-                  <CheckCircle2 size={14} color="#FFFFFF" />
-                ) : (
-                  <Text style={[styles.stepNum, (isActive || isDone) && styles.stepNumActive]}>
-                    {step}
+      {/* 4-Step Progress Indicator */}
+      {currentStep <= 4 && (
+        <View style={styles.progressHeader}>
+          <View style={styles.stepsRow}>
+            {[
+              { num: 1, label: 'Profile' },
+              { num: 2, label: 'Work & Proof' },
+              { num: 3, label: 'Govt ID' },
+              { num: 4, label: 'Selfie Check' },
+            ].map((step) => {
+              const isActive = currentStep === step.num;
+              const isDone = currentStep > step.num;
+              return (
+                <View key={step.num} style={styles.stepItem}>
+                  <View
+                    style={[
+                      styles.stepBubble,
+                      isActive && styles.stepBubbleActive,
+                      isDone && styles.stepBubbleDone,
+                    ]}
+                  >
+                    {isDone ? (
+                      <CheckCircle2 size={13} color="#FFFFFF" />
+                    ) : (
+                      <Text style={[styles.stepNum, (isActive || isDone) && styles.stepNumActive]}>
+                        {step.num}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.stepLabel, (isActive || isDone) && styles.stepLabelActive]} numberOfLines={1}>
+                    {step.label}
                   </Text>
-                )}
-              </View>
-              <Text style={[styles.stepLabel, (isActive || isDone) && styles.stepLabelActive]}>
-                {step === 1 ? 'Identity' : step === 2 ? 'Financial' : 'Guarantor'}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
+                </View>
+              );
+            })}
+          </View>
+          <View style={styles.stepProgressLineContainer}>
+            <View style={[styles.stepProgressLineFill, { width: `${(currentStep / 4) * 100}%` }]} />
+          </View>
+        </View>
+      )}
+
+      {errorMessage && (
+        <View style={styles.errorBanner}>
+          <AlertCircle size={15} color="#B91C1C" />
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* STEP 1: IDENTITY & BVN / NIN */}
+        {/* ============================================================ */}
+        {/* STEP 1: RESIDENTIAL & PERSONAL DETAILS */}
+        {/* ============================================================ */}
         {currentStep === 1 && (
           <View style={styles.card}>
             <View style={styles.cardBadge}>
-              <ShieldCheck size={16} color="#4A50AE" />
-              <Text style={styles.cardBadgeText}>STEP 1 OF 3: IDENTITY TIER</Text>
+              <ShieldCheck size={14} color="#3730A3" />
+              <Text style={styles.cardBadgeText}>STEP 1 OF 4: PERSONAL & RESIDENCE</Text>
             </View>
-            <Text style={styles.cardTitle}>Identity & NIBSS Verification</Text>
+            <Text style={styles.cardTitle}>Where are you based?</Text>
             <Text style={styles.cardSubtitle}>
-              CBN-mandated biometric verification to prevent identity theft.
+              Please verify your legal name and residential base in Lagos for equipment assignment.
             </Text>
 
-            <Text style={styles.label}>Bank Verification Number (BVN)</Text>
+            <Text style={styles.label}>Full Legal Name (as on ID)</Text>
             <View style={styles.inputContainer}>
-              <Lock size={16} color="#2E3192" />
-              <TextInput
-                style={styles.input}
-                value={bvn}
-                onChangeText={setBvn}
-                keyboardType="numeric"
-                maxLength={11}
-              />
-              <View style={styles.verifiedTag}>
-                <Text style={styles.verifiedTagText}>✓ NIBSS Match</Text>
-              </View>
+              <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="e.g. Solomon Dunu" />
             </View>
 
-            <Text style={styles.label}>National Identity Number (NIN)</Text>
+            <Text style={styles.label}>Phone Number (WhatsApp Contact)</Text>
             <View style={styles.inputContainer}>
-              <Lock size={16} color="#2E3192" />
+              <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            </View>
+
+            <Text style={styles.label}>Residential Address (Lagos State)</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, { height: 48 }]}
+                value={residentialAddress}
+                onChangeText={setResidentialAddress}
+                placeholder="Street address, neighborhood & LGA"
+              />
+            </View>
+
+            <View style={styles.trustBox}>
+              <Lock size={15} color="#1E1B4B" />
+              <Text style={styles.trustText}>
+                Encrypted with bank-grade security. Used strictly for your master lease contract.
+              </Text>
+            </View>
+
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleNextStep1} activeOpacity={0.88}>
+              <Text style={styles.primaryBtnText}>Continue to Gig & Earnings Proof</Text>
+              <ChevronRight size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ============================================================ */}
+        {/* STEP 2: EMPLOYMENT / GIG WORK & EARNINGS DASHBOARD (PRIORITY) */}
+        {/* ============================================================ */}
+        {currentStep === 2 && (
+          <View style={styles.card}>
+            <View style={styles.cardBadge}>
+              <Briefcase size={14} color="#3730A3" />
+              <Text style={styles.cardBadgeText}>STEP 2 OF 4: GIG EARNINGS & PROOF</Text>
+            </View>
+            <Text style={styles.cardTitle}>Courier & Earnings Profile</Text>
+            <Text style={styles.cardSubtitle}>
+              Prove your operational cashflow to qualify for 0% down payment and higher credit tiers.
+            </Text>
+
+            <Text style={styles.label}>Primary Dispatch / Delivery Platform</Text>
+            <View style={styles.platformChipRow}>
+              {GIG_PLATFORMS.map((platform) => {
+                const isSelected = selectedPlatform === platform;
+                return (
+                  <TouchableOpacity
+                    key={platform}
+                    style={[styles.platformChip, isSelected && styles.platformChipActive]}
+                    onPress={() => setSelectedPlatform(platform)}
+                  >
+                    <Text style={[styles.platformChipText, isSelected && styles.platformChipTextActive]}>
+                      {platform}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.label}>When Did You Join {selectedPlatform}? (Month & Year)</Text>
+            <View style={styles.inputContainer}>
+              <Calendar size={18} color="#64748B" />
+              <TextInput
+                style={[styles.input, { marginLeft: 8 }]}
+                value={joinedDate}
+                onChangeText={setJoinedDate}
+                placeholder="e.g. March 2023 or MM/YYYY"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <Text style={styles.fieldHint}>
+              Courier platform tenure helps fast-track verification for 0% down payment.
+            </Text>
+
+            <Text style={[styles.label, { marginTop: 14 }]}>Estimated Weekly Earnings (NGN)</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.currencyPrefix}>₦</Text>
               <TextInput
                 style={styles.input}
-                value={nin}
-                onChangeText={setNin}
+                value={weeklyEarnings}
+                onChangeText={setWeeklyEarnings}
                 keyboardType="numeric"
-                maxLength={11}
+                placeholder="e.g. 45,000"
+              />
+            </View>
+            <Text style={styles.fieldHint}>
+              Equates to approx. ₦{(Number(weeklyEarnings || 0) * 4.33).toLocaleString(undefined, { maximumFractionDigits: 0 })} monthly gross turnover.
+            </Text>
+
+            {/* Upload Courier Earning Dashboard Screenshot */}
+            <Text style={[styles.label, { marginTop: 16 }]}>Courier Dashboard Screenshot (Required)</Text>
+            <Text style={styles.fieldHint}>
+              Screenshot your active payout or weekly orders history in Chowdeck, Glovo, Gokada, etc.
+            </Text>
+
+            {earningsScreenshot ? (
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: earningsScreenshot }} style={styles.screenshotPreview} resizeMode="cover" />
+                <View style={styles.previewMeta}>
+                  <View style={styles.previewBadge}>
+                    <CheckCircle2 size={13} color="#15803D" />
+                    <Text style={styles.previewBadgeText}>Screenshot Attached</Text>
+                  </View>
+                  <Text style={styles.previewHint}>High readability. Payout stats visible.</Text>
+                  <TouchableOpacity style={styles.replaceBtn} onPress={simulateUploadScreenshot}>
+                    <Text style={styles.replaceBtnText}>Replace Screenshot</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.uploadDropzone}
+                onPress={simulateUploadScreenshot}
+                disabled={uploadingScreenshot}
+                activeOpacity={0.8}
+              >
+                {uploadingScreenshot ? (
+                  <ActivityIndicator color="#1E1B4B" />
+                ) : (
+                  <>
+                    <View style={styles.uploadIconCircle}>
+                      <Upload size={22} color="#1E1B4B" />
+                    </View>
+                    <Text style={styles.uploadTitle}>Tap to upload earning screenshot</Text>
+                    <Text style={styles.uploadSubtitle}>PNG, JPG, or PDF (Max 5MB • Auto-compressed)</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            <View style={[styles.trustBox, { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' }]}>
+              <Sparkles size={15} color="#15803D" />
+              <Text style={[styles.trustText, { color: '#166534' }]}>
+                Verified weekly earnings reduce deposit requirements to ₦0 and unlock rapid loan approval.
+              </Text>
+            </View>
+
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setCurrentStep(1)}>
+                <Text style={styles.secondaryBtnText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { flex: 1 }]} onPress={handleNextStep2} activeOpacity={0.88}>
+                <Text style={styles.primaryBtnText}>Continue to ID Upload</Text>
+                <ChevronRight size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* ============================================================ */}
+        {/* STEP 3: GOVERNMENT ID VERIFICATION (NIN, DRIVER'S LICENSE) */}
+        {/* ============================================================ */}
+        {currentStep === 3 && (
+          <View style={styles.card}>
+            <View style={styles.cardBadge}>
+              <CreditCard size={14} color="#3730A3" />
+              <Text style={styles.cardBadgeText}>STEP 3 OF 4: GOVERNMENT IDENTITY</Text>
+            </View>
+            <Text style={styles.cardTitle}>Identity Document</Text>
+            <Text style={styles.cardSubtitle}>
+              CBN & NDPR compliant verification. Select an official document to link.
+            </Text>
+
+            <Text style={styles.label}>Select Identification Document</Text>
+            <View style={styles.idTypeRow}>
+              {ID_TYPES.map((type) => {
+                const isSelected = selectedIdType === type.id;
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[styles.idTypeChip, isSelected && styles.idTypeChipActive]}
+                    onPress={() => setSelectedIdType(type.id)}
+                  >
+                    <Text style={[styles.idTypeChipText, isSelected && styles.idTypeChipTextActive]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.label}>Identification Number</Text>
+            <View style={styles.inputContainer}>
+              <Lock size={16} color="#1E1B4B" />
+              <TextInput
+                style={styles.input}
+                value={idNumber}
+                onChangeText={setIdNumber}
+                keyboardType="numeric"
+                placeholder="Enter 11-digit NIN or document ID"
               />
               <View style={styles.verifiedTag}>
                 <Text style={styles.verifiedTagText}>✓ NIMC Match</Text>
               </View>
             </View>
 
-            <Text style={styles.label}>Lagos Residential Address</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={address}
-                onChangeText={setAddress}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.continueBtn} onPress={handleStep1} activeOpacity={0.85}>
-              <Text style={styles.continueBtnText}>Continue to Financial Verification</Text>
-              <ChevronRight size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* STEP 2: FINANCIAL ASSESSMENT & OPEN BANKING */}
-        {currentStep === 2 && (
-          <View style={styles.card}>
-            <View style={styles.cardBadge}>
-              <Building size={16} color="#4A50AE" />
-              <Text style={styles.cardBadgeText}>STEP 2 OF 3: FINANCIAL TIER</Text>
-            </View>
-            <Text style={styles.cardTitle}>Open Banking & Income Check</Text>
-            <Text style={styles.cardSubtitle}>
-              Mono Open Banking securely verifies your average monthly cash inflow.
-            </Text>
-
-            <View style={styles.openBankingBox}>
-              <View style={styles.openBankingLeft}>
-                <Building size={20} color="#087F75" />
+            {/* Document Upload Box */}
+            <Text style={[styles.label, { marginTop: 12 }]}>Upload Document Copy / Slip</Text>
+            <View style={styles.docUploadBox}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <FileText size={22} color="#1E1B4B" />
                 <View>
-                  <Text style={styles.openBankingTitle}>Mono Connect Linked</Text>
-                  <Text style={styles.openBankingSub}>Providus Bank • Account 9928172635</Text>
+                  <Text style={styles.docFileName}>NIN_Slip_Verified.pdf</Text>
+                  <Text style={styles.docFileSize}>280 KB • Encrypted on device</Text>
                 </View>
               </View>
               <View style={styles.verifiedTag}>
-                <Text style={styles.verifiedTagText}>Active</Text>
+                <Text style={styles.verifiedTagText}>Attached</Text>
               </View>
             </View>
 
-            <Text style={styles.label}>Verified Monthly Income (NGN)</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={monthlyIncome}
-                onChangeText={setMonthlyIncome}
-                keyboardType="numeric"
-              />
+            <View style={styles.trustBox}>
+              <Lock size={15} color="#1E1B4B" />
+              <Text style={styles.trustText}>
+                Your identity data is processed via licensed NIMC verification servers.
+              </Text>
             </View>
 
-            <View style={styles.creditScoreBox}>
-              <Sparkles size={18} color="#D97706" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.creditScoreTitle}>Preliminary Credit Assessment</Text>
-                <Text style={styles.creditScoreVal}>Score: 84/100 (Prime Commercial Rider)</Text>
-                <Text style={styles.creditScoreSub}>
-                  High monthly inflow qualifies you for up to ₦2,000,000 credit at 0% down payment!
-                </Text>
-              </View>
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setCurrentStep(2)}>
+                <Text style={styles.secondaryBtnText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { flex: 1 }]} onPress={handleNextStep3} activeOpacity={0.88}>
+                <Text style={styles.primaryBtnText}>Continue to Selfie Check</Text>
+                <ChevronRight size={18} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.continueBtn} onPress={handleStep2} activeOpacity={0.85}>
-              <Text style={styles.continueBtnText}>Continue to Guarantor Verification</Text>
-              <ChevronRight size={18} color="#FFFFFF" />
-            </TouchableOpacity>
           </View>
         )}
 
-        {/* STEP 3: DIGITAL GUARANTOR CO-SIGNING */}
-        {currentStep === 3 && (
+        {/* ============================================================ */}
+        {/* STEP 4: SELFIE LIVENESS VERIFICATION */}
+        {/* ============================================================ */}
+        {currentStep === 4 && (
           <View style={styles.card}>
             <View style={styles.cardBadge}>
-              <UserCheck size={16} color="#4A50AE" />
-              <Text style={styles.cardBadgeText}>STEP 3 OF 3: DIGITAL GUARANTOR</Text>
+              <ScanFace size={14} color="#3730A3" />
+              <Text style={styles.cardBadgeText}>STEP 4 OF 4: SELFIE LIVENESS</Text>
             </View>
-            <Text style={styles.cardTitle}>Guarantor Information</Text>
+            <Text style={styles.cardTitle}>Quick Face Verification</Text>
             <Text style={styles.cardSubtitle}>
-              Required for commercial assets above ₦1,000,000. An SMS & email invite will be sent.
+              Takes 3 seconds. Confirms your live face matches your government ID photograph.
             </Text>
 
-            <Text style={styles.label}>Guarantor Full Legal Name</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={guarantorName}
-                onChangeText={setGuarantorName}
-              />
-            </View>
-
-            <Text style={styles.label}>Guarantor Phone Number</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={guarantorPhone}
-                onChangeText={setGuarantorPhone}
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            <Text style={styles.label}>Relationship to Applicant</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={guarantorRelation}
-                onChangeText={setGuarantorRelation}
-              />
-            </View>
-
-            <View style={styles.guarantorConsentBox}>
-              <CheckCircle2 size={16} color="#2E3192" />
-              <Text style={styles.guarantorConsentText}>
-                Digital agreement will be dispatched via SMS & WhatsApp for instant 1-tap co-signing.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.continueBtn, loading && { opacity: 0.8 }]}
-              onPress={handleFinalSubmit}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+            <View style={styles.selfieCanvas}>
+              {selfieCaptured ? (
+                <View style={styles.selfieSuccessState}>
+                  <CheckCircle2 size={48} color="#15803D" />
+                  <Text style={styles.selfieSuccessTitle}>Biometric Liveness Confirmed!</Text>
+                  <Text style={styles.selfieSuccessSub}>Face matched against NIMC photograph (99.2% confidence score).</Text>
+                  <TouchableOpacity style={styles.retakeBtn} onPress={() => setSelfieCaptured(false)}>
+                    <Text style={styles.retakeBtnText}>Retake Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : selfieAnalyzing ? (
+                <View style={styles.selfieLoadingState}>
+                  <ActivityIndicator size="large" color="#1E1B4B" />
+                  <Text style={styles.selfieLoadingText}>Scanning facial biometrics & liveness...</Text>
+                </View>
               ) : (
-                <>
-                  <Text style={styles.continueBtnText}>Submit KYC & Activate BNPL</Text>
-                  <ChevronRight size={18} color="#FFFFFF" />
-                </>
+                <View style={styles.selfiePromptState}>
+                  <View style={styles.selfieOvalGuide}>
+                    <Camera size={34} color="#64748B" />
+                  </View>
+                  <Text style={styles.selfieGuideTitle}>Center your face in good lighting</Text>
+                  <Text style={styles.selfieGuideSub}>Remove hats, face masks, or dark sunglasses.</Text>
+                  <TouchableOpacity style={styles.captureBtn} onPress={handleSimulateSelfie}>
+                    <Camera size={16} color="#FFFFFF" />
+                    <Text style={styles.captureBtnText}>Capture 3-Sec Liveness</Text>
+                  </TouchableOpacity>
+                </View>
               )}
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setCurrentStep(3)}>
+                <Text style={styles.secondaryBtnText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { flex: 1 }, (!selfieCaptured || loading) && { opacity: 0.6 }]}
+                onPress={handleFinalSubmit}
+                disabled={!selfieCaptured || loading}
+                activeOpacity={0.88}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryBtnText}>Submit Complete KYC</Text>
+                    <ChevronRight size={18} color="#FFFFFF" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {/* STEP 4: VERIFIED CONGRATULATIONS */}
-        {currentStep === 4 && (
+        {/* ============================================================ */}
+        {/* STEP 5: VERIFICATION SUBMITTED & SUCCESS */}
+        {/* ============================================================ */}
+        {currentStep === 5 && (
           <View style={[styles.card, { alignItems: 'center', paddingVertical: 32 }]}>
             <View style={styles.successIconBubble}>
-              <ShieldCheck size={48} color="#2E3192" />
+              <ShieldCheck size={42} color="#15803D" />
             </View>
-            <Text style={styles.congratsTitle}>Tier 3 KYC Verified! 🎉</Text>
-            <Text style={styles.congratsSubtitle}>
-              Your identity, financial inflow, and guarantor have been approved.
+            <Text style={styles.successTitle}>KYC Submitted Successfully! 🚀</Text>
+            <Text style={styles.successSub}>
+              Your earnings proof, government ID, and face biometrics have been securely submitted to underwriting.
             </Text>
 
-            <View style={styles.creditLimitBox}>
-              <Text style={styles.creditLimitLabel}>APPROVED BNPL CREDIT LIMIT</Text>
-              <Text style={styles.creditLimitAmount}>₦2,500,000</Text>
-              <Text style={styles.creditLimitSub}>
-                Available for 0% Down Payment • Weekly Repayments Enabled
-              </Text>
+            <View style={styles.timelineCard}>
+              <View style={styles.timelineItem}>
+                <CheckCircle2 size={16} color="#15803D" />
+                <Text style={styles.timelineText}>Gig Platform: {selectedPlatform} (Joined {joinedDate || '2023'})</Text>
+              </View>
+              <View style={styles.timelineItem}>
+                <CheckCircle2 size={16} color="#15803D" />
+                <Text style={styles.timelineText}>Weekly Earnings: ₦{Number(weeklyEarnings || 0).toLocaleString()}/wk verified</Text>
+              </View>
+              <View style={styles.timelineItem}>
+                <CheckCircle2 size={16} color="#15803D" />
+                <Text style={styles.timelineText}>National Identity (NIN): Biometrics matched</Text>
+              </View>
+              <View style={styles.timelineItem}>
+                <CheckCircle2 size={16} color="#15803D" />
+                <Text style={styles.timelineText}>Preliminary Approval: Tier 1 Prime Eligible (0% Down)</Text>
+              </View>
             </View>
 
-            <TouchableOpacity style={styles.finishBtn} onPress={onKycComplete} activeOpacity={0.85}>
-              <Text style={styles.finishBtnText}>Go to Loans & Servicing</Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={onKycComplete} activeOpacity={0.88}>
+              <Text style={styles.primaryBtnText}>Return to Dashboard</Text>
+              <ChevronRight size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
@@ -337,305 +592,520 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#DBE2F0',
+    borderBottomColor: '#E2E8F0',
   },
   navBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EDF2FA',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
   navTitle: {
     fontSize: 16,
-    fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
+  progressHeader: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
   stepsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EDF2FA',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   stepItem: {
     alignItems: 'center',
+    flex: 1,
   },
   stepBubble: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#EDF2FA',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   stepBubbleActive: {
-    backgroundColor: '#2E3192',
+    backgroundColor: '#1E1B4B',
   },
   stepBubbleDone: {
-    backgroundColor: '#2E3192',
+    backgroundColor: '#15803D',
   },
   stepNum: {
-    fontSize: 12,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#66728A',
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#64748B',
   },
   stepNumActive: {
     color: '#FFFFFF',
   },
   stepLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    fontFamily: 'Inter_500Medium',
+    color: '#64748B',
   },
   stepLabelActive: {
-    color: '#2E3192',
+    color: '#0A154F',
     fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  stepProgressLineContainer: {
+    height: 3,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  stepProgressLineFill: {
+    height: '100%',
+    backgroundColor: '#1E1B4B',
+    borderRadius: 2,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEE2E2',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 10,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#B91C1C',
+    fontFamily: 'Inter_500Medium',
+    flex: 1,
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 80,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#DBE2F0',
+    borderColor: '#E2E8F0',
     shadowColor: '#0A154F',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#E8F6FE',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
     marginBottom: 8,
   },
   cardBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#4A50AE',
+    color: '#3730A3',
+    letterSpacing: 0.5,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 22,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
+    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   cardSubtitle: {
-    fontSize: 12,
-    color: '#66728A',
+    fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    marginTop: 2,
+    color: '#64748B',
+    lineHeight: 19,
     marginBottom: 16,
-    lineHeight: 18,
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#334155',
+    color: '#0F172A',
     marginBottom: 6,
+  },
+  fieldHint: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: '#64748B',
+    marginTop: -4,
+    marginBottom: 10,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F6F7FC',
-    borderWidth: 1,
-    borderColor: '#DBE2F0',
+    backgroundColor: '#F8FAFC',
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 14,
+    marginBottom: 12,
+    height: 48,
   },
   input: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter_500Medium',
-    color: '#0A154F',
+    color: '#0F172A',
   },
-  verifiedTag: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  currencyPrefix: {
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#1E1B4B',
+    marginRight: 6,
+  },
+  platformChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  platformChip: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  platformChipActive: {
+    backgroundColor: '#1E1B4B',
+    borderColor: '#1E1B4B',
+  },
+  platformChipText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#475569',
+  },
+  platformChipTextActive: {
+    color: '#FFFFFF',
+  },
+  uploadDropzone: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 14,
+  },
+  uploadIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  uploadTitle: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#0A154F',
+    marginBottom: 2,
+  },
+  uploadSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: '#64748B',
+  },
+  previewContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+  },
+  screenshotPreview: {
+    width: 70,
+    height: 90,
+    borderRadius: 8,
+  },
+  previewMeta: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  previewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  previewBadgeText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#15803D',
+  },
+  previewHint: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  replaceBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#E2E8F0',
+  },
+  replaceBtnText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#0F172A',
+  },
+  idTypeRow: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  idTypeChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  idTypeChipActive: {
+    backgroundColor: '#EEF2FF',
     borderColor: '#C7D2FE',
   },
-  verifiedTagText: {
-    color: '#2E3192',
-    fontSize: 10,
+  idTypeChipText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#475569',
+  },
+  idTypeChipTextActive: {
+    color: '#3730A3',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
-  openBankingBox: {
+  verifiedTag: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  verifiedTagText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#15803D',
+  },
+  docUploadBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
-    padding: 12,
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
     borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+  },
+  docFileName: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#0A154F',
+  },
+  docFileSize: {
+    fontSize: 10,
+    fontFamily: 'Inter_400Regular',
+    color: '#64748B',
+  },
+  selfieCanvas: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 220,
     marginBottom: 16,
   },
-  openBankingLeft: {
+  selfiePromptState: {
+    alignItems: 'center',
+  },
+  selfieOvalGuide: {
+    width: 76,
+    height: 96,
+    borderRadius: 38,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  selfieGuideTitle: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#0A154F',
+    marginBottom: 2,
+  },
+  selfieGuideSub: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: '#64748B',
+    marginBottom: 16,
+  },
+  captureBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
+    backgroundColor: '#1E1B4B',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
   },
-  openBankingTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#065F46',
-  },
-  openBankingSub: {
-    fontSize: 11,
-    color: '#087F75',
-    fontFamily: 'Inter_400Regular',
-  },
-  creditScoreBox: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: '#FFFBEB',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    marginBottom: 18,
-  },
-  creditScoreTitle: {
+  captureBtnText: {
     fontSize: 12,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#92400E',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#FFFFFF',
   },
-  creditScoreVal: {
-    fontSize: 14,
-    fontWeight: '900',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#78350F',
-    marginVertical: 2,
+  selfieLoadingState: {
+    alignItems: 'center',
+    gap: 12,
   },
-  creditScoreSub: {
+  selfieLoadingText: {
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    color: '#475569',
+  },
+  selfieSuccessState: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  selfieSuccessTitle: {
+    fontSize: 16,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#15803D',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  selfieSuccessSub: {
     fontSize: 11,
-    color: '#B45309',
     fontFamily: 'Inter_400Regular',
+    color: '#475569',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  retakeBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  retakeBtnText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#0F172A',
+  },
+  trustBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+  },
+  trustText: {
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    color: '#3730A3',
+    flex: 1,
     lineHeight: 16,
   },
-  guarantorConsentBox: {
+  primaryBtn: {
+    backgroundColor: '#1E1B4B',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#EDF2FA',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 18,
-  },
-  guarantorConsentText: {
-    fontSize: 11,
-    color: '#475569',
-    fontFamily: 'Inter_500Medium',
-    flex: 1,
-  },
-  continueBtn: {
-    backgroundColor: '#2E3192',
-    flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    gap: 6,
+    paddingVertical: 14,
     borderRadius: 16,
-    marginTop: 6,
   },
-  continueBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+  primaryBtnText: {
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#FFFFFF',
+  },
+  secondaryBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  secondaryBtnText: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#475569',
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
   },
   successIconBubble: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#EEF2FF',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#F0FDF4',
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  congratsTitle: {
+  successTitle: {
     fontSize: 22,
-    fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
     textAlign: 'center',
+    marginBottom: 6,
   },
-  congratsSubtitle: {
+  successSub: {
     fontSize: 13,
-    color: '#66728A',
     fontFamily: 'Inter_400Regular',
+    color: '#475569',
     textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 20,
+    lineHeight: 19,
     paddingHorizontal: 16,
+    marginBottom: 20,
   },
-  creditLimitBox: {
+  timelineCard: {
     width: '100%',
-    backgroundColor: '#EEF2FF',
-    padding: 18,
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
-    alignItems: 'center',
+    borderColor: '#E2E8F0',
+    gap: 10,
     marginBottom: 24,
   },
-  creditLimitLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#087F75',
-  },
-  creditLimitAmount: {
-    fontSize: 32,
-    fontWeight: '900',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#047857',
-    marginVertical: 4,
-  },
-  creditLimitSub: {
-    fontSize: 11,
-    color: '#065F46',
-    fontFamily: 'Inter_500Medium',
-    textAlign: 'center',
-  },
-  finishBtn: {
-    width: '100%',
-    backgroundColor: '#2E3192',
-    paddingVertical: 16,
-    borderRadius: 16,
+  timelineItem: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  finishBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+  timelineText: {
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    color: '#1E293B',
   },
 });

@@ -2,27 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { sendEmail } from '@/lib/resend';
+import { extractBearerToken, verifySupabaseToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   const log = logger.child({ route: 'user/delete-account' });
 
   try {
-    const body = await req.json();
-    const { email, phone, reason } = body;
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
 
-    if (!email && !phone) {
+    let { email, phone, reason } = body;
+
+    // Check Authorization header fallback
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    const token = extractBearerToken(authHeader);
+    let authUserId: string | null = null;
+
+    if (token) {
+      const payload = await verifySupabaseToken(token);
+      if (payload) {
+        authUserId = payload.sub;
+        if (!email && payload.email) email = payload.email;
+        if (!phone && payload.phone) phone = payload.phone;
+      }
+    }
+
+    if (!email && !phone && !authUserId) {
       return NextResponse.json(
         { error: 'Registered email or phone number is required.' },
         { status: 400 }
       );
     }
 
-    log.info({ email, phone, reason }, 'Received account deletion request');
+    log.info({ email, phone, authUserId, reason }, 'Received account deletion request');
 
     // Check if user exists in DB
     const user = await prisma.user.findFirst({
       where: {
         OR: [
+          authUserId ? { id: authUserId } : undefined,
           email ? { email: email.trim().toLowerCase() } : undefined,
           phone ? { phone: phone.trim() } : undefined,
         ].filter(Boolean) as any,

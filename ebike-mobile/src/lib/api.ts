@@ -10,6 +10,7 @@ interface RequestOptions {
   headers?: Record<string, string>;
   body?: any;
   token?: string | null;
+  timeout?: number;
 }
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -23,18 +24,33 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   }
 
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const res = await fetch(`${APP_CONFIG.apiEndpoint}${cleanEndpoint}`, {
-    method: options.method || 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  
+  // Set default 8s timeout to prevent hanging on sleeping servers
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 8000);
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || `API Request failed with status ${res.status}`);
+  try {
+    const res = await fetch(`${APP_CONFIG.apiEndpoint}${cleanEndpoint}`, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || `API Request failed with status ${res.status}`);
+    }
+
+    return data as T;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('Server connection timed out. Please try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return data as T;
 }
 
 export const MobileApi = {
@@ -102,6 +118,9 @@ export const MobileApi = {
       token,
     });
   },
+  async initiateMonoProve(redirectUrl: string, token: string) {
+    return apiRequest<{ success: boolean; data: { url: string; reference: string } }>('/kyc/prove/initiate', { method: 'POST', body: { redirectUrl }, token });
+  },
 
   // 4. BNPL Loans & Repayments
   async applyForLoan(loanData: any, token: string) {
@@ -152,6 +171,14 @@ export const MobileApi = {
   // 7. NDPR Data Portability & Erasure
   async exportComplianceData(token: string) {
     return apiRequest<{ success: boolean; data: any }>('/user/compliance', { token });
+  },
+
+  async requestAccountDeletion(params: { email?: string; phone?: string; reason?: string }, token?: string) {
+    return apiRequest<{ success: boolean; message?: string; error?: string }>('/user/delete-account', {
+      method: 'POST',
+      body: params,
+      token,
+    });
   },
 
   // 8. Outright Orders & Checkout

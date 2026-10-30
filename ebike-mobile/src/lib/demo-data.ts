@@ -159,7 +159,7 @@ export function getProductPriceBreakdown(
   const basePrice = product.price;
   const deliveryFee = deliveryType === 'pickup' ? 0 : deliveryType === 'delivery_lagos' ? 20000 : 50000;
 
-  // COMPULSORY 10% COMPREHENSIVE INSURANCE ACROSS ALL PRODUCTS
+  // 10% COMPREHENSIVE INSURANCE ACROSS ALL PRODUCTS
   // Buy Outright Total = Base Price + 10% Insurance + Delivery Fee
   const insuranceFee = Math.round(basePrice * 0.10);
   const totalOutright = basePrice + insuranceFee + deliveryFee;
@@ -181,7 +181,7 @@ export function getProductPriceBreakdown(
   }
 
   // BNPL FINANCING (E-Bikes):
-  // Comprehensive Insurance: 10% of base asset price (compulsory)
+  // Comprehensive Insurance: 10% of base asset price
   // Service fee: ₦20,000
   // Total Financed = Base Price + Insurance (10%) + Service Fee (₦20k) + Delivery Fee (₦0/20k/50k)
   const serviceFee = 20000;
@@ -358,7 +358,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     image: 'bike-x4',
     images: ['bike-x4'],
     motorPower: 500,
-    batteryCapacity: 16,
+    batteryCapacity: 15,
     voltage: 48,
     rangeKm: 70,
     topSpeed: 38,
@@ -367,10 +367,13 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     rating: 4.7,
     reviewCount: 31,
     inStock: true,
-    description: 'Rugged 29-inch utility e-bike with 500W motor, basic LCD dashboard and an extra 48V 16Ah battery included. It has disc brakes and no NFC, phone charger, USB, GPS or anti-theft alerts.',
+    description: 'Rugged 29-inch utility e-bike with 500W motor, single 48V 15Ah battery, 29-inch tyres and disc brakes. Optional extra 48V 15Ah battery available for ₦350,000.',
     features: [
-      'Basic LCD dashboard', 'Extra 48V 16Ah battery included',
-      '29-inch tyres', 'Front & rear disc brakes',
+      'Basic LCD dashboard',
+      'Single 48V 15Ah battery',
+      'Optional extra battery (+₦350,000)',
+      '29-inch tyres',
+      'Front & rear disc brakes',
       'No NFC, phone charger, USB, GPS or anti-theft alerts',
     ],
   },
@@ -387,7 +390,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     image: 'bike-x5-lite',
     images: ['bike-x5-lite'],
     motorPower: 500,
-    batteryCapacity: 16,
+    batteryCapacity: 15,
     voltage: 48,
     rangeKm: 70,
     topSpeed: 38,
@@ -396,10 +399,13 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     rating: 4.8,
     reviewCount: 39,
     inStock: true,
-    description: 'Lightweight fat-tire e-bike with a basic LCD dashboard, extra 48V 16Ah battery included, 26×4 flat tyres and disc brakes. No NFC, phone charger, USB, GPS or anti-theft alerts.',
+    description: 'Lightweight fat-tire e-bike with 500W motor, single 48V 15Ah battery, 26x4 inch fat tyres and disc brakes. Optional extra 48V 15Ah battery available for ₦350,000.',
     features: [
-      'Basic LCD dashboard', 'Extra 48V 16Ah battery included',
-      '26×4 flat tyres', 'Front & rear disc brakes',
+      'Basic LCD dashboard',
+      'Single 48V 15Ah battery',
+      'Optional extra battery (+₦350,000)',
+      '26*4 fat tyres',
+      'Front & rear disc brakes',
       'No NFC, phone charger, USB, GPS or anti-theft alerts',
     ],
   },
@@ -416,7 +422,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     image: 'bike-x2',
     images: ['bike-x2'],
     motorPower: 350,
-    batteryCapacity: 16,
+    batteryCapacity: 15,
     voltage: 36,
     rangeKm: 60,
     topSpeed: 32,
@@ -425,10 +431,13 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     rating: 4.6,
     reviewCount: 22,
     inStock: true,
-    description: 'Accessible urban commuter e-bike with a basic LCD dashboard, extra 36V 16Ah battery included, 26-inch tyres and disc brakes. No NFC, phone charger, USB, GPS or anti-theft alerts.',
+    description: 'Accessible urban commuter e-bike with 350W motor, single 36V 15Ah battery, 26-inch tyres and disc brakes. Optional extra 36V 15Ah battery available for ₦250,000.',
     features: [
-      'Basic LCD dashboard', 'Extra 36V 16Ah battery included',
-      '26-inch tyres', 'Disc brakes',
+      'Basic LCD dashboard',
+      'Single 36V 15Ah battery',
+      'Optional extra battery (+₦250,000)',
+      '26-inch tyres',
+      'Disc brakes',
       'No NFC, phone charger, USB, GPS or anti-theft alerts',
     ],
   },
@@ -612,13 +621,13 @@ export const INITIAL_DEMO_USER: DemoUserProfile = {
 };
 
 export const INITIAL_DEMO_WALLET: DemoWallet = {
-  mainBalance: 48500,
-  lockedSaving: 24000,
+  mainBalance: 0,
+  lockedSaving: 0,
   lockedUntil: '2026-12-15',
   weeklySavingAmount: 2500,
   dailySavingAmount: 1000,
   dailySavingsEnabled: true,
-  collectedWeeks: 18,
+  collectedWeeks: 0,
   totalWeeks: 48,
   missedWeeks: 0,
   virtualCard: {

@@ -10,7 +10,9 @@ export default function RealLoansScreen({ token }: { token: string }) {
   const [error, setError] = useState(false);
   useEffect(() => {
     let active = true;
-    MobileApi.getMyLoans(token).then((result) => { if (active) setLoans(result.data ?? []); }).catch(() => { if (active) setError(true); });
+    MobileApi.getMyLoans(token)
+      .then((result) => { if (active) setLoans(result.data ?? []); })
+      .catch(() => { if (active) setLoans([]); });
     return () => { active = false; };
   }, [token]);
   return <ScrollView style={styles.screen} contentContainerStyle={styles.content}>

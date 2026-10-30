@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Platform,
   Modal,
+  TextInput,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -32,6 +33,7 @@ import {
 import { demoStore, DemoProduct, getProductPriceBreakdown, DeliveryType } from '../lib/demo-data';
 import { getProductAsset } from '../lib/bike-assets';
 import { MobileApi } from '../lib/api';
+import { APP_CONFIG } from '../lib/config';
 
 interface ProductDetailScreenProps {
   product?: DemoProduct;
@@ -54,6 +56,13 @@ export default function ProductDetailScreen({
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [deliveryPhone, setDeliveryPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [deliveryState, setDeliveryState] = useState('');
+  const [pendingPayment, setPendingPayment] = useState<{ reference: string; authorizationUrl: string } | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<{ id: string; amount: number } | null>(null);
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
   const isBike = product.type === 'bike';
   const breakdown = getProductPriceBreakdown(product, selectedTenure, deliveryType);
@@ -72,37 +81,74 @@ export default function ProductDetailScreen({
       setPurchaseError('Sign in with your customer account to complete a real purchase.');
       return;
     }
+    if (!/^\+?\d{10,15}$/.test(deliveryPhone.trim())) {
+      setPurchaseError('Enter a valid phone number for your order.'); return;
+    }
+    if (deliveryType !== 'pickup' && (!deliveryAddress.trim() || !deliveryCity.trim() || !deliveryState.trim())) {
+      setPurchaseError('Enter your delivery address, city and state.'); return;
+    }
     setPurchaseLoading(true);
     setPurchaseError(null);
+    setPaymentNotice(null);
     try {
-      const order = await MobileApi.createOrder({
+      let payment = pendingPayment;
+      if (!payment) {
+      let order = pendingOrder;
+      if (!order) {
+      const created = await MobileApi.createOrder({
         bikeId: product.type === 'bike' ? product.id : undefined,
         quantity: 1,
         paymentMethod: 'bank_transfer',
         deliveryType,
-        deliveryAddress: deliveryType === 'pickup' ? 'Lagos Central Pickup Hub' : '24 Sandstrip Oworoshoki',
-        deliveryCity: 'Lagos',
-        deliveryState: deliveryType === 'delivery_outside' ? 'Abuja' : 'Lagos',
-        deliveryPhone: '08099001122',
+        deliveryAddress: deliveryType === 'pickup' ? 'Lagos Central Pickup Hub' : deliveryAddress.trim(),
+        deliveryCity: deliveryType === 'pickup' ? 'Ikeja' : deliveryCity.trim(),
+        deliveryState: deliveryType === 'pickup' ? 'Lagos' : deliveryState.trim(),
+        deliveryPhone: deliveryPhone.trim(),
         accessories: product.type !== 'bike' ? [{ id: product.id, quantity: 1 }] : undefined,
       }, token);
-      if (!order.orderId) throw new Error('The order could not be created.');
+      if (!created.orderId || !Number.isFinite(Number(created.totalAmount))) throw new Error('The order could not be created.');
+      order = { id: created.orderId, amount: Number(created.totalAmount) };
+      setPendingOrder(order);
+      }
 
-      const payment = await MobileApi.initializePayment({
-        amount: Number(order.totalAmount ?? breakdown.totalOutright),
-        orderId: order.orderId,
+      const initialized = await MobileApi.initializePayment({
+        amount: order.amount,
+        orderId: order.id,
         provider: 'mono',
-        callbackUrl: 'dandoev://payment-callback',
+        callbackUrl: `${APP_CONFIG.apiBaseUrl}/checkout/mobile-return`,
       }, token);
-      await WebBrowser.openAuthSessionAsync(payment.data.authorizationUrl, 'dandoev://payment-callback');
-      const verification = await MobileApi.verifyPayment(payment.data.reference, token);
-      if (verification.data.status !== 'success') throw new Error('Payment is still pending. It will appear after Mono confirms settlement.');
+      payment = { reference: initialized.data.reference, authorizationUrl: initialized.data.authorizationUrl };
+      setPendingPayment(payment);
+      }
+      const browserResult = await WebBrowser.openAuthSessionAsync(payment.authorizationUrl, 'dandoev://payment-callback');
+      if (browserResult.type !== 'success') {
+        setPaymentNotice('Payment window closed. Your order is saved. You can return to payment or check its status.');
+        return;
+      }
+      const verification = await MobileApi.verifyPayment(payment.reference, token);
+      if (verification.data.status !== 'success') {
+        setPaymentNotice('Mono is still confirming your payment. Use Check payment status shortly.');
+        return;
+      }
+      setPendingPayment(null);
+      setPendingOrder(null);
       setOutrightSuccess(true);
     } catch (error) {
       setPurchaseError(error instanceof Error ? error.message : 'Unable to complete this purchase.');
     } finally {
       setPurchaseLoading(false);
     }
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!pendingPayment || !token) return;
+    setPurchaseLoading(true); setPurchaseError(null);
+    try {
+      const result = await MobileApi.verifyPayment(pendingPayment.reference, token);
+      if (result.data.status === 'success') { setOutrightSuccess(true); setPendingPayment(null); setPendingOrder(null); setPaymentNotice(null); }
+      else setPaymentNotice('Payment is still awaiting confirmation from Mono.');
+    } catch (error) { setPaymentNotice(error instanceof Error ? error.message : 'Payment is still awaiting confirmation.'); }
+    finally { setPurchaseLoading(false); }
   };
 
   return (
@@ -153,7 +199,7 @@ export default function ProductDetailScreen({
             <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
               <Text style={styles.cashLabel}>Base Item Price</Text>
               <Text style={styles.cashPrice}>₦{product.price.toLocaleString()}</Text>
-              <Text style={styles.cashSub}>10% compulsory insurance included on checkout</Text>
+              <Text style={styles.cashSub}>10% insurance included on checkout</Text>
             </View>
 
             {isBike ? (
@@ -617,7 +663,7 @@ export default function ProductDetailScreen({
                   {outrightSuccess ? 'Order Confirmed! 🚀' : 'Outright Purchase Checkout'}
                 </Text>
                 <Text style={styles.modalSub}>
-                  {outrightSuccess ? 'Dispatched from Lagos Hub' : 'No BNPL loan • Direct one-time payment'}
+                  {outrightSuccess ? 'Payment verified • Order confirmed' : 'Secure one-time payment'}
                 </Text>
               </View>
               <TouchableOpacity
@@ -638,7 +684,7 @@ export default function ProductDetailScreen({
                 </View>
                 <Text style={styles.successHeading}>₦{breakdown.totalOutright.toLocaleString()} Paid</Text>
                 <Text style={styles.successMsg}>
-                  Your order for <Text style={{ fontWeight: '800' }}>{product.name}</Text> has been processed. Delivery is scheduled within 24–48 hours to your registered address.
+                  Payment for <Text style={{ fontWeight: '800' }}>{product.name}</Text> is verified. Your order is confirmed, and the team will contact you about pickup or delivery.
                 </Text>
                 <TouchableOpacity
                   style={styles.doneBtn}
@@ -652,7 +698,7 @@ export default function ProductDetailScreen({
                 </TouchableOpacity>
               </View>
             ) : (
-              <View>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={styles.orderSummaryBox}>
                   <View style={styles.orderRow}>
                     <Text style={styles.orderLabel}>Item:</Text>
@@ -663,7 +709,7 @@ export default function ProductDetailScreen({
                     <Text style={styles.orderVal}>₦{breakdown.basePrice.toLocaleString()}</Text>
                   </View>
                   <View style={styles.orderRow}>
-                    <Text style={styles.orderLabel}>Compulsory Insurance (10%):</Text>
+                    <Text style={styles.orderLabel}>Comprehensive Insurance (10%):</Text>
                     <Text style={styles.orderVal}>₦{breakdown.insuranceFee.toLocaleString()}</Text>
                   </View>
                   <View style={styles.orderRow}>
@@ -684,11 +730,20 @@ export default function ProductDetailScreen({
                   </View>
                 </View>
 
+                {!pendingOrder && <View style={styles.checkoutFields}>
+                  <Text style={styles.checkoutLabel}>Delivery method</Text>
+                  <View style={styles.deliveryChoices}>{(['pickup', 'delivery_lagos', 'delivery_outside'] as DeliveryType[]).map((choice) => <TouchableOpacity key={choice} onPress={() => setDeliveryType(choice)} style={[styles.deliveryChoice, deliveryType === choice && styles.deliveryChoiceSelected]}><Text style={[styles.deliveryChoiceText, deliveryType === choice && styles.deliveryChoiceTextSelected]}>{choice === 'pickup' ? 'Pickup' : choice === 'delivery_lagos' ? 'Lagos' : 'Other state'}</Text></TouchableOpacity>)}</View>
+                  <Text style={styles.checkoutLabel}>Contact phone</Text>
+                  <TextInput style={styles.checkoutInput} value={deliveryPhone} onChangeText={setDeliveryPhone} keyboardType="phone-pad" placeholder="080…" autoComplete="tel" />
+                  {deliveryType !== 'pickup' && <><Text style={styles.checkoutLabel}>Street address</Text><TextInput style={styles.checkoutInput} value={deliveryAddress} onChangeText={setDeliveryAddress} placeholder="House number and street" /><Text style={styles.checkoutLabel}>City</Text><TextInput style={styles.checkoutInput} value={deliveryCity} onChangeText={setDeliveryCity} placeholder="City" /><Text style={styles.checkoutLabel}>State</Text><TextInput style={styles.checkoutInput} value={deliveryState} onChangeText={setDeliveryState} placeholder="State" /></>}
+                </View>}
+
                 <Text style={styles.paymentMethodNotice}>
-                  ⚡ Payment will be completed via Mono DirectPay (Pay with Bank / Card / Transfer) or Wallet Balance.
+                  Your bank payment opens securely with Mono. Your order is confirmed only after payment verification.
                 </Text>
 
                 {purchaseError ? <Text style={{ color: '#B91C1C', marginBottom: 10, fontFamily: 'Inter_600SemiBold' }}>{purchaseError}</Text> : null}
+                {paymentNotice ? <Text style={styles.paymentNotice}>{paymentNotice}</Text> : null}
 
                 <TouchableOpacity
                   style={styles.confirmBuyBtn}
@@ -697,10 +752,11 @@ export default function ProductDetailScreen({
                   activeOpacity={0.85}
                 >
                   <Text style={styles.confirmBuyBtnText}>
-                    {purchaseLoading ? 'Opening secure payment…' : `Confirm & Pay ₦${breakdown.totalOutright.toLocaleString()}`}
+                    {purchaseLoading ? 'Working…' : pendingPayment ? 'Return to secure payment' : `Confirm & Pay ₦${breakdown.totalOutright.toLocaleString()}`}
                   </Text>
                 </TouchableOpacity>
-              </View>
+                {pendingPayment && <TouchableOpacity style={styles.checkStatusButton} onPress={() => void checkPaymentStatus()} disabled={purchaseLoading}><Text style={styles.checkStatusText}>Check payment status</Text></TouchableOpacity>}
+              </ScrollView>
             )}
           </View>
         </View>
@@ -1242,7 +1298,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 22,
-    maxHeight: 600,
+    maxHeight: '88%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1319,6 +1375,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
+  checkoutFields: { marginBottom: 16 },
+  checkoutLabel: { color: '#102152', fontFamily: 'Inter_600SemiBold', fontSize: 13, marginBottom: 7, marginTop: 10 },
+  checkoutInput: { borderWidth: 1, borderColor: '#D8E5EB', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#102152', fontFamily: 'Inter_400Regular', backgroundColor: '#FAFCFD' },
+  deliveryChoices: { flexDirection: 'row', gap: 7, marginBottom: 4 },
+  deliveryChoice: { flex: 1, borderWidth: 1, borderColor: '#D8E5EB', borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
+  deliveryChoiceSelected: { borderColor: '#117F78', backgroundColor: '#E3F9F1' },
+  deliveryChoiceText: { color: '#607384', fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+  deliveryChoiceTextSelected: { color: '#102152' },
+  paymentNotice: { backgroundColor: '#E3F9F1', color: '#102152', fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20, padding: 12, borderRadius: 12, marginBottom: 12 },
+  checkStatusButton: { alignItems: 'center', padding: 15 },
+  checkStatusText: { color: '#117F78', fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   confirmBuyBtn: {
     backgroundColor: '#2E3192',
     borderRadius: 16,

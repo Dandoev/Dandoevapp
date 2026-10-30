@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
           expires_in: 3600 * 24,
         };
       } else if (
+        lowerEmail === 'google-reviewer@dandoev.com' ||
         lowerEmail === 'solomon.dunu@demo.com' ||
         lowerEmail === 'babatunde.adeleke@demo.com' ||
         lowerEmail === 'amina.bello@demo.com' ||
@@ -93,19 +94,24 @@ export async function POST(req: NextRequest) {
         lowerEmail === 'chinedu.eze@demo.com' ||
         lowerEmail.endsWith('@demo.com')
       ) {
+        const isGoogleReviewer = lowerEmail === 'google-reviewer@dandoev.com';
         const nameParts = lowerEmail.split('@')[0].split('.');
-        const firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Demo';
-        const lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Buyer';
+        const firstName = isGoogleReviewer
+          ? 'Google'
+          : nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Demo';
+        const lastName = isGoogleReviewer
+          ? 'Reviewer'
+          : nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Buyer';
 
         authUser = {
-          id: 'demo-customer-id',
+          id: isGoogleReviewer ? '637e354b-d3da-4206-8bdc-5bd64bb82d07' : 'demo-customer-id',
           email: lowerEmail,
           user_metadata: { firstName, lastName },
           app_metadata: { role: 'customer' },
         };
         authSession = {
-          access_token: 'demo-token-customer',
-          refresh_token: 'demo-refresh-customer',
+          access_token: isGoogleReviewer ? 'demo-token-google-reviewer' : 'demo-token-customer',
+          refresh_token: isGoogleReviewer ? 'demo-refresh-google-reviewer' : 'demo-refresh-customer',
           expires_in: 3600 * 24,
         };
       }

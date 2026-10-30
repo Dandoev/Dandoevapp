@@ -7,6 +7,7 @@ import { calculateMandateTermsFromLoan, setupMonoRecurringMandate, type Deductio
 import { BNPL_CONFIG } from '@/lib/constants';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { decryptField } from '@/lib/encryption';
 
 const staffRoles = ['super_admin', 'credit_underwriter', 'fleet_manager', 'collections_agent', 'compliance_officer', 'finance_admin'];
 
@@ -59,6 +60,8 @@ export const POST = withAuth(withIdempotency(withValidation(
         accountId: user.monoAccountId, accountNumber: data.bankAccountNumber,
         accountName: data.bankAccountName, bankName: data.bankName,
         bankCode: user.monoBankCode || undefined, email: user.email,
+        phone: user.phone || undefined, firstName: user.firstName, lastName: user.lastName,
+        address: user.address || undefined, bvn: decryptField(user.bvn) || undefined,
         amount: mandateTerms.installmentAmount, tenureMonths: tenure,
         deductionFrequency: frequency, totalRepayable, interval: mandateTerms.monoInterval,
         description: `DandoEv BNPL mandate ${tenure} months`, reference,

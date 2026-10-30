@@ -31,9 +31,21 @@ services:
         sync: false
       - key: NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
         sync: false
-      - key: MONO_SECRET_KEY
+      - key: MONO_CONNECT_SECRET_KEY
+        sync: false
+      - key: MONO_LOOKUP_SECRET_KEY
+        sync: false
+      - key: MONO_PROVE_SECRET_KEY
+        sync: false
+      - key: MONO_PAYMENTS_SECRET_KEY
         sync: false
       - key: NEXT_PUBLIC_MONO_PUBLIC_KEY
         sync: false
-      - key: MONO_WEBHOOK_SECRET
+      - key: MONO_CONNECT_WEBHOOK_SECRET
+        sync: false
+      - key: MONO_LOOKUP_WEBHOOK_SECRET
+        sync: false
+      - key: MONO_PROVE_WEBHOOK_SECRET
+        sync: false
+      - key: MONO_PAYMENTS_WEBHOOK_SECRET
         sync: false

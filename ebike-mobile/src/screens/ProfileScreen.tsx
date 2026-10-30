@@ -26,10 +26,12 @@ import {
   CreditCard,
   Building2,
   FileDown,
+  Trash2,
 } from 'lucide-react-native';
 import { demoStore, DemoUserProfile } from '../lib/demo-data';
 import FinancialStatementModal from '../components/FinancialStatementModal';
 import { APP_CONFIG } from '../lib/config';
+import { MobileApi } from '../lib/api';
 import RealProfileScreen from './RealProfileScreen';
 
 interface ProfileScreenProps {
@@ -72,6 +74,45 @@ function DemoProfileScreen({ onLogout, onNavigateToTerms, onNavigateToKyc }: Pro
       setDownloading(false);
       alert('NDPR/GDPR Data Export Archive (JSON) ready for download!\n\nAll personal data, credit ledger entries, and KYC timestamps have been bundled securely.');
     }, 800);
+  };
+
+  const handleDeleteAccountPress = () => {
+    Alert.alert(
+      'Delete Account & Data',
+      'Are you sure you want to delete your DandoEv account? All personal KYC records, credit limits, and profile data will be scheduled for permanent erasure under NDPR Article 17.\n\nNote: If you have an active or pending lease balance, your account cannot be deleted until the balance is cleared.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            if (loan && ['active', 'approved', 'under_review', 'pending'].includes(loan.status)) {
+              Alert.alert(
+                'Cannot Delete Account',
+                'You have an active or pending financing lease. Please settle your outstanding balance before requesting account deletion.'
+              );
+              return;
+            }
+
+            try {
+              await MobileApi.requestAccountDeletion({
+                email: user.email,
+                phone: user.phone,
+                reason: 'Requested from mobile app profile',
+              });
+            } catch {
+              // Proceed even if offline in demo mode
+            }
+
+            Alert.alert(
+              'Account Deletion Queued',
+              'Your account deletion request has been registered and personal data scheduled for permanent erasure. You will now be signed out.',
+              [{ text: 'OK', onPress: onLogout }]
+            );
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -327,12 +368,29 @@ function DemoProfileScreen({ onLogout, onNavigateToTerms, onNavigateToKyc }: Pro
             <ChevronRight size={18} color="#94A3B8" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionRow, { borderBottomWidth: 0 }]} onPress={onNavigateToTerms}>
+          <TouchableOpacity style={styles.actionRow} onPress={onNavigateToTerms}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <FileText size={18} color="#66728A" />
               <View>
                 <Text style={styles.actionTitle}>Platform Terms & BNPL Agreement</Text>
                 <Text style={styles.actionSub}>Legal terms, warranties & dispute policy</Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color="#94A3B8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionRow, { borderBottomWidth: 0 }]}
+            onPress={handleDeleteAccountPress}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Trash2 size={18} color="#DC2626" />
+              <View>
+                <Text style={[styles.actionTitle, { color: '#DC2626' }]}>
+                  Delete Account & Data (NDPR Art. 17)
+                </Text>
+                <Text style={styles.actionSub}>Permanently delete account and personal records</Text>
               </View>
             </View>
             <ChevronRight size={18} color="#94A3B8" />

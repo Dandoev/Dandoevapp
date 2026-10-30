@@ -293,7 +293,7 @@ function BnplCheckoutContent() {
         monoAccountId: mandateOrder?.accountId,
         monoMandateId: mandateOrder?.id,
         monoMandateRef: mandateOrder?.reference,
-        monoMandateStatus: mandateOrder?.status || 'active',
+        monoMandateStatus: mandateOrder?.status || 'pending',
         mandateStartDate: mandateOrder?.startDate,
         mandateEndDate: mandateOrder?.endDate,
         bankName: monoData?.bankName || selectedBank,
@@ -540,7 +540,7 @@ function BnplCheckoutContent() {
                     onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
                     className="w-full mt-1.5 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:border-primary focus:bg-white focus:outline-none cursor-pointer"
                   >
-                    <option value="Bolt / Chowdeck Dispatch">Commercial Dispatch (Bolt, Chowdeck, Glovo)</option>
+                    <option value="Bolt / Chowdeck Dispatch">Commercial Dispatch (Bolt, Chowdeck, Glovo, Uber, Indrive, Lagride)</option>
                     <option value="Personal Daily Commute">Personal Daily Commute</option>
                     <option value="Corporate Logistics Fleet">Corporate / SME Delivery Fleet</option>
                   </select>

@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { initiateMonoPayment } from '@/lib/mono';
 import { PaymentIntentError, resolvePaymentIntent } from '@/lib/payment-intent';
+import crypto from 'crypto';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
@@ -29,7 +30,7 @@ export const POST = withAuth(
           await resolvePaymentIntent(prisma, {
             userId: ctx.user.sub, amount, orderId, loanId, repaymentId,
           });
-          const transactionId = `TX-${provider.toUpperCase()}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const transactionId = `DND${crypto.randomBytes(10).toString('hex')}`;
 
           // ---- Create local transaction record ----
           const transaction = await prisma.paymentTransaction.create({
@@ -58,8 +59,10 @@ export const POST = withAuth(
             paymentDescription = `DandoEv BNPL Down Payment (Loan #${loanId.slice(0, 8)})`;
           }
 
-          const customerEmail = ctx.user.email || 'customer@dandoev.com';
-          const customerName = `${ctx.user.email?.split('@')[0] || 'DandoEv'} Rider`;
+          const customer = await prisma.user.findUnique({ where: { id: ctx.user.sub }, select: { firstName: true, lastName: true, email: true } });
+          if (!customer?.email) throw new PaymentIntentError('Customer email is required for payment', 400);
+          const customerEmail = customer.email;
+          const customerName = `${customer.firstName} ${customer.lastName}`.trim();
           const resolvedCallbackUrl =
             callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://dashboard.dandoev.com'}/checkout/callback`;
 

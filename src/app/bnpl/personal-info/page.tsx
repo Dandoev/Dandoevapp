@@ -28,7 +28,7 @@ export default function PersonalInfoPage() {
     const router = useRouter();
     const defaultForm = {
         firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '', address: '',
-        city: '', state: '', employmentStatus: '', monthlyIncome: '', employerName: '', employerAddress: '',
+        city: '', state: '', employmentStatus: '', monthlyIncome: '', employerName: '', joinedDate: '', employerAddress: '',
         addressVerified: false,
     };
 
@@ -203,17 +203,28 @@ export default function PersonalInfoPage() {
                                     <option value="Chowdeck">Chowdeck</option>
                                     <option value="Glovo">Glovo</option>
                                     <option value="Indrive">Indrive</option>
+                                    <option value="Uber">Uber</option>
+                                    <option value="Lagride">Lagride</option>
                                     <option value="Waysdrop">Waysdrop</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Office Address / Hub</label>
-                                <input className="form-input" placeholder="Office address" value={form.employerAddress} onChange={e => u('employerAddress', e.target.value)} />
+                                <label className="form-label">When Did You Join? (Month & Year)</label>
+                                <input
+                                    className="form-input"
+                                    placeholder="e.g. March 2023"
+                                    value={form.joinedDate || ''}
+                                    onChange={e => u('joinedDate', e.target.value)}
+                                />
                             </div>
                         </div>
+                        <div className="form-group">
+                            <label className="form-label">Office Address / Hub</label>
+                            <input className="form-input" placeholder="Office address" value={form.employerAddress} onChange={e => u('employerAddress', e.target.value)} />
+                        </div>
 
-                        {(['Bolt', 'Chowdeck', 'Glovo', 'Indrive', 'Waysdrop'].includes(form.employerName)) && (
+                        {(['Bolt', 'Chowdeck', 'Glovo', 'Indrive', 'Uber', 'Lagride', 'Waysdrop'].includes(form.employerName)) && (
                             <div className="form-group animate-fade-in-up">
                                 <label className="form-label">Upload {form.employerName} Account Dashboard</label>
                                 <input

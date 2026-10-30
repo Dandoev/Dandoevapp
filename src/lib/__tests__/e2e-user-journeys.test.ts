@@ -127,7 +127,7 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
   // JOURNEY 3: Outright Cash Purchase via Mono DirectPay
   // ============================================================
   describe('Journey 3: Outright E-Bike & Accessory Purchase via Mono DirectPay', () => {
-    it('calculates outright purchase totals with 10% compulsory insurance', () => {
+    it('calculates outright purchase totals with 10% insurance', () => {
       const bikePrice = 1500000; // DandoEv X6
       const batteryPrice = 385000; // 48V 20Ah Battery
       const chargerPrice = 60000; // Fast Charger
@@ -323,7 +323,7 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
       const deliveryLagos = 20000;
       const deliveryOutside = 50000;
 
-      // Outright purchases include 10% compulsory insurance
+      // Outright purchases include 10% comprehensive insurance
       const outrightLagosTotal = bikeBasePrice + insurance + deliveryLagos;
       const outrightOutsideTotal = bikeBasePrice + insurance + deliveryOutside;
 

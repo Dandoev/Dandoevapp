@@ -69,6 +69,9 @@ export const GET = withAuth(
       // ========================================================
       if (transaction.provider === 'mono') {
         const monoResult = await verifyMonoPayment(gatewayReference);
+        if (monoResult.status === 'pending') {
+          return NextResponse.json({ success: true, data: { status: 'pending', reference: gatewayReference, provider: 'mono' } }, { status: 202 });
+        }
         assertVerifiedPayment(
           { reference: gatewayReference, amount: expectedAmount },
           { status: monoResult.status === 'successful' ? 'success' : monoResult.status,

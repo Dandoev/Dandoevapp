@@ -31,8 +31,8 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
         success: true,
         data: {
           id: 'wallet-demo-001',
-          mainBalance: 25000,
-          lockedSaving: 15000,
+          mainBalance: 0,
+          lockedSaving: 0,
           currency: 'NGN',
         },
       });

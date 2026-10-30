@@ -105,8 +105,8 @@ function getDemoCustomerDashboard(userEmail?: string) {
       kycStatus: 'verified',
       customerStatus: 'active_bnpl',
       wallet: {
-        mainBalance: 25000,
-        lockedSaving: 15000,
+        mainBalance: 0,
+        lockedSaving: 0,
       },
     },
     loan: {

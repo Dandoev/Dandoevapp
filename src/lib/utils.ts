@@ -41,7 +41,7 @@ export function calculateInstallment(principal: number, monthlyInterestRate: num
     // Interest = Principal * (Rate/100) * Months
     const totalInterest = Math.round(principal * (monthlyInterestRate / 100) * tenureMonths);
 
-    // Comprehensive Insurance: 10% on every product (compulsory)
+    // Comprehensive Insurance: 10% on every product
     const healthInsuranceFee = Math.round(principal * 0.10);
     // Processing Fee: Fixed 20,000
     const processingFee = 20000;

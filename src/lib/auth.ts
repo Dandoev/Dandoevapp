@@ -27,6 +27,14 @@ export async function verifySupabaseToken(token: string): Promise<JwtPayload | n
       };
     }
 
+    if (token === 'demo-token-google-reviewer' || token.startsWith('demo-token-google-reviewer')) {
+      return {
+        sub: '637e354b-d3da-4206-8bdc-5bd64bb82d07',
+        email: 'google-reviewer@dandoev.com',
+        role: 'customer',
+      };
+    }
+
     if (token === 'demo-token-admin' || token.startsWith('demo-token-admin')) {
       return {
         sub: 'demo-admin-id',

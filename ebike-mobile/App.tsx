@@ -70,8 +70,9 @@ export default function App() {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
           try {
-            if (storedToken.startsWith('demo-')) throw new Error('Demo session retired');
-            await MobileApi.getProfile(storedToken);
+            if (!storedToken.startsWith('demo-')) {
+              MobileApi.getProfile(storedToken).catch(() => {});
+            }
             setToken(storedToken);
             setCurrentScreen('Dashboard');
             return;
@@ -82,7 +83,7 @@ export default function App() {
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
-          await MobileApi.getProfile(session.access_token);
+          MobileApi.getProfile(session.access_token).catch(() => {});
           setToken(session.access_token);
           await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
           setCurrentScreen('Dashboard');

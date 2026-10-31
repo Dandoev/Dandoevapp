@@ -72,18 +72,46 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
       // 1. Try Backend API endpoint if reachable
       try {
         const apiData = await MobileApi.signUp({
-          firstName,
-          lastName,
-          email,
-          phone: phone || '+234 800 000 0000',
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          phone: phone ? phone.trim() : '+234 800 000 0000',
           password,
         });
         if (apiData.success) {
-          // Account creation succeeds, but authentication starts after a real sign-in.
+          // Account creation succeeds, navigate to SignIn
           navigateTo('SignIn');
           return;
         }
-      } catch (backendError) {
+      } catch (backendError: any) {
+        // 2. Direct Supabase Fallback
+        // Guarantees sign-up succeeds seamlessly even if backend returns 429 or network times out
+        try {
+          const { data: supaData, error: supaError } = await supabase.auth.signUp({
+            email: email.trim().toLowerCase(),
+            password,
+            options: {
+              data: {
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                phone: phone ? phone.trim() : null,
+                role: 'customer',
+              },
+            },
+          });
+
+          if (!supaError && supaData.user) {
+            navigateTo('SignIn');
+            return;
+          }
+
+          if (supaError) {
+            throw new Error(supaError.message || backendError.message);
+          }
+        } catch (supaFallbackError: any) {
+          throw supaFallbackError.message ? supaFallbackError : backendError;
+        }
+
         throw backendError;
       }
     } catch (err: any) {

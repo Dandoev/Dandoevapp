@@ -14,12 +14,14 @@ export interface RateLimitConfig {
 
 /** Pre-defined rate limit tiers */
 export const RATE_LIMITS = {
-  /** Auth signin: 5 req / 15 min */
-  AUTH_SIGNIN: { maxRequests: 5, windowSeconds: 900 } as RateLimitConfig,
-  /** Auth signup: 3 req / 1 hour */
-  AUTH_SIGNUP: { maxRequests: 3, windowSeconds: 3600 } as RateLimitConfig,
-  /** Token refresh: 10 req / 15 min */
-  AUTH_REFRESH: { maxRequests: 10, windowSeconds: 900 } as RateLimitConfig,
+  /** Auth signin: 15 req / 15 min */
+  AUTH_SIGNIN: { maxRequests: 15, windowSeconds: 900 } as RateLimitConfig,
+  /** Auth signup by IP: 60 req / 15 min (generous to support shared mobile/NAT gateways) */
+  AUTH_SIGNUP: { maxRequests: 60, windowSeconds: 900 } as RateLimitConfig,
+  /** Auth signup by individual email: 10 req / 15 min */
+  AUTH_SIGNUP_EMAIL: { maxRequests: 10, windowSeconds: 900 } as RateLimitConfig,
+  /** Token refresh: 20 req / 15 min */
+  AUTH_REFRESH: { maxRequests: 20, windowSeconds: 900 } as RateLimitConfig,
   /** Webhook ingress: 100 req / 1 min */
   WEBHOOK: { maxRequests: 100, windowSeconds: 60 } as RateLimitConfig,
   /** General API (authenticated): 60 req / 1 min */
@@ -89,7 +91,7 @@ export function rateLimitResponse(result: RateLimitResult): NextResponse {
       headers: {
         'X-RateLimit-Remaining': result.remaining.toString(),
         'X-RateLimit-Reset': result.resetAt.toString(),
-        'Retry-After': result.resetAt.toString(),
+        'Retry-After': Math.max(1, result.resetAt - Math.floor(Date.now() / 1000)).toString(),
       },
     }
   );

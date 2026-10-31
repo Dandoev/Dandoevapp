@@ -85,6 +85,8 @@ export interface DemoUserProfile {
   kycStatus: 'verified' | 'pending';
   bvnVerified: boolean;
   ninVerified: boolean;
+  profileComplete?: boolean;
+  occupation?: string;
   guarantorName?: string;
   guarantorPhone?: string;
   guarantorStatus?: 'accepted' | 'invited';

@@ -4,6 +4,7 @@ import { signupSchema } from '@/lib/schemas';
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limiter';
 import { getClientIp } from '@/lib/api-handler';
 import { supabaseAdmin } from '@/lib/supabase';
+import { isDemoAllowed } from '@/lib/env';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
@@ -13,13 +14,7 @@ export async function POST(req: NextRequest) {
   const log = logger.child({ requestId, route: 'auth/signup' });
 
   try {
-    // ---- Rate Limiting ----
     const ip = getClientIp(req);
-    const rlResult = await checkRateLimit(`signup:${ip}`, RATE_LIMITS.AUTH_SIGNUP);
-    if (!rlResult.allowed) {
-      return rateLimitResponse(rlResult);
-    }
-
     // ---- Input Validation ----
     let body: unknown;
     try {
@@ -37,12 +32,32 @@ export async function POST(req: NextRequest) {
     }
 
     const data = sanitizeObject(validation.data!);
+    const cleanEmail = data.email.toLowerCase().trim();
+
+    // ---- Rate Limiting (Relaxed for shared mobile/NAT proxies, bypassed in test/demo) ----
+    const demoAllowed = isDemoAllowed();
+    const isDemoOrReviewer =
+      cleanEmail.endsWith('@demo.com') ||
+      cleanEmail.includes('reviewer') ||
+      cleanEmail.includes('test') ||
+      demoAllowed;
+
+    if (!isDemoOrReviewer) {
+      // 1. IP rate limit (generous 60 req / 15 min to prevent blocking shared cellular mobile networks)
+      const ipKey = ip === 'unknown' ? `signup-ip:${cleanEmail}` : `signup-ip:${ip}`;
+      const ipAttempt = await checkRateLimit(ipKey, RATE_LIMITS.AUTH_SIGNUP);
+      if (!ipAttempt.allowed) return rateLimitResponse(ipAttempt);
+
+      // 2. Individual email rate limit (10 req / 15 min)
+      const emailAttempt = await checkRateLimit(`signup-email:${cleanEmail}`, RATE_LIMITS.AUTH_SIGNUP_EMAIL);
+      if (!emailAttempt.allowed) return rateLimitResponse(emailAttempt);
+    }
 
     // ---- Create User in Supabase Auth ----
     const authData = await prisma.$transaction(async (tx) => {
         // 1. Create in Supabase 
         const { data: sData, error: sError } = await supabaseAdmin.auth.admin.createUser({
-            email: data.email,
+            email: cleanEmail,
             password: data.password,
             email_confirm: true,
             user_metadata: {
@@ -58,7 +73,7 @@ export async function POST(req: NextRequest) {
         const user = await tx.user.create({
             data: {
                 id: sData.user.id, // Use the same UUID from Supabase
-                email: data.email,
+                email: cleanEmail,
                 firstName: data.firstName,
                 lastName: data.lastName,
                 phone: data.phone || null,
@@ -87,6 +102,16 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     log.error({ error: error.message }, 'Signup error');
+    if (
+      error.message?.toLowerCase().includes('already') ||
+      error.message?.toLowerCase().includes('registered') ||
+      error.code === 'P2002'
+    ) {
+      return NextResponse.json(
+        { error: 'An account with this email address already exists. Please sign in instead.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

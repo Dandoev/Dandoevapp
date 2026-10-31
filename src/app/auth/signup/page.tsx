@@ -119,17 +119,11 @@ function SignUpForm() {
       if (res.ok) {
         router.push(redirectTo);
       } else {
-        // Fallback demo session if DB signup endpoint returns non-200 in preview mode
-        const demoToken = 'demo-token-customer';
-        document.cookie = `token=${demoToken}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `sb-access-token=${demoToken}; path=/; max-age=86400; SameSite=Lax`;
-        router.push(redirectTo);
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'We could not create your account. Please try again.');
       }
     } catch {
-      const demoToken = 'demo-token-customer';
-      document.cookie = `token=${demoToken}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `sb-access-token=${demoToken}; path=/; max-age=86400; SameSite=Lax`;
-      router.push(redirectTo);
+      setError('We could not reach the signup service. Check your connection and try again.');
     } finally {
       setLoading(false);
     }

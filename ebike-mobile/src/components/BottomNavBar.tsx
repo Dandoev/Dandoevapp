@@ -12,7 +12,7 @@ interface BottomNavBarProps {
 
 export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: BottomNavBarProps) {
   const tabs: { key: TabType; label: string; icon: any }[] = [
-    { key: 'home', label: 'Home', icon: Home },
+    { key: 'home', label: 'Overview', icon: Home },
     { key: 'bikes', label: 'Shop', icon: ShoppingBag },
     { key: 'loans', label: 'Loans', icon: CreditCard },
     { key: 'profile', label: 'Profile', icon: User },

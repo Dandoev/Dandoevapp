@@ -146,16 +146,9 @@ export const GET = withAuth(
 
         // ---- C. Confirm BNPL Down Payment ----
         if (transaction.loanId) {
-          await tx.loan.update({
-            where: { id: transaction.loanId },
-            data: {
-              status: 'approved',
-              downPayment: expectedAmount,
-            },
-          });
           log.info(
             { loanId: transaction.loanId, amount: expectedAmount },
-            'BNPL loan down payment confirmed via Mono DirectPay'
+            'BNPL down payment recorded; application remains under review'
           );
         }
       });

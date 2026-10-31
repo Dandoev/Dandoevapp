@@ -46,7 +46,8 @@ export type ScreenType =
 export default function App() {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('Onboarding');
-  const [currentTab, setCurrentTab] = useState<TabType>('home');
+  // The shop is the primary point of contact after authentication.
+  const [currentTab, setCurrentTab] = useState<TabType>('bikes');
   const [selectedProduct, setSelectedProduct] = useState<DemoProduct | null>(null);
   const [prevScreenBeforeDetail, setPrevScreenBeforeDetail] = useState<ScreenType>('Dashboard');
   const [token, setToken] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export default function App() {
               MobileApi.getProfile(storedToken).catch(() => {});
             }
             setToken(storedToken);
+            setCurrentTab('bikes');
             setCurrentScreen('Dashboard');
             return;
           } catch {
@@ -86,6 +88,7 @@ export default function App() {
           MobileApi.getProfile(session.access_token).catch(() => {});
           setToken(session.access_token);
           await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
+          setCurrentTab('bikes');
           setCurrentScreen('Dashboard');
         }
       } catch (err) {
@@ -115,7 +118,7 @@ export default function App() {
   const navigateTo = (screen: ScreenType) => {
     setCurrentScreen(screen);
     if (screen === 'Dashboard') {
-      setCurrentTab('home');
+      setCurrentTab('bikes');
     }
   };
 

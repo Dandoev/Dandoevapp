@@ -10,11 +10,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react-native';
-import { supabase } from '../lib/supabase';
 import { MobileApi } from '../lib/api';
 import { ScreenType } from '../../App';
 import BrandMark from '../components/BrandMark';
-import { demoStore } from '../lib/demo-data';
 
 interface SignInScreenProps {
   navigateTo: (screen: ScreenType) => void;
@@ -38,64 +36,12 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
 
     setLoading(true);
     try {
-      // 1. Direct Supabase authentication (Immediate & resilient, avoids Render cold starts)
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-
-        if (!error && data?.session?.access_token) {
-          const authToken = data.session.access_token;
-          // Preload profile in background without blocking screen transition
-          MobileApi.getProfile(authToken).catch(() => {});
-          setToken(authToken);
-          navigateTo('Dashboard');
-          return;
-        }
-      } catch {
-        // Fall through to Render API or reviewer fail-safe
-      }
-
-      // 2. Attempt sign-in via Backend API (Render)
-      try {
-        const resData = await MobileApi.signIn({ email: cleanEmail, password });
-        if (resData.success && (resData.accessToken || resData.session?.access_token || resData.token)) {
-          const authToken = resData.accessToken || resData.session?.access_token || resData.token;
-          MobileApi.getProfile(authToken).catch(() => {});
-          setToken(authToken);
-          navigateTo('Dashboard');
-          return;
-        }
-      } catch {
-        // Fall through to reviewer fail-safe
-      }
-
-      // 3. Google Play Reviewer & Sandbox Fail-Safe
-      // Guarantees Google Play reviewers NEVER get rejected due to network firewalls or server cold-starts
-      const isReviewer = cleanEmail === 'google-reviewer@dandoev.com' && password === 'DandoEvReview2026!';
-      const isDemoUser = cleanEmail === 'solomon.dunu@demo.com' && password === 'password123';
-
-      if (isReviewer || isDemoUser) {
-        const demoToken = isReviewer ? 'demo-token-google-reviewer' : 'demo-token-customer';
-        demoStore.setUser({
-          firstName: isReviewer ? 'Google' : 'Solomon',
-          lastName: isReviewer ? 'Reviewer' : 'Dunu',
-          email: cleanEmail,
-          phone: '+234 802 345 6789',
-          kycTier: 2,
-          ninVerified: true,
-          bvnVerified: true,
-          profileComplete: true,
-          address: 'Victoria Island, Lagos, Nigeria',
-          occupation: isReviewer ? 'App Quality Reviewer' : 'Logistics Rider',
-        });
-        setToken(demoToken);
-        navigateTo('Dashboard');
-        return;
-      }
-
-      setErrorMessage('Invalid email or password. Please verify your credentials.');
+      const resData = await MobileApi.signIn({ email: cleanEmail, password });
+      const authToken = resData.accessToken || resData.session?.access_token || resData.token;
+      if (!resData.success || !authToken) throw new Error('Sign in could not be completed.');
+      await MobileApi.getProfile(authToken);
+      setToken(authToken);
+      navigateTo('Dashboard');
     } catch (err: any) {
       setErrorMessage(err.message || 'Sign in failed. Please check your credentials and try again.');
     } finally {

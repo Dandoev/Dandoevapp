@@ -36,6 +36,10 @@ export const PATCH = withRoles(roles, withValidation(
       }
 
       const blockers = getApprovalBlockers(loan);
+      if (Number(loan.downPayment) > 0) {
+        const paidDownPayment = await prisma.paymentTransaction.findFirst({ where: { loanId: loan.id, status: 'success', amount: loan.downPayment! } });
+        if (!paidDownPayment) blockers.push('BNPL down payment has not been confirmed');
+      }
       if (blockers.length) return NextResponse.json({ error: 'Loan is not eligible for approval', blockers }, { status: 409 });
       if (loan.repayments.length) return NextResponse.json({ error: 'Repayment schedule already exists' }, { status: 409 });
 

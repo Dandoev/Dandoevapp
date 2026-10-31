@@ -122,14 +122,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Update last login in local DB if connected
-    try {
-      await prisma.user.update({
-        where: { id: authUser.id },
-        data: { lastLoginAt: new Date() },
-      });
-    } catch {
-      // Ignored if using demo in-memory ID
+    if (!String(authSession.access_token).startsWith('demo-token')) {
+      const profile = await prisma.user.findUnique({ where: { id: authUser.id }, select: { id: true, role: true } });
+      if (!profile) return NextResponse.json({ error: 'Account profile is incomplete. Please contact support.' }, { status: 409 });
+      await prisma.user.update({ where: { id: authUser.id }, data: { lastLoginAt: new Date() } });
     }
 
     log.info({ userId: authUser.id }, 'User signed in successfully');

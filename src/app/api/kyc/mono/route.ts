@@ -152,9 +152,8 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     ]);
 
     // Step 3: Cross-validate KYC Identity (BVN, NIN, Legal Name match)
-    const { isMonoProductConfigured } = await import('@/lib/mono');
     const verifiedUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (isMonoProductConfigured('prove') && verifiedUser && verifiedUser.kycStatus !== 'verified') {
+    if (!verifiedUser || verifiedUser.kycStatus !== 'verified') {
       return NextResponse.json({ error: 'Complete Mono Prove identity verification before financial assessment' }, { status: 409 });
     }
     const creditBvn = identity.bvn;

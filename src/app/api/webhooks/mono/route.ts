@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
         const initiation = reference ? await prisma.auditLog.findFirst({ where: { action: 'MONO_PROVE_STARTED', resourceId: reference } }) : null;
         const user = initiation?.userId ? await prisma.user.findUnique({ where: { id: initiation.userId } }) : null;
         if (user && (!email || user.email.toLowerCase() === String(email).toLowerCase())) {
-          await prisma.user.update({ where: { id: user.id }, data: { kycStatus: successful ? 'verified' : 'failed' } });
+          if (successful || user.kycStatus !== 'verified') {
+            await prisma.user.update({ where: { id: user.id }, data: { kycStatus: successful ? 'verified' : 'failed' } });
+          }
           await prisma.auditLog.create({ data: { userId: user.id, action: successful ? 'MONO_PROVE_FACE_VERIFIED' : 'MONO_PROVE_FACE_REJECTED', resource: 'kyc', resourceId: reference, details: JSON.stringify({ provider: 'mono_prove', event: payload.event }) } });
         } else {
           throw new Error('Mono Prove reference or customer did not match an initiated session');
@@ -295,11 +297,7 @@ export async function POST(req: NextRequest) {
 
             // C. Confirm BNPL Down Payment
             if (transaction.loanId) {
-              await tx.loan.update({
-                where: { id: transaction.loanId },
-                data: { status: 'approved', downPayment: amountNgn },
-              });
-              log.info({ loanId: transaction.loanId }, 'Down payment confirmed via Mono DirectPay webhook');
+              log.info({ loanId: transaction.loanId }, 'BNPL down payment recorded; application remains under review');
             }
           });
         } catch (err: any) {

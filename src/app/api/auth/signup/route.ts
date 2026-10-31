@@ -35,12 +35,7 @@ export async function POST(req: NextRequest) {
     const cleanEmail = data.email.toLowerCase().trim();
 
     // ---- Rate Limiting (Relaxed for shared mobile/NAT proxies, bypassed in test/demo) ----
-    const demoAllowed = isDemoAllowed();
-    const isDemoOrReviewer =
-      cleanEmail.endsWith('@demo.com') ||
-      cleanEmail.includes('reviewer') ||
-      cleanEmail.includes('test') ||
-      demoAllowed;
+    const isDemoOrReviewer = isDemoAllowed() && cleanEmail.endsWith('@demo.com');
 
     if (!isDemoOrReviewer) {
       // 1. IP rate limit (generous 60 req / 15 min to prevent blocking shared cellular mobile networks)
@@ -54,9 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ---- Create User in Supabase Auth ----
-    const authData = await prisma.$transaction(async (tx) => {
-        // 1. Create in Supabase 
-        const { data: sData, error: sError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: sData, error: sError } = await supabaseAdmin.auth.admin.createUser({
             email: cleanEmail,
             password: data.password,
             email_confirm: true,
@@ -67,10 +60,11 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        if (sError) throw sError;
+    if (sError || !sData.user) throw sError || new Error('Supabase did not create the user');
 
-        // 2. Create in our local User table for profile data
-        const user = await tx.user.create({
+    let user;
+    try {
+        user = await prisma.user.create({
             data: {
                 id: sData.user.id, // Use the same UUID from Supabase
                 email: cleanEmail,
@@ -83,8 +77,13 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        return { user, authUser: sData.user };
-    });
+    } catch (databaseError) {
+        await supabaseAdmin.auth.admin.deleteUser(sData.user.id).catch((cleanupError) => {
+          log.error({ cleanupError, authUserId: sData.user.id }, 'Could not roll back incomplete signup');
+        });
+        throw databaseError;
+    }
+    const authData = { user };
 
     log.info({ userId: authData.user.id }, 'User created successfully with Supabase Auth');
 

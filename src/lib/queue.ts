@@ -61,6 +61,10 @@ export async function enqueuePaymentJob(data: {
   eventType: string;
   payload: unknown;
 }): Promise<string> {
+  if (!process.env.REDIS_URL) {
+    logger.warn({ eventId: data.eventId }, 'REDIS_URL not set; skipping BullMQ payment job enqueue');
+    return `mock-${data.eventId}`;
+  }
   const queue = getQueue(QUEUE_NAMES.PAYMENT_PROCESSING);
   const job = await queue.add('process-payment', data, {
     jobId: data.eventId, // Prevents duplicate jobs for same event
@@ -89,6 +93,10 @@ export async function enqueueNotification(data: {
   }).catch(err => logger.error({ error: err.message }, 'Real-time broadcast failed in enqueueNotification'));
 
   // 2. Add to background worker queue for delivery (Email, Push, SMS)
+  if (!process.env.REDIS_URL) {
+    logger.warn({ userId: data.userId, type: data.type }, 'REDIS_URL not set; skipping BullMQ notification job');
+    return `mock-notif-${Date.now()}`;
+  }
   const queue = getQueue(QUEUE_NAMES.NOTIFICATION);
   const job = await queue.add('send-notification', data);
   return job.id!;
@@ -98,6 +106,10 @@ export async function enqueueReconciliation(data: {
   type: 'payment' | 'overdue' | 'savings' | 'stale';
   dateRange?: { from: string; to: string };
 }): Promise<string> {
+  if (!process.env.REDIS_URL) {
+    logger.warn({ type: data.type }, 'REDIS_URL not set; skipping BullMQ reconciliation enqueue');
+    return `mock-rec-${Date.now()}`;
+  }
   const queue = getQueue(QUEUE_NAMES.RECONCILIATION);
   const job = await queue.add('reconcile', data);
   return job.id!;

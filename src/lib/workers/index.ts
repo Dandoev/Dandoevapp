@@ -11,6 +11,11 @@ export function startWorkers() {
     return;
   }
 
+  if (!process.env.REDIS_URL) {
+    logger.warn('REDIS_URL is not configured. BullMQ background workers will not be started.');
+    return;
+  }
+
   logger.info('Initializing BullMQ Background Workers...');
 
   // 1. Payment Processing Worker

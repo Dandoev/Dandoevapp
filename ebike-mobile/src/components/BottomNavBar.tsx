@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Home, ShoppingBag, CreditCard, User } from 'lucide-react-native';
+import { LayoutDashboard, ShoppingBag, CreditCard, User } from 'lucide-react-native';
 
 export type TabType = 'home' | 'bikes' | 'loans' | 'profile';
 
@@ -12,7 +12,7 @@ interface BottomNavBarProps {
 
 export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: BottomNavBarProps) {
   const tabs: { key: TabType; label: string; icon: any }[] = [
-    { key: 'home', label: 'Overview', icon: Home },
+    { key: 'home', label: 'Overview', icon: LayoutDashboard },
     { key: 'bikes', label: 'Shop', icon: ShoppingBag },
     { key: 'loans', label: 'Loans', icon: CreditCard },
     { key: 'profile', label: 'Profile', icon: User },

@@ -28,12 +28,14 @@ export function usePushNotifications() {
 
   useEffect(() => {
     let isMounted = true;
+    let registeredToken: string | undefined;
 
     // Push notifications are optional and unsupported in the web client.
     if (Platform.OS !== 'web') {
       registerForPushNotificationsAsync()
         .then(token => {
           if (!isMounted) return;
+          registeredToken = token;
           setExpoPushToken(token);
           if (token) syncTokenWithBackend(token).catch(() => {});
         })
@@ -42,6 +44,14 @@ export function usePushNotifications() {
           console.warn('Push notification setup skipped:', error);
         });
     }
+
+    // Session restoration can finish after notification registration. Retry token
+    // sync whenever Supabase establishes or refreshes the mobile session.
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (registeredToken && session) {
+        syncTokenWithBackend(registeredToken, session.access_token).catch(() => {});
+      }
+    });
 
     if (Platform.OS !== 'web') {
       notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
@@ -61,14 +71,16 @@ export function usePushNotifications() {
       if (responseListener.current) {
         responseListener.current.remove();
       }
+      authSubscription.subscription.unsubscribe();
     };
   }, []);
 
   return { expoPushToken };
 }
 
-async function syncTokenWithBackend(token: string) {
-  const { data: { session } } = await supabase.auth.getSession();
+async function syncTokenWithBackend(token: string, accessToken?: string) {
+  const sessionResult = accessToken ? null : await supabase.auth.getSession();
+  const session = accessToken ? { access_token: accessToken } : sessionResult?.data.session;
   if (!session) return;
 
   try {

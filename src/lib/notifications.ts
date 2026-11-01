@@ -33,8 +33,36 @@ async function createInAppNotification(
         isRead: false,
       },
     });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { pushToken: true },
+    });
+    if (user?.pushToken) {
+      await sendExpoPushNotification(user.pushToken, title, message);
+    }
   } catch (err: any) {
     logger.warn({ err: err.message, userId }, 'Could not persist in-app notification');
+  }
+}
+
+async function sendExpoPushNotification(to: string, title: string, body: string) {
+  if (!to.startsWith('ExponentPushToken[')) return;
+  const response = await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      to,
+      title,
+      body,
+      sound: 'default',
+      priority: 'high',
+      channelId: 'default',
+      data: { screen: 'Notifications' },
+    }),
+  });
+  if (!response.ok) {
+    logger.warn({ status: response.status }, 'Expo push notification request failed');
   }
 }
 

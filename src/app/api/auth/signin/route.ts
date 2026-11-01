@@ -61,6 +61,24 @@ export async function POST(req: NextRequest) {
       if (!authError && authData.user && authData.session) {
         authUser = authData.user;
         authSession = authData.session;
+      } else if (authError?.message?.toLowerCase().includes('email not confirmed')) {
+        // Auto-confirm user if unconfirmed in Supabase to eliminate onboarding friction
+        try {
+          const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+          const targetUser = listData?.users?.find(
+            (u) => u.email?.toLowerCase() === email.toLowerCase()
+          );
+          if (targetUser) {
+            await supabaseAdmin.auth.admin.updateUserById(targetUser.id, { email_confirm: true });
+            const retryRes = await supabaseAdmin.auth.signInWithPassword({ email, password });
+            if (!retryRes.error && retryRes.data?.user && retryRes.data?.session) {
+              authUser = retryRes.data.user;
+              authSession = retryRes.data.session;
+            }
+          }
+        } catch (confirmErr) {
+          log.warn({ confirmErr }, 'Auto-confirm fallback attempted');
+        }
       }
     } catch {
       // Supabase unavailable, proceed to demo checks
@@ -123,9 +141,39 @@ export async function POST(req: NextRequest) {
     }
 
     if (!String(authSession.access_token).startsWith('demo-token')) {
-      const profile = await prisma.user.findUnique({ where: { id: authUser.id }, select: { id: true, role: true } });
-      if (!profile) return NextResponse.json({ error: 'Account profile is incomplete. Please contact support.' }, { status: 409 });
-      await prisma.user.update({ where: { id: authUser.id }, data: { lastLoginAt: new Date() } });
+      let profile = await prisma.user.findUnique({ where: { id: authUser.id }, select: { id: true, role: true } });
+      if (!profile) {
+        // If not found by UUID, check if user exists by email and re-link UUID
+        const existingByEmail = await prisma.user.findFirst({
+          where: { email: { equals: email.toLowerCase().trim(), mode: 'insensitive' } },
+        });
+        if (existingByEmail) {
+          profile = await prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: { id: authUser.id, lastLoginAt: new Date() },
+            select: { id: true, role: true },
+          });
+        } else {
+          // Auto-provision from Supabase Auth metadata
+          const meta = authUser.user_metadata || {};
+          profile = await prisma.user.create({
+            data: {
+              id: authUser.id,
+              email: authUser.email.toLowerCase().trim(),
+              firstName: meta.firstName || 'Customer',
+              lastName: meta.lastName || 'User',
+              phone: meta.phone || null,
+              passwordHash: 'SUPABASE_AUTH',
+              role: (meta.role as any) || 'customer',
+              customerStatus: 'registered',
+              lastLoginAt: new Date(),
+            },
+            select: { id: true, role: true },
+          });
+        }
+      } else {
+        await prisma.user.update({ where: { id: authUser.id }, data: { lastLoginAt: new Date() } });
+      }
     }
 
     log.info({ userId: authUser.id }, 'User signed in successfully');

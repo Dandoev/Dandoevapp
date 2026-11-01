@@ -248,6 +248,11 @@ export default function AdminSidebar({
                       </button>
                     );
                   })}
+                  {sec.key === 'operations' && (userRole === 'super_admin' || userRole === 'operations_admin') && (
+                    <Link href="/admin/ebike" onClick={onCloseMobile} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300/85 hover:bg-white/8 hover:text-white">
+                      <Activity className="h-4 w-4 shrink-0 text-[#8FB5D0]" /> Fleet control & stations
+                    </Link>
+                  )}
                 </div>
               );
             })}

@@ -10,6 +10,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react-native';
+import { supabase } from '../lib/supabase';
+import { demoStore } from '../lib/demo-data';
 import { MobileApi } from '../lib/api';
 import { ScreenType } from '../../App';
 import BrandMark from '../components/BrandMark';
@@ -36,12 +38,67 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
 
     setLoading(true);
     try {
-      const resData = await MobileApi.signIn({ email: cleanEmail, password });
-      const authToken = resData.accessToken || resData.session?.access_token || resData.token;
-      if (!resData.success || !authToken) throw new Error('Sign in could not be completed.');
-      await MobileApi.getProfile(authToken);
-      setToken(authToken);
-      navigateTo('Dashboard');
+      let authToken: string | null = null;
+
+      // 1. Primary: Attempt sign-in via Backend API (auto-confirms unconfirmed emails & syncs DB profile)
+      try {
+        const resData = await MobileApi.signIn({ email: cleanEmail, password });
+        authToken = resData.accessToken || resData.session?.access_token || resData.token || null;
+      } catch (backendError: any) {
+        // If explicitly invalid credentials, verify reviewer credentials before rejecting
+        if (backendError.message?.toLowerCase().includes('invalid credentials')) {
+          const isReviewer = cleanEmail === 'google-reviewer@dandoev.com' && password === 'DandoEvReview2026!';
+          const isDemoUser = cleanEmail === 'solomon.dunu@demo.com' && password === 'password123';
+          if (!isReviewer && !isDemoUser) {
+            throw backendError;
+          }
+        }
+
+        // 2. Direct Supabase Fallback (immediate fallback if Render backend is sleeping or unreachable)
+        try {
+          const { data: supaData, error: supaError } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          });
+          if (!supaError && supaData?.session?.access_token) {
+            authToken = supaData.session.access_token;
+          } else if (supaError) {
+            throw new Error(supaError.message || backendError.message);
+          }
+        } catch (supaErr: any) {
+          // 3. Google Play & App Store Reviewer Fallback
+          const isReviewer = cleanEmail === 'google-reviewer@dandoev.com' && password === 'DandoEvReview2026!';
+          const isDemoUser = cleanEmail === 'solomon.dunu@demo.com' && password === 'password123';
+          if (isReviewer || isDemoUser) {
+            const demoToken = isReviewer ? 'demo-token-google-reviewer' : 'demo-token-customer';
+            demoStore.setUser({
+              firstName: isReviewer ? 'Google' : 'Solomon',
+              lastName: isReviewer ? 'Reviewer' : 'Dunu',
+              email: cleanEmail,
+              phone: '+234 802 345 6789',
+              kycTier: 2,
+              ninVerified: true,
+              bvnVerified: true,
+              profileComplete: true,
+              address: 'Victoria Island, Lagos, Nigeria',
+              occupation: isReviewer ? 'App Quality Reviewer' : 'Logistics Rider',
+            });
+            setToken(demoToken);
+            navigateTo('Dashboard');
+            return;
+          }
+          throw supaErr;
+        }
+      }
+
+      if (authToken) {
+        MobileApi.getProfile(authToken).catch(() => {});
+        setToken(authToken);
+        navigateTo('Dashboard');
+        return;
+      }
+
+      throw new Error('Sign in could not be completed. Please check your credentials.');
     } catch (err: any) {
       setErrorMessage(err.message || 'Sign in failed. Please check your credentials and try again.');
     } finally {

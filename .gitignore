@@ -32,6 +32,7 @@ prisma/generated/
 *.db
 *.sqlite
 *.sql
+!prisma/migrations/20261101000000_connected_fleet_foundation/migration.sql
 
 # ---- Logs ----
 logs/

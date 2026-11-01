@@ -222,8 +222,73 @@ model Bike {
   // Relations
   orders Order[]
   loans  Loan[]
+  vehicleAssets VehicleAsset[]
 
   @@map("bikes")
+}
+
+model VehicleAsset {
+  id String @id @default(uuid())
+  bikeId String
+  bike Bike @relation(fields: [bikeId], references: [id])
+  serialNumber String @unique
+  imei String? @unique
+  bleMac String? @unique
+  firmwareVersion String?
+  status String @default("inventory")
+  assignments VehicleAssignment[]
+  positions VehiclePosition[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([bikeId, status])
+  @@map("vehicle_assets")
+}
+
+model VehicleAssignment {
+  id String @id @default(uuid())
+  assetId String
+  asset VehicleAsset @relation(fields: [assetId], references: [id])
+  riderId String
+  loanId String?
+  orderId String?
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  @@index([assetId, endedAt])
+  @@index([riderId, endedAt])
+  @@map("vehicle_assignments")
+}
+
+model VehiclePosition {
+  id String @id @default(uuid())
+  assetId String
+  asset VehicleAsset @relation(fields: [assetId], references: [id])
+  latitude Decimal @db.Decimal(10, 7)
+  longitude Decimal @db.Decimal(10, 7)
+  satellites Int?
+  hdop Decimal? @db.Decimal(6, 2)
+  estimated Boolean @default(false)
+  observedAt DateTime
+  receivedAt DateTime @default(now())
+  source String @default("omni-device")
+  @@unique([assetId, observedAt])
+  @@index([assetId, observedAt(sort: Desc)])
+  @@map("vehicle_positions")
+}
+
+model SwapStation {
+  id String @id @default(uuid())
+  name String
+  address String
+  latitude Decimal @db.Decimal(10, 7)
+  longitude Decimal @db.Decimal(10, 7)
+  hours String
+  batteryTypes String[]
+  availableBatteries Int @default(0)
+  enabled Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([enabled])
+  @@map("swap_stations")
 }
 
 model Order {

@@ -25,9 +25,9 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Set default 8s timeout to prevent hanging on sleeping servers
+  // Set default 25s timeout to allow Render cold-starts & mobile latency
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 8000);
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 25000);
 
   try {
     const res = await fetch(`${APP_CONFIG.apiEndpoint}${cleanEndpoint}`, {
@@ -66,6 +66,7 @@ export const MobileApi = {
     }>('/auth/signin', {
       method: 'POST',
       body: credentials,
+      timeout: 30000,
     });
   },
 
@@ -86,6 +87,7 @@ export const MobileApi = {
     }>('/auth/signup', {
       method: 'POST',
       body: userData,
+      timeout: 30000,
     });
   },
 

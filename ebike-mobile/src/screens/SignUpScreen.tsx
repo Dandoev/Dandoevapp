@@ -69,12 +69,13 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
     setLoading(true);
 
     try {
-      // 1. Try Backend API endpoint if reachable
+      const cleanEmail = email.trim().toLowerCase();
+      // 1. Try Backend API endpoint if reachable (auto-confirms user and synchronizes profile)
       try {
         const apiData = await MobileApi.signUp({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          email: email.trim(),
+          email: cleanEmail,
           phone: phone ? phone.trim() : '+234 800 000 0000',
           password,
         });
@@ -84,11 +85,18 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
           return;
         }
       } catch (backendError: any) {
-        // 2. Direct Supabase Fallback
-        // Guarantees sign-up succeeds seamlessly even if backend returns 429 or network times out
+        // If account already exists, immediately show error instead of falling back to Supabase
+        if (
+          backendError.message?.toLowerCase().includes('already') ||
+          backendError.message?.toLowerCase().includes('exists')
+        ) {
+          throw backendError;
+        }
+
+        // 2. Direct Supabase Fallback (on network timeout / server sleeping)
         try {
           const { data: supaData, error: supaError } = await supabase.auth.signUp({
-            email: email.trim().toLowerCase(),
+            email: cleanEmail,
             password,
             options: {
               data: {

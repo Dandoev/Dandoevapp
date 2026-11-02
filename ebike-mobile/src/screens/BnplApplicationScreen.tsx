@@ -48,18 +48,24 @@ type SubmittedLoanInfo = {
 export default function BnplApplicationScreen({
   token,
   product,
+  resumeStep,
+  onRequestKyc,
   onBack,
   onComplete,
 }: {
   token: string;
   product: DemoProduct;
+  resumeStep: number | null;
+  onRequestKyc: () => void;
   onBack: () => void;
   onComplete: () => void;
 }) {
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [submittedLoan, setSubmittedLoan] = useState<SubmittedLoanInfo | null>(null);
+  const [submittedLoan, setSubmittedLoan] = useState<SubmittedLoanInfo | null>(
+    null,
+  );
   const [applicationKey] = useState(
     () => `bnpl-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
   );
@@ -122,6 +128,10 @@ export default function BnplApplicationScreen({
       })
       .catch(() => {});
   }, [draftKey]);
+
+  useEffect(() => {
+    if (resumeStep !== null) setStep(resumeStep);
+  }, [resumeStep]);
 
   useEffect(() => {
     if (submittedLoan) return;
@@ -235,7 +245,9 @@ export default function BnplApplicationScreen({
       const callbackUrl = result.type === "success" ? result.url : undefined;
       const code = callbackUrl?.match(/[?&]code=([^&]+)/)?.[1];
       if (!code)
-        throw new Error("Bank connection window closed or cancelled. Please tap to retry.");
+        throw new Error(
+          "Bank connection window closed or cancelled. Please tap to retry.",
+        );
       const linked = await MobileApi.completeMonoFinancial(
         decodeURIComponent(code),
         token,
@@ -320,7 +332,8 @@ export default function BnplApplicationScreen({
       );
       await AsyncStorage.removeItem(draftKey);
       setSubmittedLoan({
-        loanId: response.loanId || `APP-${Date.now().toString(36).toUpperCase()}`,
+        loanId:
+          response.loanId || `APP-${Date.now().toString(36).toUpperCase()}`,
         bikeName: product.name,
         loanAmount,
         tenure,
@@ -377,7 +390,11 @@ export default function BnplApplicationScreen({
           <Text style={styles.successEyebrow}>APPLICATION SUBMITTED</Text>
           <Text style={styles.successTitle}>Underwriting In Progress! 🎉</Text>
           <Text style={styles.successSub}>
-            Your application for <Text style={{ fontWeight: '800', color: '#0A154F' }}>{submittedLoan.bikeName}</Text> has been received and queued for credit assessment.
+            Your application for{" "}
+            <Text style={{ fontWeight: "800", color: "#0A154F" }}>
+              {submittedLoan.bikeName}
+            </Text>{" "}
+            has been received and queued for credit assessment.
           </Text>
 
           <View style={styles.refPill}>
@@ -398,12 +415,20 @@ export default function BnplApplicationScreen({
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Financed Principal</Text>
-            <Text style={styles.reviewVal}>₦{submittedLoan.loanAmount.toLocaleString()}</Text>
+            <Text style={styles.reviewVal}>
+              ₦{submittedLoan.loanAmount.toLocaleString()}
+            </Text>
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Repayment Cadence</Text>
-            <Text style={[styles.reviewVal, { color: '#2E3192', fontWeight: '800' }]}>
-              ₦{submittedLoan.monthly.toLocaleString()} / {submittedLoan.frequency}
+            <Text
+              style={[
+                styles.reviewVal,
+                { color: "#2E3192", fontWeight: "800" },
+              ]}
+            >
+              ₦{submittedLoan.monthly.toLocaleString()} /{" "}
+              {submittedLoan.frequency}
             </Text>
           </View>
           <View style={styles.reviewRow}>
@@ -413,7 +438,9 @@ export default function BnplApplicationScreen({
           <View style={[styles.reviewRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.reviewLabel}>Fulfillment Method</Text>
             <Text style={styles.reviewVal}>
-              {submittedLoan.deliveryType === 'pickup' ? 'Hub Pickup (Lagos Central)' : 'Doorstep Courier'}
+              {submittedLoan.deliveryType === "pickup"
+                ? "Hub Pickup (Lagos Central)"
+                : "Doorstep Courier"}
             </Text>
           </View>
         </View>
@@ -422,18 +449,25 @@ export default function BnplApplicationScreen({
         <View style={styles.card}>
           <View style={styles.cardHeaderWithIcon}>
             <Users size={18} color="#2E3192" />
-            <Text style={styles.cardTitle}>Guarantor Invitations Dispatched</Text>
+            <Text style={styles.cardTitle}>
+              Guarantor Invitations Dispatched
+            </Text>
           </View>
           <Text style={styles.guarantorNote}>
-            We have sent verification SMS & email links to your 2 nominated guarantors:
+            We have sent verification SMS & email links to your 2 nominated
+            guarantors:
           </Text>
           {submittedLoan.guarantors.map((g, idx) => (
             <View key={idx} style={styles.guarantorItem}>
               <View style={styles.guarantorAvatar}>
-                <Text style={styles.guarantorInitial}>{g.fullName[0]?.toUpperCase() || 'G'}</Text>
+                <Text style={styles.guarantorInitial}>
+                  {g.fullName[0]?.toUpperCase() || "G"}
+                </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.guarantorName}>{g.fullName} ({g.relationship})</Text>
+                <Text style={styles.guarantorName}>
+                  {g.fullName} ({g.relationship})
+                </Text>
                 <Text style={styles.guarantorPhone}>{g.phone}</Text>
               </View>
               <View style={styles.guarantorBadge}>
@@ -449,22 +483,34 @@ export default function BnplApplicationScreen({
           <Text style={styles.cardTitle}>What Happens Next?</Text>
           <View style={styles.timelineList}>
             <View style={styles.timelineItem}>
-              <View style={[styles.timelineIconDot, styles.timelineIconDotDone]}>
+              <View
+                style={[styles.timelineIconDot, styles.timelineIconDotDone]}
+              >
                 <Check size={12} color="#FFFFFF" strokeWidth={3} />
               </View>
               <View style={styles.timelineBody}>
                 <Text style={styles.timelineTitle}>1. Application Logged</Text>
-                <Text style={styles.timelineText}>Your bank statement and profile have been securely synchronized with Mono.</Text>
+                <Text style={styles.timelineText}>
+                  Your bank statement and profile have been securely
+                  synchronized with Mono.
+                </Text>
               </View>
             </View>
 
             <View style={styles.timelineItem}>
-              <View style={[styles.timelineIconDot, styles.timelineIconDotActive]}>
+              <View
+                style={[styles.timelineIconDot, styles.timelineIconDotActive]}
+              >
                 <Text style={styles.timelineDotNumber}>2</Text>
               </View>
               <View style={styles.timelineBody}>
-                <Text style={styles.timelineTitle}>2. Guarantor Digital Sign-Off</Text>
-                <Text style={styles.timelineText}>Remind both guarantors to click their invite link to verify their details.</Text>
+                <Text style={styles.timelineTitle}>
+                  2. Guarantor Digital Sign-Off
+                </Text>
+                <Text style={styles.timelineText}>
+                  Remind both guarantors to click their invite link to verify
+                  their details.
+                </Text>
               </View>
             </View>
 
@@ -473,30 +519,52 @@ export default function BnplApplicationScreen({
                 <Text style={styles.timelineDotNumber}>3</Text>
               </View>
               <View style={styles.timelineBody}>
-                <Text style={styles.timelineTitle}>3. Credit Underwriter Decision</Text>
-                <Text style={styles.timelineText}>Our operations risk team approves within 24 hours.</Text>
+                <Text style={styles.timelineTitle}>
+                  3. Credit Underwriter Decision
+                </Text>
+                <Text style={styles.timelineText}>
+                  Our operations risk team approves within 24 hours.
+                </Text>
               </View>
             </View>
 
-            <View style={[styles.timelineItem, { borderLeftWidth: 0, paddingBottom: 0 }]}>
+            <View
+              style={[
+                styles.timelineItem,
+                { borderLeftWidth: 0, paddingBottom: 0 },
+              ]}
+            >
               <View style={styles.timelineIconDot}>
                 <Text style={styles.timelineDotNumber}>4</Text>
               </View>
               <View style={styles.timelineBody}>
-                <Text style={styles.timelineTitle}>4. Vehicle Handover & Keys</Text>
-                <Text style={styles.timelineText}>Pick up your bike at the Ikeja Central Hub or receive dispatch delivery.</Text>
+                <Text style={styles.timelineTitle}>
+                  4. Vehicle Handover & Keys
+                </Text>
+                <Text style={styles.timelineText}>
+                  Pick up your bike at the Ikeja Central Hub or receive dispatch
+                  delivery.
+                </Text>
               </View>
             </View>
           </View>
         </View>
 
         {/* Action Buttons */}
-        <TouchableOpacity style={styles.primary} onPress={onComplete} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.primary}
+          onPress={onComplete}
+          activeOpacity={0.85}
+        >
           <Text style={styles.primaryText}>View Application in My Plans</Text>
           <ChevronRight size={18} color="#0A154F" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryBtn} onPress={onBack} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.secondaryBtn}
+          onPress={onBack}
+          activeOpacity={0.85}
+        >
           <Text style={styles.secondaryBtnText}>Back to Product Catalog</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -597,7 +665,9 @@ export default function BnplApplicationScreen({
               value={state}
               onChangeText={setState}
             />
-            <Text style={[styles.cardTitle, { marginTop: 16 }]}>Delivery Option</Text>
+            <Text style={[styles.cardTitle, { marginTop: 16 }]}>
+              Delivery Option
+            </Text>
             <View style={styles.choiceRow}>
               {(["pickup", "delivery_lagos", "delivery_outside"] as const).map(
                 (option) => (
@@ -652,12 +722,12 @@ export default function BnplApplicationScreen({
                 if (message) setError(message);
                 else {
                   setError("");
-                  setStep(1);
+                  onRequestKyc();
                 }
               }}
             >
               <Text style={styles.primaryText}>
-                Continue to bank verification
+                Continue to identity verification
               </Text>
               <ChevronRight size={18} color="#102152" />
             </TouchableOpacity>
@@ -677,7 +747,8 @@ export default function BnplApplicationScreen({
               <View style={styles.verifiedBox}>
                 <CheckCircle2 size={18} color="#10B981" />
                 <Text style={styles.verifiedText}>
-                  Bank & Mono assessment linked ({bankName || "Verified Account"})
+                  Bank & Mono assessment linked (
+                  {bankName || "Verified Account"})
                 </Text>
               </View>
             ) : (
@@ -1084,5 +1155,10 @@ const styles = StyleSheet.create({
   timelineDotNumber: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
   timelineBody: { flex: 1, marginTop: -2 },
   timelineTitle: { color: "#0A154F", fontSize: 13, fontWeight: "800" },
-  timelineText: { color: "#64748B", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  timelineText: {
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
 });

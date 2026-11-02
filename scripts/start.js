@@ -5,7 +5,10 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 const port = process.env.PORT || '3000';
-const hostname = process.env.HOSTNAME || '0.0.0.0';
+// Render sets HOSTNAME to the container name. Binding to that name makes the
+// process unreachable from Render's proxy; always bind the web server to all
+// interfaces and use PORT only from the platform.
+const hostname = '0.0.0.0';
 
 console.log(`[start] Starting Next.js production server on ${hostname}:${port}...`);
 

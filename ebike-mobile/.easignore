@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Local builds & exports
+dist/
+.qa-export/
+web-build/
+.expo/
+
+# Store marketing assets (not needed in app bundle)
+store-assets/
+
+# Native folders (managed by prebuild)
+/ios
+/android
+
+# Env
+.env
+.env*.local
+
+# Logs and system
+*.log
+.DS_Store

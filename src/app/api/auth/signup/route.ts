@@ -48,6 +48,44 @@ export async function POST(req: NextRequest) {
       if (!emailAttempt.allowed) return rateLimitResponse(emailAttempt);
     }
 
+    // ---- Check for Existing or Orphaned User in Prisma DB ----
+    const existingPrismaUser = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: {
+        loans: { where: { status: { in: ['active', 'approved', 'under_review', 'pending'] } } },
+      },
+    });
+
+    if (existingPrismaUser) {
+      // Check if user still exists in Supabase Auth
+      let supaAuthUser = null;
+      try {
+        const { data: supaUserRes } = await supabaseAdmin.auth.admin.getUserById(existingPrismaUser.id);
+        supaAuthUser = supaUserRes?.user;
+      } catch {}
+
+      if (supaAuthUser) {
+        return NextResponse.json(
+          { error: 'An account with this email address already exists. Please sign in instead.' },
+          { status: 409 }
+        );
+      }
+
+      // User was deleted from Supabase Auth directly (orphaned record in Prisma)
+      if (existingPrismaUser.loans.length > 0) {
+        return NextResponse.json(
+          { error: 'An account with this email address has an active lease. Please contact support.' },
+          { status: 409 }
+        );
+      }
+
+      // Safely purge orphaned record so fresh signup can proceed seamlessly
+      log.warn({ userId: existingPrismaUser.id, email: cleanEmail }, 'Purging orphaned DB user with no Supabase Auth counterpart');
+      await prisma.auditLog.deleteMany({ where: { userId: existingPrismaUser.id } }).catch(() => {});
+      await prisma.wallet.deleteMany({ where: { userId: existingPrismaUser.id } }).catch(() => {});
+      await prisma.user.delete({ where: { id: existingPrismaUser.id } });
+    }
+
     // ---- Create User in Supabase Auth ----
     const { data: sData, error: sError } = await supabaseAdmin.auth.admin.createUser({
             email: cleanEmail,

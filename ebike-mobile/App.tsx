@@ -24,6 +24,7 @@ import KycScreen from './src/screens/KycScreen';
 import FundWalletScreen from './src/screens/FundWalletScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import BottomNavBar, { TabType } from './src/components/BottomNavBar';
+import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { usePushNotifications } from './src/lib/usePushNotifications';
 import { demoStore, DemoProduct } from './src/lib/demo-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -190,7 +191,8 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppErrorBoundary>
+      <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={['Onboarding', 'SignIn', 'SignUp'].includes(currentScreen) ? 'light-content' : 'dark-content'} backgroundColor={['Onboarding', 'SignIn', 'SignUp'].includes(currentScreen) ? '#0A154F' : '#F6F7FC'} />
       <View style={[styles.webFrame, viewportWidth >= 768 && {
         maxWidth: 860,
@@ -261,7 +263,8 @@ export default function App() {
           </View>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </AppErrorBoundary>
   );
 }
 

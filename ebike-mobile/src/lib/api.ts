@@ -54,7 +54,11 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
     }
 
     if (!res.ok) {
-      throw new Error(data?.error || data?.message || `API Request failed with status ${res.status}`);
+      const serverMessage = data?.error || data?.message;
+      if (res.status === 401) throw new Error(serverMessage || 'Your session has expired. Please sign in again.');
+      if (res.status === 429) throw new Error(serverMessage || 'Too many attempts. Please wait a moment and try again.');
+      if (res.status >= 500) throw new Error(serverMessage || 'The service is temporarily unavailable. Please try again shortly.');
+      throw new Error(serverMessage || `Request failed (${res.status}). Please try again.`);
     }
 
     if (data === null) {

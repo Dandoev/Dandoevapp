@@ -37,9 +37,28 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
       signal: controller.signal,
     });
 
-    const data = await res.json();
+    // Render/proxy errors can occasionally return an empty or HTML body. Do not
+    // let JSON.parse mask the actual authentication/network error as
+    // "Unexpected EOF".
+    const responseText = await res.text();
+    let data: any = null;
+    if (responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        if (!res.ok) {
+          throw new Error(`Server returned an invalid response (${res.status}). Please try again.`);
+        }
+        throw new Error('Server returned an invalid response. Please try again.');
+      }
+    }
+
     if (!res.ok) {
-      throw new Error(data.error || `API Request failed with status ${res.status}`);
+      throw new Error(data?.error || data?.message || `API Request failed with status ${res.status}`);
+    }
+
+    if (data === null) {
+      throw new Error('Server returned an empty response. Please try again.');
     }
 
     return data as T;

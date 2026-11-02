@@ -8,13 +8,18 @@ import logger from './logger';
 
 function getConnection(): ConnectionOptions {
   const url = process.env.REDIS_URL || 'redis://localhost:6379';
-  // Parse the URL to extract host, port, etc.
   const parsed = new URL(url);
+  const isTls = parsed.protocol === 'rediss:';
+
   return {
     host: parsed.hostname || 'localhost',
     port: parseInt(parsed.port || '6379'),
+    username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
     password: parsed.password || undefined,
     maxRetriesPerRequest: null, // Required by BullMQ
+    connectTimeout: 10000,
+    enableReadyCheck: true,
+    ...(isTls ? { tls: {} } : {}),
   };
 }
 

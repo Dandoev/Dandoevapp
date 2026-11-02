@@ -57,6 +57,18 @@ export const POST = withAuth(
             });
 
             if (!bike) {
+              const modelMatch = data.bikeId.replace(/^(bike|seed-bike)-/i, '');
+              bike = await prisma.bike.findFirst({
+                where: {
+                  OR: [
+                    { model: { equals: modelMatch, mode: 'insensitive' } },
+                    { name: { contains: modelMatch, mode: 'insensitive' } },
+                  ],
+                },
+              });
+            }
+
+            if (!bike) {
               return NextResponse.json({ error: 'Bike not found' }, { status: 404 });
             }
 

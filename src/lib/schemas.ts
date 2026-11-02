@@ -27,18 +27,18 @@ export const signinSchema = z.object({
 // ---- Orders ----
 
 export const createOrderSchema = z.object({
-  bikeId: z.string().uuid('Invalid bike ID').optional(),
+  bikeId: z.string().min(1, 'Invalid bike ID').optional(),
   quantity: z.number().int().min(1).max(10).default(1),
   paymentMethod: z.enum(['card', 'bank_transfer', 'wallet', 'bnpl']),
   deliveryType: z.enum(['pickup', 'delivery_lagos', 'delivery_outside']).default('pickup'),
   deliveryAddress: z.string().max(500).trim().optional(),
   deliveryCity: z.string().max(100).trim().optional(),
   deliveryState: z.string().max(50).trim().optional(),
-  deliveryPhone: z.string().min(10).max(15).trim().optional(),
-  loanId: z.string().uuid().optional(),
+  deliveryPhone: z.string().min(10).max(25).trim().optional(),
+  loanId: z.string().min(1).optional(),
   notes: z.string().max(1000).trim().optional(),
   accessories: z.array(z.object({
-    id: z.string().uuid('Invalid accessory ID'),
+    id: z.string().min(1, 'Invalid accessory ID'),
     quantity: z.number().int().min(1).max(10).default(1),
   })).optional(),
 });

@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { verifyMonoPayment } from '@/lib/mono';
 import { assertVerifiedPayment, PaymentIntentError, resolvePaymentIntent } from '@/lib/payment-intent';
+import { notifyOrderConfirmed, notifyDownPaymentSuccess, notifyOrderPaymentFailed } from '@/lib/notifications';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
@@ -154,6 +155,18 @@ export const GET = withAuth(
       });
 
       log.info({ reference, status: 'success', provider: transaction.provider }, 'Payment verified');
+
+      // Dispatch async notifications after successful DB state update
+      if (transaction.orderId) {
+        notifyOrderConfirmed(transaction.orderId, reference).catch((err) =>
+          log.warn({ err: err.message, orderId: transaction.orderId }, 'Background order confirmed notification failed')
+        );
+      }
+      if (transaction.loanId) {
+        notifyDownPaymentSuccess(transaction.loanId, expectedAmount, reference).catch((err) =>
+          log.warn({ err: err.message, loanId: transaction.loanId }, 'Background down payment notification failed')
+        );
+      }
 
       return NextResponse.json({
         success: true,

@@ -6,7 +6,9 @@ import {
   View,
   Platform,
   useWindowDimensions,
+  AppState,
 } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
@@ -23,6 +25,7 @@ import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import KycScreen from './src/screens/KycScreen';
 import FundWalletScreen from './src/screens/FundWalletScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
+import BnplApplicationScreen from './src/screens/BnplApplicationScreen';
 import BottomNavBar, { TabType } from './src/components/BottomNavBar';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { usePushNotifications } from './src/lib/usePushNotifications';
@@ -30,6 +33,13 @@ import { demoStore, DemoProduct } from './src/lib/demo-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/lib/supabase';
 import { MobileApi } from './src/lib/api';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  enabled: Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN),
+  sendDefaultPii: false,
+  tracesSampleRate: 0.1,
+});
 
 const TOKEN_STORAGE_KEY = '@dandoev_auth_token';
 
@@ -42,9 +52,10 @@ export type ScreenType =
   | 'ProductDetail'
   | 'Kyc'
   | 'FundWallet'
-  | 'Notifications';
+  | 'Notifications'
+  | 'BnplApplication';
 
-export default function App() {
+function App() {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('Onboarding');
   // The shop is the primary point of contact after authentication.
@@ -98,6 +109,14 @@ export default function App() {
     }
     restoreSession();
   }, []);
+
+  useEffect(() => {
+    if (!token || token.startsWith('demo-')) return;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') MobileApi.getProfile(token).catch(() => {});
+    });
+    return () => subscription.remove();
+  }, [token]);
 
   useEffect(() => {
     // Splash screen timer
@@ -223,7 +242,8 @@ export default function App() {
             product={selectedProduct}
             token={token}
             onBack={() => setCurrentScreen(prevScreenBeforeDetail)}
-            onApplyBNPL={(_prod, _tenure) => {
+            onApplyBNPL={(prod, _tenure) => {
+              setSelectedProduct(prod);
               setCurrentScreen('Kyc');
             }}
           />
@@ -234,7 +254,16 @@ export default function App() {
           <KycScreen
             token={token}
             onBack={() => setCurrentScreen('Dashboard')}
-            onKycComplete={() => setCurrentScreen('Dashboard')}
+            onKycComplete={() => selectedProduct ? setCurrentScreen('BnplApplication') : setCurrentScreen('Dashboard')}
+          />
+        )}
+
+        {currentScreen === 'BnplApplication' && selectedProduct && token && (
+          <BnplApplicationScreen
+            token={token}
+            product={selectedProduct}
+            onBack={() => setCurrentScreen('Kyc')}
+            onComplete={() => setCurrentScreen('Dashboard')}
           />
         )}
 
@@ -267,6 +296,8 @@ export default function App() {
     </AppErrorBoundary>
   );
 }
+
+export default Sentry.wrap(App);
 
 const styles = StyleSheet.create({
   safeArea: {

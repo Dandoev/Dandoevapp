@@ -10,6 +10,8 @@ import {
   Platform,
   Modal,
   TextInput,
+  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -29,6 +31,12 @@ import {
   X,
   ShoppingBag,
   Clock,
+  AlertTriangle,
+  RefreshCw,
+  Phone,
+  MapPin,
+  ChevronRight,
+  MessageSquare,
 } from 'lucide-react-native';
 import { demoStore, DemoProduct, getProductPriceBreakdown, DeliveryType } from '../lib/demo-data';
 import { getProductAsset } from '../lib/bike-assets';
@@ -63,6 +71,15 @@ export default function ProductDetailScreen({
   const [pendingPayment, setPendingPayment] = useState<{ reference: string; authorizationUrl: string } | null>(null);
   const [pendingOrder, setPendingOrder] = useState<{ id: string; amount: number } | null>(null);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  const [confirmedOrderData, setConfirmedOrderData] = useState<{
+    orderId: string;
+    reference: string;
+    amount: number;
+    itemName: string;
+    deliveryType: DeliveryType;
+    deliveryAddress: string;
+    deliveryPhone: string;
+  } | null>(null);
 
   const isBike = product.type === 'bike';
   const breakdown = getProductPriceBreakdown(product, selectedTenure, deliveryType);
@@ -92,9 +109,9 @@ export default function ProductDetailScreen({
     setPaymentNotice(null);
     try {
       let payment = pendingPayment;
-      if (!payment) {
       let order = pendingOrder;
-      if (!order) {
+      if (!payment) {
+        if (!order) {
       const created = await MobileApi.createOrder({
         bikeId: product.type === 'bike' ? product.id : undefined,
         quantity: 1,
@@ -130,8 +147,19 @@ export default function ProductDetailScreen({
         setPaymentNotice('Mono is still confirming your payment. Use Check payment status shortly.');
         return;
       }
+      setConfirmedOrderData({
+        orderId: order?.id || pendingOrder?.id || 'DND-ORDER',
+        reference: payment.reference,
+        amount: order?.amount || breakdown.totalOutright,
+        itemName: product.name,
+        deliveryType,
+        deliveryAddress: deliveryType === 'pickup' ? 'DandoEv Central Lagos Hub (Ikeja, Lagos)' : [deliveryAddress.trim(), deliveryCity.trim(), deliveryState.trim()].filter(Boolean).join(', '),
+        deliveryPhone: deliveryPhone.trim(),
+      });
       setPendingPayment(null);
       setPendingOrder(null);
+      setPurchaseError(null);
+      setPaymentNotice(null);
       setOutrightSuccess(true);
     } catch (error) {
       setPurchaseError(error instanceof Error ? error.message : 'Unable to complete this purchase.');
@@ -145,8 +173,24 @@ export default function ProductDetailScreen({
     setPurchaseLoading(true); setPurchaseError(null);
     try {
       const result = await MobileApi.verifyPayment(pendingPayment.reference, token);
-      if (result.data.status === 'success') { setOutrightSuccess(true); setPendingPayment(null); setPendingOrder(null); setPaymentNotice(null); }
-      else setPaymentNotice('Payment is still awaiting confirmation from Mono.');
+      if (result.data.status === 'success') {
+        setConfirmedOrderData({
+          orderId: pendingOrder?.id || 'DND-' + pendingPayment.reference.slice(-6).toUpperCase(),
+          reference: pendingPayment.reference,
+          amount: pendingOrder?.amount || breakdown.totalOutright,
+          itemName: product.name,
+          deliveryType,
+          deliveryAddress: deliveryType === 'pickup' ? 'DandoEv Central Lagos Hub (Ikeja, Lagos)' : [deliveryAddress.trim(), deliveryCity.trim(), deliveryState.trim()].filter(Boolean).join(', '),
+          deliveryPhone: deliveryPhone.trim(),
+        });
+        setOutrightSuccess(true);
+        setPendingPayment(null);
+        setPendingOrder(null);
+        setPaymentNotice(null);
+        setPurchaseError(null);
+      } else {
+        setPaymentNotice('Payment is still awaiting confirmation from Mono.');
+      }
     } catch (error) { setPaymentNotice(error instanceof Error ? error.message : 'Payment is still awaiting confirmation.'); }
     finally { setPurchaseLoading(false); }
   };
@@ -678,14 +722,74 @@ export default function ProductDetailScreen({
             </View>
 
             {outrightSuccess ? (
-              <View style={styles.successContent}>
-                <View style={styles.successIconCircle}>
-                  <CheckCircle2 size={48} color="#2E3192" />
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                <View style={styles.receiptHero}>
+                  <View style={styles.receiptIconBubble}>
+                    <CheckCircle2 size={40} color="#10B981" />
+                  </View>
+                  <Text style={styles.receiptEyebrow}>PAYMENT VERIFIED</Text>
+                  <Text style={styles.receiptTitle}>Order Confirmed! 🚀</Text>
+                  <Text style={styles.receiptAmount}>₦{(confirmedOrderData?.amount || breakdown.totalOutright).toLocaleString()}</Text>
+                  <Text style={styles.receiptSub}>
+                    We have received your payment for <Text style={{ fontWeight: '800', color: '#0A154F' }}>{product.name}</Text>. An official confirmation email and SMS have been dispatched.
+                  </Text>
+                  <View style={styles.receiptRefRow}>
+                    <Text style={styles.receiptRefLabel}>ORDER REF:</Text>
+                    <Text style={styles.receiptRefVal}>#{(confirmedOrderData?.orderId || 'ORDER').slice(0, 8).toUpperCase()}</Text>
+                  </View>
                 </View>
-                <Text style={styles.successHeading}>₦{breakdown.totalOutright.toLocaleString()} Paid</Text>
-                <Text style={styles.successMsg}>
-                  Payment for <Text style={{ fontWeight: '800' }}>{product.name}</Text> is verified. Your order is confirmed, and the team will contact you about pickup or delivery.
-                </Text>
+
+                <View style={styles.receiptCard}>
+                  <Text style={styles.receiptCardTitle}>Fulfillment Details</Text>
+                  <View style={styles.receiptDetailRow}>
+                    <Text style={styles.receiptDetailLabel}>Method:</Text>
+                    <Text style={styles.receiptDetailVal}>
+                      {deliveryType === 'pickup' ? 'Hub Self-Pickup' : deliveryType === 'delivery_lagos' ? 'Doorstep Delivery (Lagos)' : 'Interstate Delivery'}
+                    </Text>
+                  </View>
+                  <View style={styles.receiptDetailRow}>
+                    <Text style={styles.receiptDetailLabel}>Location:</Text>
+                    <Text style={styles.receiptDetailVal}>
+                      {deliveryType === 'pickup' ? 'DandoEv Central Hub (Ikeja, Lagos)' : confirmedOrderData?.deliveryAddress || deliveryAddress || 'Address on file'}
+                    </Text>
+                  </View>
+                  <View style={[styles.receiptDetailRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.receiptDetailLabel}>Contact Phone:</Text>
+                    <Text style={styles.receiptDetailVal}>{confirmedOrderData?.deliveryPhone || deliveryPhone || 'On file'}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.receiptCard}>
+                  <Text style={styles.receiptCardTitle}>Order Progress Tracker</Text>
+                  <View style={styles.trackerStep}>
+                    <View style={[styles.trackerDot, styles.trackerDotDone]}>
+                      <Check size={12} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                    <View style={styles.trackerContent}>
+                      <Text style={styles.trackerTitle}>1. Payment Verified & Reconciled</Text>
+                      <Text style={styles.trackerDesc}>Mono transaction settled successfully.</Text>
+                    </View>
+                  </View>
+                  <View style={styles.trackerStep}>
+                    <View style={[styles.trackerDot, styles.trackerDotActive]}>
+                      <Text style={styles.trackerDotNum}>2</Text>
+                    </View>
+                    <View style={styles.trackerContent}>
+                      <Text style={styles.trackerTitle}>2. PDI Diagnostics & Vehicle Preparation</Text>
+                      <Text style={styles.trackerDesc}>Our technicians are preparing the battery and vehicle.</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.trackerStep, { borderLeftWidth: 0, paddingBottom: 0 }]}>
+                    <View style={styles.trackerDot}>
+                      <Text style={styles.trackerDotNum}>3</Text>
+                    </View>
+                    <View style={styles.trackerContent}>
+                      <Text style={styles.trackerTitle}>3. Handover & Key Release</Text>
+                      <Text style={styles.trackerDesc}>Available for collection or courier dispatch in 24–48 hours.</Text>
+                    </View>
+                  </View>
+                </View>
+
                 <TouchableOpacity
                   style={styles.doneBtn}
                   onPress={() => {
@@ -693,10 +797,11 @@ export default function ProductDetailScreen({
                     setOutrightSuccess(false);
                     onBack();
                   }}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.doneBtnText}>Return to Shop</Text>
+                  <Text style={styles.doneBtnText}>Return to Catalog</Text>
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
             ) : (
               <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={styles.orderSummaryBox}>
@@ -734,28 +839,84 @@ export default function ProductDetailScreen({
                   <Text style={styles.checkoutLabel}>Delivery method</Text>
                   <View style={styles.deliveryChoices}>{(['pickup', 'delivery_lagos', 'delivery_outside'] as DeliveryType[]).map((choice) => <TouchableOpacity key={choice} onPress={() => setDeliveryType(choice)} style={[styles.deliveryChoice, deliveryType === choice && styles.deliveryChoiceSelected]}><Text style={[styles.deliveryChoiceText, deliveryType === choice && styles.deliveryChoiceTextSelected]}>{choice === 'pickup' ? 'Pickup' : choice === 'delivery_lagos' ? 'Lagos' : 'Other state'}</Text></TouchableOpacity>)}</View>
                   <Text style={styles.checkoutLabel}>Contact phone</Text>
-                  <TextInput style={styles.checkoutInput} value={deliveryPhone} onChangeText={setDeliveryPhone} keyboardType="phone-pad" placeholder="080…" autoComplete="tel" />
-                  {deliveryType !== 'pickup' && <><Text style={styles.checkoutLabel}>Street address</Text><TextInput style={styles.checkoutInput} value={deliveryAddress} onChangeText={setDeliveryAddress} placeholder="House number and street" /><Text style={styles.checkoutLabel}>City</Text><TextInput style={styles.checkoutInput} value={deliveryCity} onChangeText={setDeliveryCity} placeholder="City" /><Text style={styles.checkoutLabel}>State</Text><TextInput style={styles.checkoutInput} value={deliveryState} onChangeText={setDeliveryState} placeholder="State" /></>}
+                  <TextInput style={styles.checkoutInput} value={deliveryPhone} onChangeText={setDeliveryPhone} keyboardType="phone-pad" placeholder="080…" placeholderTextColor="#94A3B8" autoComplete="tel" />
+                  {deliveryType !== 'pickup' && <><Text style={styles.checkoutLabel}>Street address</Text><TextInput style={styles.checkoutInput} value={deliveryAddress} onChangeText={setDeliveryAddress} placeholder="House number and street" placeholderTextColor="#94A3B8" /><Text style={styles.checkoutLabel}>City</Text><TextInput style={styles.checkoutInput} value={deliveryCity} onChangeText={setDeliveryCity} placeholder="City" placeholderTextColor="#94A3B8" /><Text style={styles.checkoutLabel}>State</Text><TextInput style={styles.checkoutInput} value={deliveryState} onChangeText={setDeliveryState} placeholder="State" placeholderTextColor="#94A3B8" /></>}
                 </View>}
 
                 <Text style={styles.paymentMethodNotice}>
                   Your bank payment opens securely with Mono. Your order is confirmed only after payment verification.
                 </Text>
 
-                {purchaseError ? <Text style={{ color: '#B91C1C', marginBottom: 10, fontFamily: 'Inter_600SemiBold' }}>{purchaseError}</Text> : null}
-                {paymentNotice ? <Text style={styles.paymentNotice}>{paymentNotice}</Text> : null}
+                {purchaseLoading && (
+                  <View style={styles.loadingBanner}>
+                    <ActivityIndicator size="small" color="#2E3192" />
+                    <Text style={styles.loadingBannerText}>Connecting to Mono DirectPay... Please keep this screen open.</Text>
+                  </View>
+                )}
+
+                {/* Structured Failure & Warning Card */}
+                {purchaseError ? (
+                  <View style={styles.failureCard}>
+                    <View style={styles.failureCardHeader}>
+                      <AlertTriangle size={18} color="#DC2626" />
+                      <Text style={styles.failureCardTitle}>Payment Was Not Completed</Text>
+                    </View>
+                    <Text style={styles.failureCardMsg}>{purchaseError}</Text>
+                    <View style={styles.failureActionsRow}>
+                      <TouchableOpacity
+                        style={styles.retryBtn}
+                        onPress={handleBuyOutright}
+                        disabled={purchaseLoading}
+                        activeOpacity={0.8}
+                      >
+                        <RefreshCw size={14} color="#FFFFFF" />
+                        <Text style={styles.retryBtnText}>Retry Payment</Text>
+                      </TouchableOpacity>
+                      {pendingOrder && (
+                        <TouchableOpacity
+                          style={styles.resetBtn}
+                          onPress={() => {
+                            setPendingOrder(null);
+                            setPendingPayment(null);
+                            setPurchaseError(null);
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.resetBtnText}>Edit Details</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ) : null}
+
+                {paymentNotice ? (
+                  <View style={styles.noticeCard}>
+                    <AlertTriangle size={16} color="#D97706" />
+                    <Text style={styles.noticeCardText}>{paymentNotice}</Text>
+                  </View>
+                ) : null}
 
                 <TouchableOpacity
-                  style={styles.confirmBuyBtn}
+                  style={[styles.confirmBuyBtn, purchaseLoading && { opacity: 0.7 }]}
                   onPress={handleBuyOutright}
                   disabled={purchaseLoading}
                   activeOpacity={0.85}
                 >
                   <Text style={styles.confirmBuyBtnText}>
-                    {purchaseLoading ? 'Working…' : pendingPayment ? 'Return to secure payment' : `Confirm & Pay ₦${breakdown.totalOutright.toLocaleString()}`}
+                    {purchaseLoading ? 'Processing…' : pendingPayment ? 'Return to secure payment' : `Confirm & Pay ₦${breakdown.totalOutright.toLocaleString()}`}
                   </Text>
                 </TouchableOpacity>
-                {pendingPayment && <TouchableOpacity style={styles.checkStatusButton} onPress={() => void checkPaymentStatus()} disabled={purchaseLoading}><Text style={styles.checkStatusText}>Check payment status</Text></TouchableOpacity>}
+                {pendingPayment && (
+                  <TouchableOpacity
+                    style={styles.checkStatusButton}
+                    onPress={() => void checkPaymentStatus()}
+                    disabled={purchaseLoading}
+                    activeOpacity={0.8}
+                  >
+                    <RefreshCw size={15} color="#2E3192" style={{ marginRight: 6 }} />
+                    <Text style={styles.checkStatusText}>Check payment status</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </View>
@@ -1572,4 +1733,167 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     marginTop: 1,
   },
+  receiptHero: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 14,
+  },
+  receiptIconBubble: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  receiptEyebrow: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#10B981',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  receiptTitle: {
+    fontSize: 20,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+    marginBottom: 6,
+  },
+  receiptAmount: {
+    fontSize: 24,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#10B981',
+    marginBottom: 6,
+  },
+  receiptSub: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  receiptRefRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  receiptRefLabel: { fontSize: 10.5, color: '#64748B', fontFamily: 'Inter_600SemiBold' },
+  receiptRefVal: { fontSize: 11.5, color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold' },
+  receiptCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  receiptCardTitle: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#0A154F',
+    marginBottom: 10,
+  },
+  receiptDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2FA',
+  },
+  receiptDetailLabel: { fontSize: 12, color: '#64748B', fontFamily: 'Inter_400Regular' },
+  receiptDetailVal: { fontSize: 12, color: '#0A154F', fontFamily: 'Inter_600SemiBold', maxWidth: '65%', textAlign: 'right' },
+  trackerStep: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingLeft: 4,
+    paddingBottom: 14,
+    borderLeftWidth: 2,
+    borderLeftColor: '#E2E8F0',
+    marginLeft: 8,
+  },
+  trackerDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -11,
+  },
+  trackerDotDone: { backgroundColor: '#10B981' },
+  trackerDotActive: { backgroundColor: '#2E3192' },
+  trackerDotNum: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+  trackerContent: { flex: 1, marginTop: -2 },
+  trackerTitle: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#0A154F' },
+  trackerDesc: { fontSize: 11, color: '#64748B', lineHeight: 15, marginTop: 1 },
+  loadingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  loadingBannerText: { fontSize: 12, color: '#1E40AF', fontFamily: 'Inter_500Medium', flex: 1 },
+  failureCard: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  failureCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  failureCardTitle: { fontSize: 13.5, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#991B1B' },
+  failureCardMsg: { fontSize: 12, color: '#B91C1C', lineHeight: 17, marginBottom: 10 },
+  failureActionsRow: { flexDirection: 'row', gap: 8 },
+  retryBtn: {
+    backgroundColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  retryBtnText: { color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' },
+  resetBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  resetBtnText: { color: '#B91C1C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  noticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  noticeCardText: { color: '#92400E', fontSize: 12, fontFamily: 'Inter_500Medium', flex: 1 },
 });

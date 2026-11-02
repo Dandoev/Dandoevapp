@@ -39,7 +39,7 @@ interface KycScreenProps {
 }
 
 export default function KycScreen(props: KycScreenProps) {
-  if (props.token && !props.token.startsWith('demo-')) return <RealKycScreen token={props.token} onBack={props.onBack} />;
+  if (props.token && !props.token.startsWith('demo-')) return <RealKycScreen token={props.token} onBack={props.onBack} onKycComplete={props.onKycComplete} />;
   return <DemoKycScreen {...props} />;
 }
 

@@ -316,6 +316,23 @@ export async function exchangeMonoToken(code: string): Promise<{ id: string }> {
   } catch (err) { throw err; }
 }
 
+export async function initiateMonoConnect(input: {
+  name: string;
+  email: string;
+  reference: string;
+  redirectUrl: string;
+}): Promise<{ url: string; reference?: string }> {
+  return monoFetch<{ url: string; reference?: string }>('/accounts/initiate', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer: { name: input.name, email: input.email },
+      meta: { ref: input.reference },
+      scope: 'auth',
+      redirect_url: input.redirectUrl,
+    }),
+  });
+}
+
 /**
  * Step 2: Retrieve the verified KYC identity data for a linked Mono account.
  */

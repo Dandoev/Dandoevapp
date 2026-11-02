@@ -146,13 +146,22 @@ export const MobileApi = {
   async initiateMonoProve(redirectUrl: string, token: string) {
     return apiRequest<{ success: boolean; data: { url: string; reference: string } }>('/kyc/prove/initiate', { method: 'POST', body: { redirectUrl }, token });
   },
+  async initiateMonoConnect(redirectUrl: string, token: string) {
+    return apiRequest<{ success: boolean; data: { url: string; reference: string } }>('/kyc/connect/initiate', { method: 'POST', body: { redirectUrl }, token });
+  },
+  async completeMonoFinancial(code: string, token: string, options: { tenureMonths: number; deductionFrequency: string; proposedMonthlyRepayment: number }) {
+    return apiRequest<{ success: boolean; data: any }>('/kyc/mono', {
+      method: 'POST', body: { code, setupMandate: true, ...options }, token,
+    });
+  },
 
   // 4. BNPL Loans & Repayments
-  async applyForLoan(loanData: any, token: string) {
+  async applyForLoan(loanData: any, token: string, idempotencyKey?: string) {
     return apiRequest<{ success: boolean; loanId: string; message: string }>('/loans', {
       method: 'POST',
       body: loanData,
       token,
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
     });
   },
 

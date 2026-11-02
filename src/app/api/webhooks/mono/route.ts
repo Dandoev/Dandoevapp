@@ -10,6 +10,7 @@ import prisma from '@/lib/prisma';
 import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
+import { notifyOrderConfirmed, notifyDownPaymentSuccess, notifyOrderPaymentFailed } from '@/lib/notifications';
 
 export async function POST(req: NextRequest) {
   const log = logger.child({ route: 'webhooks/mono' });
@@ -279,6 +280,9 @@ export async function POST(req: NextRequest) {
                 data: { status: 'confirmed' },
               });
               log.info({ orderId: transaction.orderId }, 'Order confirmed via Mono DirectPay webhook');
+              notifyOrderConfirmed(transaction.orderId, reference).catch((err) =>
+                log.warn({ err: err.message, orderId: transaction.orderId }, 'Webhook order confirmed notification error')
+              );
             }
 
             // B. Settle Ad-Hoc BNPL Installment
@@ -298,6 +302,9 @@ export async function POST(req: NextRequest) {
             // C. Confirm BNPL Down Payment
             if (transaction.loanId) {
               log.info({ loanId: transaction.loanId }, 'BNPL down payment recorded; application remains under review');
+              notifyDownPaymentSuccess(transaction.loanId, amountNgn, reference).catch((err) =>
+                log.warn({ err: err.message, loanId: transaction.loanId }, 'Webhook down payment notification error')
+              );
             }
           });
         } catch (err: any) {
@@ -312,10 +319,20 @@ export async function POST(req: NextRequest) {
       case 'direct_debit.payment_abandoned': {
         const reference = data.object?.reference || data.reference;
         if (!reference) throw new Error('Mono DirectPay failure event has no reference');
-        await prisma.paymentTransaction.updateMany({
-          where: { provider: 'mono', providerRef: reference, status: { in: ['initiated', 'pending'] } },
-          data: { status: 'failed', reconciledAt: new Date() },
+        const failedTx = await prisma.paymentTransaction.findFirst({
+          where: { provider: 'mono', OR: [{ id: reference }, { providerRef: reference }] },
         });
+        if (failedTx) {
+          await prisma.paymentTransaction.update({
+            where: { id: failedTx.id },
+            data: { status: 'failed', reconciledAt: new Date() },
+          });
+          if (failedTx.orderId) {
+            notifyOrderPaymentFailed(failedTx.orderId, data.message || 'Mono payment was declined or cancelled', reference).catch((err) =>
+              log.warn({ err: err.message }, 'Webhook order payment failed alert error')
+            );
+          }
+        }
         break;
       }
 

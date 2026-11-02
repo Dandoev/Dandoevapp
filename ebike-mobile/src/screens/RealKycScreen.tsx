@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { ArrowLeft, Check, ChevronRight, RefreshCw, ShieldCheck, ScanFace } from 'lucide-react-native';
 import { MobileApi } from '../lib/api';
 
-export default function RealKycScreen({ token, onBack }: { token: string; onBack: () => void }) {
+export default function RealKycScreen({ token, onBack, onKycComplete }: { token: string; onBack: () => void; onKycComplete: () => void }) {
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -25,6 +25,17 @@ export default function RealKycScreen({ token, onBack }: { token: string; onBack
       const session = await MobileApi.initiateMonoProve('dandoev://kyc-callback', token);
       const result = await WebBrowser.openAuthSessionAsync(session.data.url, 'dandoev://kyc-callback');
       await refresh();
+      // Mono may deliver the successful webhook a few seconds after the
+      // browser closes. Poll briefly so the next step appears automatically.
+      if (result.type === 'success') {
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          await refresh();
+          const latest = await MobileApi.getProfile(token).catch(() => null);
+          const latestStatus = ((latest as any)?.user ?? (latest as any)?.data)?.kycStatus;
+          if (latestStatus === 'verified' || latestStatus === 'failed') break;
+        }
+      }
       setMessage(result.type === 'success' ? 'Mono is confirming your result. Refresh your status in a moment.' : 'Verification was closed. You can continue when you are ready.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Verification could not start. Please try again.'); }
     finally { setStarting(false); }
@@ -38,6 +49,7 @@ export default function RealKycScreen({ token, onBack }: { token: string; onBack
     <View style={styles.step}><View style={styles.stepIcon}><ScanFace size={20} color="#117F78" /></View><View style={styles.stepText}><Text style={styles.stepTitle}>Complete the face check</Text><Text style={styles.stepBody}>Mono guides you through a secure selfie and identity check.</Text></View><ChevronRight size={18} color="#92A2B5" /></View>
     <View style={styles.step}><View style={styles.stepIcon}><Check size={20} color="#117F78" /></View><View style={styles.stepText}><Text style={styles.stepTitle}>Get your result</Text><Text style={styles.stepBody}>Return here to see your status before continuing.</Text></View></View>
     {!verified && <TouchableOpacity style={[styles.button, starting && styles.disabled]} onPress={() => void startVerification()} disabled={starting || loading} accessibilityRole="button">{starting ? <ActivityIndicator color="#102152" /> : <><Text style={styles.buttonText}>{status === 'failed' ? 'Try verification again' : 'Start secure verification'}</Text><ChevronRight size={19} color="#102152" /></>}</TouchableOpacity>}
+    {verified && <TouchableOpacity style={styles.button} onPress={onKycComplete} accessibilityRole="button"><Text style={styles.buttonText}>Continue to BNPL application</Text><ChevronRight size={19} color="#102152" /></TouchableOpacity>}
     <TouchableOpacity style={styles.refreshButton} onPress={() => void refresh()} disabled={loading} accessibilityRole="button"><Text style={styles.refreshText}>Refresh status</Text></TouchableOpacity>
     {message && <Text style={styles.message}>{message}</Text>}
     <Text style={styles.footnote}>Closing the verification window does not mean your identity was approved. Your result may take a moment to appear.</Text>

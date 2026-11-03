@@ -1,17 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { validateRequest } from '@/lib/validate';
-import { signinSchema } from '@/lib/schemas';
-import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limiter';
-import { getClientIp } from '@/lib/api-handler';
-import { supabaseAdmin } from '@/lib/supabase';
-import { isDemoAllowed } from '@/lib/env';
-import prisma from '@/lib/prisma';
-import logger from '@/lib/logger';
-import crypto from 'crypto';
+import { NextRequest, NextResponse } from "next/server";
+import { validateRequest } from "@/lib/validate";
+import { signinSchema } from "@/lib/schemas";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limiter";
+import { getClientIp } from "@/lib/api-handler";
+import { supabaseAdmin } from "@/lib/supabase";
+import { isDemoAllowed } from "@/lib/env";
+import prisma from "@/lib/prisma";
+import logger from "@/lib/logger";
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
-  const log = logger.child({ requestId, route: 'auth/signin' });
+  const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
+  const log = logger.child({ requestId, route: "auth/signin" });
 
   try {
     // ---- Input Validation ----
@@ -19,14 +23,14 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
     const validation = validateRequest(signinSchema, body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
-        { status: 400 }
+        { error: "Validation failed", details: validation.errors },
+        { status: 400 },
       );
     }
 
@@ -36,14 +40,17 @@ export async function POST(req: NextRequest) {
     const demoAllowed = isDemoAllowed();
     const isDemoAccount =
       demoAllowed &&
-      (email.toLowerCase().endsWith('@demo.com') ||
-        email.toLowerCase() === 'admin@dandoev.com' ||
-        email.toLowerCase() === 'finance@dandoev.com' ||
-        email.toLowerCase() === 'ops@dandoev.com');
+      (email.toLowerCase().endsWith("@demo.com") ||
+        email.toLowerCase() === "admin@dandoev.com" ||
+        email.toLowerCase() === "finance@dandoev.com" ||
+        email.toLowerCase() === "ops@dandoev.com");
 
     if (!isDemoAccount) {
       const ip = getClientIp(req);
-      const rlResult = await checkRateLimit(`signin:${ip}:${email}`, RATE_LIMITS.AUTH_SIGNIN);
+      const rlResult = await checkRateLimit(
+        `signin:${ip}:${email}`,
+        RATE_LIMITS.AUTH_SIGNIN,
+      );
       if (!rlResult.allowed) {
         return rateLimitResponse(rlResult);
       }
@@ -54,30 +61,42 @@ export async function POST(req: NextRequest) {
     let authSession: any = null;
 
     try {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data: authData, error: authError } =
+        await supabaseAdmin.auth.signInWithPassword({
+          email,
+          password,
+        });
       if (!authError && authData.user && authData.session) {
         authUser = authData.user;
         authSession = authData.session;
-      } else if (authError?.message?.toLowerCase().includes('email not confirmed')) {
+      } else if (
+        authError?.message?.toLowerCase().includes("email not confirmed")
+      ) {
         // Auto-confirm user if unconfirmed in Supabase to eliminate onboarding friction
         try {
           const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
           const targetUser = listData?.users?.find(
-            (u) => u.email?.toLowerCase() === email.toLowerCase()
+            (u) => u.email?.toLowerCase() === email.toLowerCase(),
           );
           if (targetUser) {
-            await supabaseAdmin.auth.admin.updateUserById(targetUser.id, { email_confirm: true });
-            const retryRes = await supabaseAdmin.auth.signInWithPassword({ email, password });
-            if (!retryRes.error && retryRes.data?.user && retryRes.data?.session) {
+            await supabaseAdmin.auth.admin.updateUserById(targetUser.id, {
+              email_confirm: true,
+            });
+            const retryRes = await supabaseAdmin.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (
+              !retryRes.error &&
+              retryRes.data?.user &&
+              retryRes.data?.session
+            ) {
               authUser = retryRes.data.user;
               authSession = retryRes.data.session;
             }
           }
         } catch (confirmErr) {
-          log.warn({ confirmErr }, 'Auto-confirm fallback attempted');
+          log.warn({ confirmErr }, "Auto-confirm fallback attempted");
         }
       }
     } catch {
@@ -88,64 +107,82 @@ export async function POST(req: NextRequest) {
     if (!authUser && demoAllowed) {
       const lowerEmail = email.toLowerCase();
       if (
-        lowerEmail === 'admin@dandoev.com' ||
-        lowerEmail === 'finance@dandoev.com' ||
-        lowerEmail === 'ops@dandoev.com'
+        lowerEmail === "admin@dandoev.com" ||
+        lowerEmail === "finance@dandoev.com" ||
+        lowerEmail === "ops@dandoev.com"
       ) {
         authUser = {
-          id: 'demo-admin-id',
+          id: "demo-admin-id",
           email: lowerEmail,
-          user_metadata: { firstName: 'System', lastName: 'Admin' },
-          app_metadata: { role: 'super_admin' },
+          user_metadata: { firstName: "System", lastName: "Admin" },
+          app_metadata: { role: "super_admin" },
         };
         authSession = {
-          access_token: 'demo-token-admin',
-          refresh_token: 'demo-refresh-admin',
+          access_token: "demo-token-admin",
+          refresh_token: "demo-refresh-admin",
           expires_in: 3600 * 24,
         };
       } else if (
-        lowerEmail === 'google-reviewer@dandoev.com' ||
-        lowerEmail === 'solomon.dunu@demo.com' ||
-        lowerEmail === 'babatunde.adeleke@demo.com' ||
-        lowerEmail === 'amina.bello@demo.com' ||
-        lowerEmail === 'fatima.yusuf@demo.com' ||
-        lowerEmail === 'chinedu.eze@demo.com' ||
-        lowerEmail.endsWith('@demo.com')
+        lowerEmail === "google-reviewer@dandoev.com" ||
+        lowerEmail === "solomon.dunu@demo.com" ||
+        lowerEmail === "babatunde.adeleke@demo.com" ||
+        lowerEmail === "amina.bello@demo.com" ||
+        lowerEmail === "fatima.yusuf@demo.com" ||
+        lowerEmail === "chinedu.eze@demo.com" ||
+        lowerEmail.endsWith("@demo.com")
       ) {
-        const isGoogleReviewer = lowerEmail === 'google-reviewer@dandoev.com';
-        const nameParts = lowerEmail.split('@')[0].split('.');
+        const isGoogleReviewer = lowerEmail === "google-reviewer@dandoev.com";
+        const nameParts = lowerEmail.split("@")[0].split(".");
         const firstName = isGoogleReviewer
-          ? 'Google'
-          : nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Demo';
+          ? "Google"
+          : nameParts[0]
+            ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1)
+            : "Demo";
         const lastName = isGoogleReviewer
-          ? 'Reviewer'
-          : nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Buyer';
+          ? "Reviewer"
+          : nameParts[1]
+            ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)
+            : "Buyer";
 
         authUser = {
-          id: isGoogleReviewer ? '637e354b-d3da-4206-8bdc-5bd64bb82d07' : 'demo-customer-id',
+          id: isGoogleReviewer
+            ? "637e354b-d3da-4206-8bdc-5bd64bb82d07"
+            : "demo-customer-id",
           email: lowerEmail,
           user_metadata: { firstName, lastName },
-          app_metadata: { role: 'customer' },
+          app_metadata: { role: "customer" },
         };
         authSession = {
-          access_token: isGoogleReviewer ? 'demo-token-google-reviewer' : 'demo-token-customer',
-          refresh_token: isGoogleReviewer ? 'demo-refresh-google-reviewer' : 'demo-refresh-customer',
+          access_token: isGoogleReviewer
+            ? "demo-token-google-reviewer"
+            : "demo-token-customer",
+          refresh_token: isGoogleReviewer
+            ? "demo-refresh-google-reviewer"
+            : "demo-refresh-customer",
           expires_in: 3600 * 24,
         };
       }
     }
 
     if (!authUser || !authSession) {
-      log.warn({ email }, 'Invalid credentials attempt');
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      log.warn({ email }, "Invalid credentials attempt");
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
-    if (!String(authSession.access_token).startsWith('demo-token')) {
-      let profile = await prisma.user.findUnique({ where: { id: authUser.id }, select: { id: true, role: true } });
+    if (!String(authSession.access_token).startsWith("demo-token")) {
+      let profile = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        select: { id: true, role: true },
+      });
       if (!profile) {
         // If not found by UUID, check if user exists by email and re-link UUID
         const existingByEmail = await prisma.user.findFirst({
-          where: { email: { equals: email.toLowerCase().trim(), mode: 'insensitive' } },
+          where: {
+            email: { equals: email.toLowerCase().trim(), mode: "insensitive" },
+          },
         });
         if (existingByEmail) {
           profile = await prisma.user.update({
@@ -160,75 +197,87 @@ export async function POST(req: NextRequest) {
             data: {
               id: authUser.id,
               email: authUser.email.toLowerCase().trim(),
-              firstName: meta.firstName || 'Customer',
-              lastName: meta.lastName || 'User',
+              firstName: meta.firstName || "Customer",
+              lastName: meta.lastName || "User",
               phone: meta.phone || null,
-              passwordHash: 'SUPABASE_AUTH',
-              role: (meta.role as any) || 'customer',
-              customerStatus: 'registered',
+              passwordHash: "SUPABASE_AUTH",
+              role: (meta.role as any) || "customer",
+              customerStatus: "registered",
               lastLoginAt: new Date(),
             },
             select: { id: true, role: true },
           });
         }
       } else {
-        await prisma.user.update({ where: { id: authUser.id }, data: { lastLoginAt: new Date() } });
+        await prisma.user.update({
+          where: { id: authUser.id },
+          data: { lastLoginAt: new Date() },
+        });
       }
     }
 
-    log.info({ userId: authUser.id }, 'User signed in successfully');
+    log.info({ userId: authUser.id }, "User signed in successfully");
 
     const response = NextResponse.json({
       success: true,
-      message: 'Signed in successfully',
+      message: "Signed in successfully",
       user: {
         id: authUser.id,
         email: authUser.email,
         firstName: authUser.user_metadata?.firstName,
         lastName: authUser.user_metadata?.lastName,
-        role: authUser.app_metadata?.role || 'customer',
+        role: authUser.app_metadata?.role || "customer",
       },
       accessToken: authSession.access_token,
+      session: {
+        access_token: authSession.access_token,
+        refresh_token: authSession.refresh_token,
+        expires_in: authSession.expires_in,
+        expires_at: authSession.expires_at,
+      },
     });
 
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = process.env.NODE_ENV === "production";
 
     // Set session cookies
     response.cookies.set({
-      name: 'token',
+      name: "token",
       value: authSession.access_token,
       httpOnly: false,
       secure: isProd,
-      sameSite: 'lax',
-      path: '/',
+      sameSite: "lax",
+      path: "/",
       maxAge: authSession.expires_in || 3600 * 24,
     });
 
     response.cookies.set({
-      name: 'sb-access-token',
+      name: "sb-access-token",
       value: authSession.access_token,
       httpOnly: false,
       secure: isProd,
-      sameSite: 'lax',
-      path: '/',
+      sameSite: "lax",
+      path: "/",
       maxAge: authSession.expires_in || 3600 * 24,
     });
 
     if (authSession.refresh_token) {
       response.cookies.set({
-        name: 'refreshToken',
+        name: "refreshToken",
         value: authSession.refresh_token,
         httpOnly: true,
         secure: isProd,
-        sameSite: 'lax',
-        path: '/',
+        sameSite: "lax",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60,
       });
     }
 
     return response;
   } catch (error: any) {
-    log.error({ error: error.message }, 'Signin error');
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    log.error({ error: error.message }, "Signin error");
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

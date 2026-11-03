@@ -56,8 +56,14 @@ export default function RealKycScreen({
         "dandoev://kyc-callback",
         token,
       );
+      const proveUrl = session.data?.url;
+      if (!proveUrl || !/^https:\/\//i.test(proveUrl)) {
+        throw new Error(
+          "Mono did not return a valid identity verification link. Please try again.",
+        );
+      }
       const result = await WebBrowser.openAuthSessionAsync(
-        session.data.url,
+        proveUrl,
         "dandoev://kyc-callback",
       );
       await refresh();

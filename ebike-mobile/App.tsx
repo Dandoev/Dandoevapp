@@ -40,6 +40,7 @@ import { demoStore, DemoProduct } from "./src/lib/demo-data";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./src/lib/supabase";
 import { MobileApi } from "./src/lib/api";
+import { TOKEN_STORAGE_KEY } from "./src/lib/auth-session";
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -47,8 +48,6 @@ Sentry.init({
   sendDefaultPii: false,
   tracesSampleRate: 0.1,
 });
-
-const TOKEN_STORAGE_KEY = "@dandoev_auth_token";
 
 export type ScreenType =
   | "Onboarding"
@@ -92,11 +91,23 @@ function App() {
   useEffect(() => {
     async function restoreSession() {
       try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await MobileApi.getProfile(session.access_token);
+          setToken(session.access_token);
+          await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
+          setCurrentTab("bikes");
+          setCurrentScreen("Dashboard");
+          return;
+        }
+
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
           try {
             if (!storedToken.startsWith("demo-")) {
-              MobileApi.getProfile(storedToken).catch(() => {});
+              await MobileApi.getProfile(storedToken);
             }
             setToken(storedToken);
             setCurrentTab("bikes");
@@ -106,22 +117,18 @@ function App() {
             await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
           }
         }
-
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          MobileApi.getProfile(session.access_token).catch(() => {});
-          setToken(session.access_token);
-          await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
-          setCurrentTab("bikes");
-          setCurrentScreen("Dashboard");
-        }
       } catch (err) {
         console.warn("Session restoration skipped:", err);
       }
     }
     restoreSession();
+  }, []);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) updateToken(session.access_token);
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {

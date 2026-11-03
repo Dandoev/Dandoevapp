@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,22 +8,25 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-} from 'react-native';
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react-native';
-import { supabase } from '../lib/supabase';
-import { demoStore } from '../lib/demo-data';
-import { MobileApi } from '../lib/api';
-import { ScreenType } from '../../App';
-import BrandMark from '../components/BrandMark';
+} from "react-native";
+import { Eye, EyeOff, Lock, Mail, AlertCircle } from "lucide-react-native";
+import { supabase } from "../lib/supabase";
+import { demoStore } from "../lib/demo-data";
+import { MobileApi } from "../lib/api";
+import { ScreenType } from "../../App";
+import BrandMark from "../components/BrandMark";
 
 interface SignInScreenProps {
   navigateTo: (screen: ScreenType) => void;
   setToken: (t: string) => void;
 }
 
-export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function SignInScreen({
+  navigateTo,
+  setToken,
+}: SignInScreenProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
     setErrorMessage(null);
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !password) {
-      setErrorMessage('Please enter both your email and password.');
+      setErrorMessage("Please enter both your email and password.");
       return;
     }
 
@@ -43,12 +46,34 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
       // 1. Primary: Attempt sign-in via Backend API (auto-confirms unconfirmed emails & syncs DB profile)
       try {
         const resData = await MobileApi.signIn({ email: cleanEmail, password });
-        authToken = resData.accessToken || resData.session?.access_token || resData.token || null;
+        authToken =
+          resData.accessToken ||
+          resData.session?.access_token ||
+          resData.token ||
+          null;
+        if (
+          authToken &&
+          !authToken.startsWith("demo-") &&
+          resData.session?.refresh_token
+        ) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: authToken,
+            refresh_token: resData.session.refresh_token,
+          });
+          if (error) throw new Error(error.message);
+          authToken = data.session?.access_token || authToken;
+        }
       } catch (backendError: any) {
         // If explicitly invalid credentials, verify reviewer credentials before rejecting
-        if (backendError.message?.toLowerCase().includes('invalid credentials')) {
-          const isReviewer = cleanEmail === 'google-reviewer@dandoev.com' && password === 'DandoEvReview2026!';
-          const isDemoUser = cleanEmail === 'solomon.dunu@demo.com' && password === 'password123';
+        if (
+          backendError.message?.toLowerCase().includes("invalid credentials")
+        ) {
+          const isReviewer =
+            cleanEmail === "google-reviewer@dandoev.com" &&
+            password === "DandoEvReview2026!";
+          const isDemoUser =
+            cleanEmail === "solomon.dunu@demo.com" &&
+            password === "password123";
           if (!isReviewer && !isDemoUser) {
             throw backendError;
           }
@@ -56,10 +81,11 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
 
         // 2. Direct Supabase Fallback (immediate fallback if Render backend is sleeping or unreachable)
         try {
-          const { data: supaData, error: supaError } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password,
-          });
+          const { data: supaData, error: supaError } =
+            await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password,
+            });
           if (!supaError && supaData?.session?.access_token) {
             authToken = supaData.session.access_token;
           } else if (supaError) {
@@ -67,24 +93,32 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
           }
         } catch (supaErr: any) {
           // 3. Google Play & App Store Reviewer Fallback
-          const isReviewer = cleanEmail === 'google-reviewer@dandoev.com' && password === 'DandoEvReview2026!';
-          const isDemoUser = cleanEmail === 'solomon.dunu@demo.com' && password === 'password123';
+          const isReviewer =
+            cleanEmail === "google-reviewer@dandoev.com" &&
+            password === "DandoEvReview2026!";
+          const isDemoUser =
+            cleanEmail === "solomon.dunu@demo.com" &&
+            password === "password123";
           if (isReviewer || isDemoUser) {
-            const demoToken = isReviewer ? 'demo-token-google-reviewer' : 'demo-token-customer';
+            const demoToken = isReviewer
+              ? "demo-token-google-reviewer"
+              : "demo-token-customer";
             demoStore.setUser({
-              firstName: isReviewer ? 'Google' : 'Solomon',
-              lastName: isReviewer ? 'Reviewer' : 'Dunu',
+              firstName: isReviewer ? "Google" : "Solomon",
+              lastName: isReviewer ? "Reviewer" : "Dunu",
               email: cleanEmail,
-              phone: '+234 802 345 6789',
+              phone: "+234 802 345 6789",
               kycTier: 2,
               ninVerified: true,
               bvnVerified: true,
               profileComplete: true,
-              address: 'Victoria Island, Lagos, Nigeria',
-              occupation: isReviewer ? 'App Quality Reviewer' : 'Logistics Rider',
+              address: "Victoria Island, Lagos, Nigeria",
+              occupation: isReviewer
+                ? "App Quality Reviewer"
+                : "Logistics Rider",
             });
             setToken(demoToken);
-            navigateTo('Dashboard');
+            navigateTo("Dashboard");
             return;
           }
           throw supaErr;
@@ -94,20 +128,30 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
       if (authToken) {
         MobileApi.getProfile(authToken).catch(() => {});
         setToken(authToken);
-        navigateTo('Dashboard');
+        navigateTo("Dashboard");
         return;
       }
 
-      throw new Error('Sign in could not be completed. Please check your credentials.');
+      throw new Error(
+        "Sign in could not be completed. Please check your credentials.",
+      );
     } catch (err: any) {
-      setErrorMessage(err.message || 'Sign in failed. Please check your credentials and try again.');
+      setErrorMessage(
+        err.message ||
+          "Sign in failed. Please check your credentials and try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.contentWrapper}>
         <View style={styles.brandHeader}>
           <BrandMark size={58} backgroundColor="#FFFFFF" />
@@ -117,7 +161,9 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
 
         <View style={styles.card}>
           <Text style={styles.title}>Welcome back.</Text>
-          <Text style={styles.subtitle}>Your next move starts here. Sign in to continue.</Text>
+          <Text style={styles.subtitle}>
+            Your next move starts here. Sign in to continue.
+          </Text>
 
           {errorMessage && (
             <View style={styles.errorBox}>
@@ -163,8 +209,18 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
                 setErrorMessage(null);
               }}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
-              {showPassword ? <EyeOff size={18} color="#9CA3AF" /> : <Eye size={18} color="#9CA3AF" />}
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                showPassword ? "Hide password" : "Show password"
+              }
+            >
+              {showPassword ? (
+                <EyeOff size={18} color="#9CA3AF" />
+              ) : (
+                <Eye size={18} color="#9CA3AF" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -184,7 +240,7 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
           {/* Footer navigation */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don&apos;t have an account?</Text>
-            <TouchableOpacity onPress={() => navigateTo('SignUp')}>
+            <TouchableOpacity onPress={() => navigateTo("SignUp")}>
               <Text style={styles.linkText}> Create Account</Text>
             </TouchableOpacity>
           </View>
@@ -197,88 +253,88 @@ export default function SignInScreen({ navigateTo, setToken }: SignInScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A154F',
+    backgroundColor: "#0A154F",
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 22,
     paddingVertical: 34,
   },
   contentWrapper: {
-    width: '100%',
+    width: "100%",
     maxWidth: 420,
   },
   brandHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 27,
     gap: 8,
   },
   brandName: {
     fontSize: 34,
-    fontWeight: '900',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#FFFFFF',
+    fontWeight: "900",
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    color: "#FFFFFF",
     letterSpacing: -0.5,
   },
   brandTagline: {
     fontSize: 14,
-    color: '#FFFFFF',
-    fontFamily: 'Inter_600SemiBold',
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
     marginTop: 5,
     letterSpacing: 2,
     opacity: 0.95,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 28,
     padding: 26,
   },
   title: {
     fontSize: 29,
-    fontWeight: '900',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    color: '#0A154F',
+    fontWeight: "900",
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    color: "#0A154F",
     marginBottom: 6,
     letterSpacing: -0.8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    color: "#66728A",
+    fontFamily: "Inter_400Regular",
     marginBottom: 20,
   },
   errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: "#FEE2E2",
   },
   errorText: {
-    color: '#B91C1C',
+    color: "#B91C1C",
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     flex: 1,
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#334155',
+    fontWeight: "700",
+    fontFamily: "PlusJakartaSans_700Bold",
+    color: "#334155",
     marginBottom: 6,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F6F7FC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F6F7FC",
     borderWidth: 1,
-    borderColor: '#DBE2F0',
+    borderColor: "#DBE2F0",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -288,83 +344,83 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: '#0A154F',
+    fontFamily: "Inter_400Regular",
+    color: "#0A154F",
   },
   button: {
-    backgroundColor: '#36C0FE',
+    backgroundColor: "#36C0FE",
     paddingVertical: 16,
     borderRadius: 18,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 6,
-    shadowColor: '#36C0FE',
+    shadowColor: "#36C0FE",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
   },
   buttonText: {
-    color: '#0A154F',
+    color: "#0A154F",
     fontSize: 16,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontWeight: "800",
+    fontFamily: "PlusJakartaSans_800ExtraBold",
   },
   dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 18,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#DBE2F0',
+    backgroundColor: "#DBE2F0",
   },
   dividerText: {
-    color: '#94A3B8',
+    color: "#94A3B8",
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     marginHorizontal: 10,
   },
   demoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    backgroundColor: '#E8F6FE',
+    backgroundColor: "#E8F6FE",
     borderWidth: 1.5,
-    borderColor: '#BFDBFE',
+    borderColor: "#BFDBFE",
     paddingVertical: 14,
     borderRadius: 14,
   },
   demoButtonText: {
-    color: '#1768D1',
+    color: "#1768D1",
     fontSize: 15,
-    fontWeight: '800',
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontWeight: "800",
+    fontFamily: "PlusJakartaSans_800ExtraBold",
   },
   demoHint: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 12,
-    color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    color: "#66728A",
+    fontFamily: "Inter_400Regular",
     marginTop: 6,
     marginBottom: 12,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 10,
   },
   footerText: {
-    color: '#66728A',
+    color: "#66728A",
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
   },
   linkText: {
-    color: '#1768D1',
+    color: "#1768D1",
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontWeight: "700",
+    fontFamily: "PlusJakartaSans_700Bold",
   },
 });

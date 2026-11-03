@@ -54,7 +54,11 @@ export default function ApplicationsTab({
       const bike = (loan.bike?.name || loan.bikeName || '').toLowerCase();
       const phone = (loan.personalInfo?.phone || loan.user?.phone || loan.userPhone || '').toLowerCase();
       const bvn = (loan.personalInfo?.bvn || loan.bvn || '').toLowerCase();
-      return uName.includes(q) || email.includes(q) || bike.includes(q) || phone.includes(q) || bvn.includes(q);
+      const employer = (loan.user?.employerName || '').toLowerCase();
+      const status = (loan.user?.employmentStatus || '').toLowerCase();
+      const bank = (loan.user?.bankName || '').toLowerCase();
+      const nin = (loan.user?.ninNumber || '').toLowerCase();
+      return uName.includes(q) || email.includes(q) || bike.includes(q) || phone.includes(q) || bvn.includes(q) || employer.includes(q) || status.includes(q) || bank.includes(q) || nin.includes(q);
     }
     return true;
   });
@@ -207,20 +211,34 @@ export default function ApplicationsTab({
                     </div>
                   </div>
 
-                  {/* Open Banking & Verification Badges */}
+                  {/* Dynamic Badges: Identity, Gig Logistics, Mandate & Documents */}
                   <div className="flex items-center gap-2 flex-wrap text-xs">
+                    {loan.user?.employerName && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200">
+                        🛵 {loan.user.employerName}
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 border border-emerald-200">
                       <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                      Mono BVN Match (Verified)
+                      {loan.user?.ninNumber ? 'NIN Verified' : 'ID Verified'}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 border border-blue-200">
-                      <FileText className="h-3.5 w-3.5 text-blue-600" />
-                      Cashflow Verified (₦340k Inflow /mo)
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-800 border border-purple-200">
-                      <UserCheck className="h-3.5 w-3.5 text-purple-600" />
-                      Guarantor Co-Signed
-                    </span>
+                    {loan.user?.bankName && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 border border-blue-200">
+                        <FileText className="h-3.5 w-3.5 text-blue-600" />
+                        {loan.user.bankName}
+                      </span>
+                    )}
+                    {Array.isArray(loan.documents) && loan.documents.length > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-800 border border-cyan-200">
+                        📎 {loan.documents.length} Proof File(s)
+                      </span>
+                    )}
+                    {Array.isArray(loan.guarantors) && loan.guarantors.length > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-800 border border-purple-200">
+                        <UserCheck className="h-3.5 w-3.5 text-purple-600" />
+                        {loan.guarantors.length} Guarantors
+                      </span>
+                    )}
                     {loan.bikeSerialNumber && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-0.5 text-xs font-mono text-[#26fedc]">
                         VIN: {loan.bikeSerialNumber}

@@ -134,11 +134,24 @@ export const PATCH = withRoles(
           if (!paidDownPayment)
             blockers.push("BNPL down payment has not been confirmed");
         }
-        if (blockers.length)
+        if (blockers.length && !data.overrideBlockers) {
           return NextResponse.json(
             { error: "Loan is not eligible for approval", blockers },
             { status: 409 },
           );
+        }
+
+        if (blockers.length && data.overrideBlockers) {
+          await prisma.auditLog.create({
+            data: {
+              userId: ctx.user.sub,
+              action: "LOAN_APPROVAL_OVERRIDE",
+              resource: "loan",
+              resourceId: loan.id,
+              details: JSON.stringify({ waivedBlockers: blockers, notes: data.adminNotes }),
+            },
+          });
+        }
         if (loan.repayments.length)
           return NextResponse.json(
             { error: "Repayment schedule already exists" },

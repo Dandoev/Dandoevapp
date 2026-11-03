@@ -130,6 +130,7 @@ export const loanActionSchema = z.object({
   batteryNumber1: z.string().max(100).trim().optional(),
   batteryNumber2: z.string().max(100).trim().optional(),
   chargerNumber: z.string().max(100).trim().optional(),
+  overrideBlockers: z.boolean().optional(),
 });
 
 // ---- User Profile Update ----

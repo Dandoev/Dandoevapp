@@ -14,6 +14,12 @@ import {
   Mail,
   MapPin,
   TrendingUp,
+  Briefcase,
+  FileText,
+  CheckCircle2,
+  ExternalLink,
+  Clock,
+  Eye,
 } from "lucide-react";
 import {
   formatNaira,
@@ -260,11 +266,10 @@ export default function ApplicationDetailDrawer({
             </div>
           </div>
 
-          {/* 3. Applicant Contact & Delivery */}
+          {/* 3. Applicant Contact, Personal Profile & Delivery */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-              <UserCheck className="w-4 h-4 text-emerald-500" /> Contact &amp;
-              Dispatch Destination
+              <UserCheck className="w-4 h-4 text-emerald-500" /> Applicant Profile &amp; Dispatch Destination
             </h3>
             <div className="p-4 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-2.5 text-xs">
               <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
@@ -276,27 +281,190 @@ export default function ApplicationDetailDrawer({
               <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
                 <MapPin className="w-4 h-4 text-neutral-400" /> {address}
               </div>
+              {loan.user?.dateOfBirth && (
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                  <Calendar className="w-4 h-4 text-neutral-400" /> Date of Birth:{" "}
+                  <strong>{formatDate(loan.user.dateOfBirth)}</strong>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 4. Digital Guarantor Co-Signer Status */}
+          {/* 4. Employment & Gig Courier Logistics Profile */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-purple-500" /> Guarantor
-              Co-Signing Verification
+              <Briefcase className="w-4 h-4 text-amber-500" /> Employment &amp; Gig Courier Logistics
             </h3>
-            <div className="p-3.5 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-500/20 rounded-xl text-xs flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-neutral-900 dark:text-white">
-                  Emeka Okafor (Guarantor)
-                </div>
-                <div className="text-neutral-500 text-[11px]">
-                  Verified via Mono Open Banking • Access Bank Nigeria
-                  (223*****411)
-                </div>
+            <div className="p-4 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-2.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-500">Employment Status:</span>
+                <span className="font-semibold text-neutral-900 dark:text-white capitalize">
+                  {loan.user?.employmentStatus?.replace(/_/g, " ") || "Gig Courier Rider"}
+                </span>
               </div>
-              <span className="badge badge-success text-xs">✓ Co-Signed</span>
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-500">Delivery Platform / Employer:</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                  🛵 {loan.user?.employerName || "Independent Logistics Rider"}
+                </span>
+              </div>
+              {loan.user?.employerAddress && (
+                <div className="flex justify-between items-start">
+                  <span className="text-neutral-500">Delivery Hub / Base:</span>
+                  <span className="font-medium text-neutral-800 dark:text-neutral-200 text-right max-w-xs">
+                    {loan.user.employerAddress}
+                  </span>
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* 5. Repayment Bank Account & Mandate Details */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+              <CreditCard className="w-4 h-4 text-blue-500" /> Repayment Bank &amp; Debit Mandate
+            </h3>
+            <div className="p-4 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Bank Name:</span>
+                <span className="font-semibold text-neutral-900 dark:text-white">
+                  {loan.user?.bankName || "Commercial Bank"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Account Name:</span>
+                <span className="font-semibold text-neutral-900 dark:text-white">
+                  {loan.user?.bankAccountName || applicantName}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">NUBAN Account:</span>
+                <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">
+                  {sensitiveData?.bankAccountNumber ||
+                    (loan.user?.bankAccountNumber
+                      ? `••••${String(loan.user.bankAccountNumber).slice(-4)}`
+                      : "••••••••••")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Deduction Frequency:</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                  {loan.deductionFrequency || "Weekly"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Mandate Reference:</span>
+                <span className="font-mono text-[11px] text-neutral-500">
+                  {loan.monoMandateRef || "MND-DANDO-PENDING"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Uploaded Verification Documents & Courier Dashboard */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-cyan-500" /> Verification Documents &amp; Earnings Proof
+            </h3>
+            {loan.documents && loan.documents.length > 0 ? (
+              <div className="space-y-2.5">
+                {loan.documents.map((doc: any, idx: number) => {
+                  const isImage =
+                    typeof doc.fileUrl === "string" &&
+                    (doc.fileUrl.startsWith("data:image") ||
+                      /\.(png|jpe?g|webp|gif)($|\?)/i.test(doc.fileUrl));
+                  return (
+                    <div
+                      key={doc.id || idx}
+                      className="p-3 bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-info text-[10px]">
+                            {doc.type === "work_id"
+                              ? "Courier Earnings Dashboard"
+                              : doc.type?.replace(/_/g, " ").toUpperCase() || "DOCUMENT"}
+                          </span>
+                          <span className="font-semibold text-xs text-neutral-800 dark:text-neutral-200 truncate max-w-[200px]">
+                            {doc.fileName || "proof-document.jpg"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          ✓ Uploaded
+                        </span>
+                      </div>
+                      {isImage && (
+                        <div className="mt-2 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 max-h-48 bg-neutral-900 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={doc.fileUrl}
+                            alt={doc.fileName || "Uploaded document"}
+                            className="w-full object-contain max-h-48 hover:opacity-95 transition cursor-pointer"
+                            onClick={() => window.open(doc.fileUrl, "_blank")}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-950/60 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-400 text-xs text-center">
+                No verification documents uploaded.
+              </div>
+            )}
+          </div>
+
+          {/* 7. Digital Guarantor Co-Signer Status */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+              <FileCheck className="w-4 h-4 text-purple-500" /> Guarantor Co-Signing Verification
+            </h3>
+            {loan.guarantors && loan.guarantors.length > 0 ? (
+              <div className="space-y-2">
+                {loan.guarantors.map((g: any, i: number) => (
+                  <div
+                    key={g.id || i}
+                    className="p-3.5 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-500/20 rounded-xl text-xs flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-semibold text-neutral-900 dark:text-white">
+                        {g.fullName}{" "}
+                        <span className="text-neutral-400 font-normal">
+                          ({g.relationship || "Guarantor"})
+                        </span>
+                      </div>
+                      <div className="text-neutral-500 text-[11px] mt-0.5">
+                        Phone: {g.phone} {g.email ? `• ${g.email}` : ""}
+                      </div>
+                    </div>
+                    <span
+                      className={`badge text-[11px] ${
+                        g.status === "accepted" || g.status === "verified"
+                          ? "badge-success"
+                          : "badge-warning"
+                      }`}
+                    >
+                      {g.status === "accepted" || g.status === "verified"
+                        ? "✓ Co-Signed"
+                        : "Invited"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-3.5 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-500/20 rounded-xl text-xs flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-neutral-900 dark:text-white">
+                    Nominated Guarantors
+                  </div>
+                  <div className="text-neutral-500 text-[11px]">
+                    Pending guarantor verification via SMS/WhatsApp
+                  </div>
+                </div>
+                <span className="badge badge-warning text-xs">Pending</span>
+              </div>
+            )}
           </div>
 
           {/* Existing hardware allocations if approved */}

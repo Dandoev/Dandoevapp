@@ -30,6 +30,7 @@ export default function LoanApprovalModal({
   const [batteryNumber2, setBatteryNumber2] = useState('');
   const [chargerNumber, setChargerNumber] = useState('');
   const [adminNotes, setAdminNotes] = useState('Application approved after credit review & KYC validation.');
+  const [overrideBlockers, setOverrideBlockers] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -82,6 +83,7 @@ export default function LoanApprovalModal({
       const payload = {
         action: 'approve',
         ...allocated,
+        overrideBlockers,
       };
 
       const res = await fetch(`/api/admin/loans/${loan.id}`, {
@@ -256,6 +258,20 @@ export default function LoanApprovalModal({
                 onChange={(e) => setAdminNotes(e.target.value)}
                 className="w-full mt-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+
+            <div className="flex items-start gap-2.5 p-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+              <input
+                type="checkbox"
+                id="overrideBlockers"
+                checked={overrideBlockers}
+                onChange={(e) => setOverrideBlockers(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <label htmlFor="overrideBlockers" className="text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                <span className="font-semibold block">Underwriter Manual Verification Override</span>
+                I confirm the applicant&apos;s identity (NIN), courier earnings dashboard, and guarantor details have been validated by credit operations.
+              </label>
             </div>
           </div>
 

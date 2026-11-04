@@ -132,6 +132,8 @@ const MONTHS = [
 export default function BnplApplicationScreen({
   token,
   product,
+  resumeStep,
+  onRequestKyc,
   onBack,
   onComplete,
 }: {
@@ -155,25 +157,21 @@ export default function BnplApplicationScreen({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("1996-10-14");
-  const [gender, setGender] = useState("Male");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
   const [address, setAddress] = useState("");
-  const [city, setCity] = useState("Lagos");
-  const [state, setState] = useState("Lagos");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
 
   // Employment & Gig details
-  const [employmentStatus, setEmploymentStatus] = useState("Gig Economy / Logistics Courier");
-  const [employerName, setEmployerName] = useState("Chowdeck");
+  const [employmentStatus, setEmploymentStatus] = useState("");
+  const [employerName, setEmployerName] = useState("");
   const [customEmployerName, setCustomEmployerName] = useState("");
-  const [joinedDate, setJoinedDate] = useState("March 2023");
-  const [employerAddress, setEmployerAddress] = useState("Ikeja Central Hub, Lagos");
+  const [joinedDate, setJoinedDate] = useState("");
+  const [employerAddress, setEmployerAddress] = useState("");
 
   // Courier Dashboard Screenshot
-  const [dashboardFile, setDashboardFile] = useState<UploadedFile | null>({
-    name: "chowdeck_courier_dashboard.png",
-    uri: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=80",
-    size: "1.4 MB",
-  });
+  const [dashboardFile, setDashboardFile] = useState<UploadedFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   // Delivery Option
@@ -184,20 +182,21 @@ export default function BnplApplicationScreen({
 
   // Step 1: In-App Identity & NIN
   const [idType, setIdType] = useState("NIN");
-  const [idNumber, setIdNumber] = useState("22334455667");
-  const [ninVerified, setNinVerified] = useState(true);
+  const [idNumber, setIdNumber] = useState("");
+  const [bvn, setBvn] = useState("");
+  const [faceVerified, setFaceVerified] = useState(false);
 
   // Step 2: In-App Bank & Repayment Mandate
-  const [bankName, setBankName] = useState("Guaranty Trust Bank (GTBank)");
-  const [accountNumber, setAccountNumber] = useState("0123456789");
-  const [accountName, setAccountName] = useState("Solomon Dunu");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [frequency, setFrequency] = useState("weekly");
   const [tenure, setTenure] = useState(12);
 
   // Step 3: Guarantors
   const [guarantors, setGuarantors] = useState<Guarantor[]>([
-    { fullName: "Chief Babatunde Johnson", email: "babatunde@example.com", phone: "08023345566", relationship: "Senior Colleague" },
-    { fullName: "Grace Okafor", email: "grace@example.com", phone: "08034455667", relationship: "Family Member" },
+    { fullName: "", email: "", phone: "", relationship: "" },
+    { fullName: "", email: "", phone: "", relationship: "" },
   ]);
 
   // Step 4: Agreement
@@ -212,6 +211,13 @@ export default function BnplApplicationScreen({
   const [showBankPicker, setShowBankPicker] = useState(false);
 
   const draftKey = `@dandoev_bnpl_draft_${product.id}`;
+
+  useEffect(() => {
+    if (resumeStep === 1) {
+      setFaceVerified(true);
+      setStep(1);
+    }
+  }, [resumeStep]);
 
   // Restore Draft
   useEffect(() => {
@@ -271,7 +277,7 @@ export default function BnplApplicationScreen({
         employerName,
         joinedDate,
         employerAddress,
-        idNumber,
+        // Identity numbers are never written to the local form draft.
         bankName,
         accountNumber,
         accountName,
@@ -293,7 +299,6 @@ export default function BnplApplicationScreen({
     employerName,
     joinedDate,
     employerAddress,
-    idNumber,
     bankName,
     accountNumber,
     accountName,
@@ -360,9 +365,8 @@ export default function BnplApplicationScreen({
 
   // Step 1 Validator
   const validateStep1 = () => {
-    if (!idNumber.trim() || idNumber.replace(/\D/g, "").length < 10) {
-      return "Please enter a valid 11-digit NIN or government ID number.";
-    }
+    if (!/^\d{11}$/.test(idNumber)) return "Enter your 11-digit NIN.";
+    if (!/^\d{11}$/.test(bvn)) return "Enter your 11-digit BVN.";
     return null;
   };
 
@@ -428,7 +432,8 @@ export default function BnplApplicationScreen({
           deliveryAddress: deliveryType === "pickup" ? "Lagos Central Pickup Hub, Ikeja" : deliveryAddress,
           deliveryCity: deliveryType === "pickup" ? "Ikeja" : deliveryCity,
           deliveryState: deliveryType === "pickup" ? "Lagos" : deliveryState,
-          ninNumber: idNumber.replace(/\D/g, ""),
+          ninNumber: idNumber,
+          bvn,
           bankName,
           bankAccountNumber: accountNumber,
           bankAccountName: accountName,

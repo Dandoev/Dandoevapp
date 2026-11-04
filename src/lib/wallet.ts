@@ -11,6 +11,15 @@ export async function ensureWallet(tx: TxClient, userId: string) {
   return wallet;
 }
 
+export async function creditWalletFromPayment(tx: TxClient, userId: string, amount: number, reference: string) {
+  const wallet = await ensureWallet(tx, userId);
+  await tx.wallet.update({ where: { id: wallet.id }, data: { mainBalance: { increment: amount } } });
+  await postLedgerEntries(tx, [
+    { account: `payment_clearing:${userId}`, debit: amount, credit: 0, reference, details: 'Verified wallet funding' },
+    { account: `wallet_main:${userId}`, debit: 0, credit: amount, reference, details: 'Verified wallet funding' },
+  ], crypto.randomUUID());
+}
+
 /**
  * Debit User Wallet (Main) and Credit Locked Savings Wallet.
  * Increments liability (Locked Savings) and decrements liability (Main Wallet).

@@ -114,6 +114,7 @@ export const initializePaymentSchema = z.object({
   orderId: z.string().optional(),
   loanId: z.string().optional(),
   repaymentId: z.string().optional(),
+  walletTopup: z.boolean().optional(),
   callbackUrl: z.string().optional(),
   provider: z.enum(['mono', 'paystack']).optional().default('mono'),
   metadata: z.record(z.string(), z.unknown()).optional(),

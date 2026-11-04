@@ -44,13 +44,11 @@ describe("Mono production integration", () => {
     process.env.MONO_PAYMENTS_SECRET_KEY = "test_sk_configured";
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: false,
-          status: 500,
-          text: async () => "upstream failure",
-        }),
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => "upstream failure",
+      }),
     );
     const { chargeMonoMandate } = await import("../mono");
 
@@ -93,14 +91,12 @@ describe("Mono production integration", () => {
 
   it("routes credit history through the Lookup credential and requires a real response", async () => {
     process.env.MONO_LOOKUP_SECRET_KEY = "test_sk_lookup";
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          data: { providers: ["xds"], credit_history: [] },
-        }),
-      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { providers: ["xds"], credit_history: [] },
+      }),
+    });
     vi.stubGlobal("fetch", fetchMock);
     const { getMonoCreditHistory } = await import("../mono");
     const report = await getMonoCreditHistory("12345678901");
@@ -115,14 +111,12 @@ describe("Mono production integration", () => {
 
   it("routes Prove initiation through the Prove credential", async () => {
     process.env.MONO_PROVE_SECRET_KEY = "test_sk_prove";
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          data: { mono_url: "https://example.com/verify", reference: "ref-1" },
-        }),
-      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { mono_url: "https://example.com/verify", reference: "ref-1" },
+      }),
+    });
     vi.stubGlobal("fetch", fetchMock);
     const { initiateMonoProve } = await import("../mono");
     const session = await initiateMonoProve({
@@ -168,18 +162,16 @@ describe("Mono production integration", () => {
 
   it("uses the Payments credential and kobo amount for DirectPay", async () => {
     process.env.MONO_PAYMENTS_SECRET_KEY = "test_sk_payments";
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          status: "successful",
-          data: {
-            mono_url: "https://checkout.mono.co/test",
-            reference: "DND123",
-          },
-        }),
-      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: "successful",
+        data: {
+          mono_url: "https://checkout.mono.co/test",
+          reference: "DND123",
+        },
+      }),
+    });
     vi.stubGlobal("fetch", fetchMock);
     const { initiateMonoPayment } = await import("../mono");
     const session = await initiateMonoPayment({
@@ -195,6 +187,53 @@ describe("Mono production integration", () => {
     expect(options.headers["mono-sec-key"]).toBe("test_sk_payments");
     expect(JSON.parse(options.body).amount).toBe(150000);
     expect(session.reference).toBe("DND123");
+  });
+
+  it("initiates BNPL mandates as Mono Sweep through the authorization API", async () => {
+    process.env.MONO_PAYMENTS_SECRET_KEY = "test_sk_payments";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { id: "mono-customer-1" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            mandate_id: "mmc-sweep-1",
+            mono_url: "https://authorise.mono.co/sweep-1",
+            status: "pending",
+          },
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setupMonoRecurringMandate } = await import("../mono");
+    const mandate = await setupMonoRecurringMandate({
+      accountId: "mono-account-1",
+      accountNumber: "0123456789",
+      accountName: "Test User",
+      bankName: "GTBank",
+      email: "test@example.com",
+      phone: "08012345678",
+      bvn: "22233344455",
+      firstName: "Test",
+      lastName: "User",
+      address: "Lagos",
+      amount: 25000,
+      totalRepayable: 300000,
+      tenureMonths: 12,
+      deductionFrequency: "weekly",
+    });
+    const request = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "https://api.withmono.com/v2/payments/initiate",
+    );
+    expect(request.mandate_type).toBe("sweep");
+    expect(request.type).toBe("recurring-debit");
+    expect(request.method).toBe("mandate");
+    expect(mandate.mandateType).toBe("sweep");
+    expect(mandate.authorizationUrl).toBe("https://authorise.mono.co/sweep-1");
   });
 
   it("treats an unfinished Mono payment as pending", async () => {

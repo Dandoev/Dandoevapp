@@ -5,6 +5,7 @@ import logger from '@/lib/logger';
 import { verifyMonoPayment } from '@/lib/mono';
 import { assertVerifiedPayment, PaymentIntentError, resolvePaymentIntent } from '@/lib/payment-intent';
 import { notifyOrderConfirmed, notifyDownPaymentSuccess, notifyOrderPaymentFailed } from '@/lib/notifications';
+import { creditWalletFromPayment } from '@/lib/wallet';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
@@ -113,12 +114,16 @@ export const GET = withAuth(
           userId: transaction.userId, amount: expectedAmount,
           orderId: transaction.orderId, loanId: transaction.loanId,
           repaymentId: transaction.repaymentId,
+          walletTopup: (transaction.metadata as Record<string, unknown> | null)?.walletTopup === true,
         });
         const claimed = await tx.paymentTransaction.updateMany({
           where: { id: transaction.id, status: { in: ['initiated', 'pending'] } },
           data: { status: 'success', reconciledAt: new Date() },
         });
         if (claimed.count !== 1) throw new PaymentIntentError('Payment was already processed', 409);
+        if ((transaction.metadata as Record<string, unknown> | null)?.walletTopup === true) {
+          await creditWalletFromPayment(tx, transaction.userId, expectedAmount, gatewayReference);
+        }
         // ---- A. Confirm Outright Order (Bike / Batteries / Chargers) ----
         if (transaction.orderId) {
           await tx.order.update({

@@ -1464,15 +1464,18 @@ export async function setupMonoRecurringMandate(params: {
     );
     if (!customer.data?.id)
       throw new Error("Mono did not return a customer ID");
+    // Mono Sweep must use the Initiate Mandate API. The Create Mandate API
+    // does not support mandate_type=sweep.
     const res = await monoFetch<{ data: any }>(
-      "/payments/mandates",
+      "/initiate",
       {
         method: "POST",
         body: JSON.stringify({
+          type: "recurring-debit",
+          method: "mandate",
           debit_type: "variable",
-          customer: customer.data.id,
-          mandate_type: "emandate",
-          verification_method: "selfie_verification",
+          mandate_type: "sweep",
+          customer: { id: customer.data.id },
           // For variable mandates this is the total amount collectible for the mandate period.
           amount: Math.round(totalRepayable * 100),
           reference: ref.slice(0, 24),
@@ -1482,13 +1485,15 @@ export async function setupMonoRecurringMandate(params: {
           description: desc.slice(0, 100),
           start_date: startDate,
           end_date: endDate,
+          redirect_url:
+            "https://dandoevapp.onrender.com/checkout/mobile-return",
           meta: {
             account_id: params.accountId,
             deduction_frequency: deductionFrequency,
           },
         }),
       },
-      "v3",
+      "payments",
       "payments",
     );
 
@@ -1497,7 +1502,7 @@ export async function setupMonoRecurringMandate(params: {
         id: res.data.id || res.data.mandate_id,
         status: res.data.status || "pending",
         reference: ref,
-        mandateType: "emandate",
+        mandateType: "sweep",
         debitType: "variable",
         amount: params.amount || computedTerms.installmentAmount,
         mandateCapAmount: computedTerms.mandateCapAmount,
@@ -1535,7 +1540,7 @@ export async function setupMonoRecurringMandate(params: {
     id: `mnd_live_${deterministicSuffix}`,
     status: "active",
     reference: ref,
-    mandateType: "emandate",
+    mandateType: "sweep",
     debitType: "variable",
     amount: params.amount || computedTerms.installmentAmount,
     mandateCapAmount: computedTerms.mandateCapAmount,

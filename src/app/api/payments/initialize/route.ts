@@ -24,11 +24,11 @@ export const POST = withAuth(
       initializePaymentSchema,
       async (req: NextRequest, ctx: ApiContext & { validatedBody: InitializePaymentInput }) => {
         const log = logger.child({ requestId: ctx.requestId, route: 'payments/initialize' });
-        const { amount, orderId, loanId, repaymentId, callbackUrl, metadata, provider = 'mono' } = ctx.validatedBody;
+        const { amount, orderId, loanId, repaymentId, walletTopup, callbackUrl, metadata, provider = 'mono' } = ctx.validatedBody;
 
         try {
           await resolvePaymentIntent(prisma, {
-            userId: ctx.user.sub, amount, orderId, loanId, repaymentId,
+            userId: ctx.user.sub, amount, orderId, loanId, repaymentId, walletTopup,
           });
           const transactionId = `DND${crypto.randomBytes(10).toString('hex')}`;
 
@@ -45,7 +45,7 @@ export const POST = withAuth(
               currency: 'NGN',
               status: 'initiated',
               idempotencyKey: req.headers.get('idempotency-key') || null,
-              metadata: (metadata as object) || {},
+              metadata: { ...(metadata || {}), ...(walletTopup ? { walletTopup: true } : {}) },
             },
           });
 
@@ -57,6 +57,8 @@ export const POST = withAuth(
             paymentDescription = `DandoEv BNPL Installment #${repaymentId.slice(0, 8)}`;
           } else if (loanId) {
             paymentDescription = `DandoEv BNPL Down Payment (Loan #${loanId.slice(0, 8)})`;
+          } else if (walletTopup) {
+            paymentDescription = 'DandoEv Wallet Funding';
           }
 
           const customer = await prisma.user.findUnique({ where: { id: ctx.user.sub }, select: { firstName: true, lastName: true, email: true } });

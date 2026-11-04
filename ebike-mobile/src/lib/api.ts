@@ -366,4 +366,11 @@ export const MobileApi = {
       token,
     });
   },
+
+  async fundWallet(amount: number, token: string) {
+    return apiRequest<{ success: boolean; data: { authorizationUrl: string; reference: string } }>(
+      '/payments/initialize',
+      { method: 'POST', token, body: { amount, walletTopup: true, provider: 'mono', callbackUrl: `${APP_CONFIG.apiBaseUrl}/checkout/mobile-return` } },
+    );
+  },
 };

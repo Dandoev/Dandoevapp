@@ -15,6 +15,7 @@ export interface PaymentIntent {
   orderId?: string | null;
   loanId?: string | null;
   repaymentId?: string | null;
+  walletTopup?: boolean;
 }
 
 function cents(amount: number): number {
@@ -26,12 +27,16 @@ function cents(amount: number): number {
 }
 
 export async function resolvePaymentIntent(db: PaymentDb, intent: PaymentIntent): Promise<void> {
-  const { userId, amount, orderId, loanId, repaymentId } = intent;
-  const supplied = [orderId, loanId, repaymentId].filter(Boolean);
+  const { userId, amount, orderId, loanId, repaymentId, walletTopup } = intent;
+  const supplied = [orderId, loanId, repaymentId, walletTopup].filter(Boolean);
   if (supplied.length !== 1) {
     throw new PaymentIntentError('Exactly one payment target is required', 400);
   }
   const paymentCents = cents(amount);
+  if (walletTopup) {
+    if (paymentCents < 100000 || paymentCents > 100000000) throw new PaymentIntentError('Wallet funding must be between ₦1,000 and ₦1,000,000', 400);
+    return;
+  }
 
   let owner: string;
   let due: number;

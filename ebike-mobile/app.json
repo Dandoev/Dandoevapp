@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 14,
+      "versionCode": 15,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png"

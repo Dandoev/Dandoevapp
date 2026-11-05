@@ -155,22 +155,31 @@ export const POST = withAuth(
             });
           }
 
-          // Identity verification check:
-          // Verified if Mono KYC passed, OR if valid 11-digit NIN/BVN is submitted in-app
-          const hasValidIdentity =
-            user.kycStatus === "verified" ||
-            Boolean(user.monoAccountId && user.monoStatus === "statement_fetched") ||
-            Boolean(data.ninNumber && data.ninNumber.replace(/\D/g, "").length === 11) ||
-            Boolean(data.bvn && data.bvn.replace(/\D/g, "").length === 11) ||
-            Boolean(user.ninNumber) ||
-            Boolean(user.bvn);
-
-          if (!hasValidIdentity) {
+          if (user.kycStatus !== "verified") {
             return NextResponse.json(
               {
-                error:
-                  "Please provide a valid 11-digit NIN or complete Mono KYC before applying.",
+                error: "Complete facial identity verification before applying.",
               },
+              { status: 400 },
+            );
+          }
+          const faceVerification = await prisma.auditLog.findFirst({
+            where: { userId: user.id, action: "MONO_PROVE_FACE_VERIFIED" },
+            select: { id: true },
+          });
+          if (!faceVerification) {
+            return NextResponse.json(
+              { error: "Complete Mono Prove facial verification before applying." },
+              { status: 400 },
+            );
+          }
+          const identityLookup = await prisma.auditLog.findFirst({
+            where: { userId: user.id, action: "MONO_LOOKUP_IDENTITY_VERIFIED" },
+            select: { id: true },
+          });
+          if (!identityLookup) {
+            return NextResponse.json(
+              { error: "Verify your BVN and NIN with Mono Lookup before applying." },
               { status: 400 },
             );
           }
@@ -192,13 +201,8 @@ export const POST = withAuth(
             );
           }
 
-          const deliveryType = data.deliveryType;
-          const deliveryFee =
-            deliveryType === "pickup"
-              ? 0
-              : deliveryType === "delivery_lagos"
-                ? 20_000
-                : 50_000;
+          const deliveryType = "pickup";
+          const deliveryFee = 0;
           const tenure = data.tenure;
           const frequency = data.deductionFrequency as DeductionInterval;
           const downPayment = Math.max(
@@ -355,10 +359,10 @@ export const POST = withAuth(
                 ninNumber: data.ninNumber
                   ? encryptField(data.ninNumber.replace(/\D/g, ""))
                   : user.ninNumber,
+                bvn: data.bvn ? encryptField(data.bvn) : user.bvn,
                 bankName: data.bankName,
                 bankAccountNumber: encryptField(data.bankAccountNumber),
                 bankAccountName: data.bankAccountName,
-                kycStatus: "verified",
               },
             });
             return created;

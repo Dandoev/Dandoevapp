@@ -265,7 +265,31 @@ async function main() {
   for (const bike of bikes) {
     const created = await prisma.bike.upsert({
       where: { id: `seed-bike-${bike.model}` },
-      update: { stockQuantity: bike.stockQuantity },
+      // Keep the live catalog synchronized when product prices/specifications change.
+      update: {
+        name: bike.name,
+        brand: bike.brand,
+        model: bike.model,
+        description: bike.description,
+        price: bike.price,
+        images: bike.images,
+        category: bike.category,
+        motorPower: bike.motorPower,
+        batteryCapacity: bike.batteryCapacity,
+        rangeKm: bike.rangeKm,
+        topSpeed: bike.topSpeed,
+        weight: bike.weight,
+        chargingTime: bike.chargingTime,
+        warranty: bike.warranty,
+        colors: bike.colors,
+        availability: bike.availability,
+        bnplEligible: bike.bnplEligible,
+        bnplMinDownPayment: bike.bnplMinDownPayment,
+        stockQuantity: bike.stockQuantity,
+        rating: bike.rating,
+        reviewCount: bike.reviewCount,
+        features: bike.features,
+      },
       create: {
         id: `seed-bike-${bike.model}`,
         ...bike,

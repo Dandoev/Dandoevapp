@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import * as WebBrowser from "expo-web-browser";
 import {
   ArrowLeft,
@@ -31,11 +33,14 @@ export default function RealKycScreen({
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [addressDocument, setAddressDocument] = useState<any | null>(null);
+  const [uploadingAddress, setUploadingAddress] = useState(false);
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const result = await MobileApi.getProfile(token);
-      setStatus(((result as any).user ?? result.data)?.kycStatus ?? "pending");
+      const profile = (result as any).user ?? result.data;
+      setStatus(profile?.kycStatus === "verified" && profile?.faceVerified ? "verified" : "pending");
       setMessage(null);
     } catch {
       setMessage(
@@ -74,8 +79,8 @@ export default function RealKycScreen({
           await new Promise((resolve) => setTimeout(resolve, 3000));
           await refresh();
           const latest = await MobileApi.getProfile(token).catch(() => null);
-          const latestStatus = ((latest as any)?.user ?? (latest as any)?.data)
-            ?.kycStatus;
+          const latestProfile = (latest as any)?.user ?? (latest as any)?.data;
+          const latestStatus = latestProfile?.kycStatus === "verified" && latestProfile?.faceVerified ? "verified" : latestProfile?.kycStatus === "failed" ? "failed" : "pending";
           if (latestStatus === "verified" || latestStatus === "failed") break;
         }
       }
@@ -92,6 +97,22 @@ export default function RealKycScreen({
       );
     } finally {
       setStarting(false);
+    }
+  };
+  const pickProofOfAddress = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png", "application/pdf"], copyToCacheDirectory: true });
+      if (result.canceled || !result.assets[0]) return;
+      const file = result.assets[0];
+      setUploadingAddress(true);
+      setMessage(null);
+      const uploaded = await MobileApi.uploadProofOfAddress({ uri: file.uri, name: file.name, mimeType: file.mimeType }, token);
+      setAddressDocument(uploaded.data);
+      setMessage("Proof of address uploaded and sent for review.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Proof of address upload failed. Please try again.");
+    } finally {
+      setUploadingAddress(false);
     }
   };
   const verified = status === "verified";
@@ -150,6 +171,14 @@ export default function RealKycScreen({
             </Text>
           </>
         )}
+      </View>
+      <View style={styles.addressCard}>
+        <Text style={styles.addressTitle}>Proof of address</Text>
+        <Text style={styles.addressBody}>Upload a recent utility bill, bank statement, tenancy document, or official correspondence showing your residential address.</Text>
+        <TouchableOpacity style={[styles.uploadButton, uploadingAddress && styles.disabled]} onPress={() => void pickProofOfAddress()} disabled={uploadingAddress} accessibilityRole="button">
+          {uploadingAddress ? <ActivityIndicator color="#102152" /> : <Text style={styles.uploadButtonText}>{addressDocument ? `Uploaded: ${addressDocument.fileName || "document"}` : "Upload proof of address"}</Text>}
+        </TouchableOpacity>
+        {addressDocument && <Text style={styles.pendingText}>Pending review · PDF, JPG, and PNG accepted · max 5 MB</Text>}
       </View>
       <Text style={styles.sectionTitle}>How it works</Text>
       <View style={styles.step}>
@@ -275,6 +304,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#DDE8ED",
   },
+  addressCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, borderWidth: 1, borderColor: "#DDE8ED", marginTop: 14 },
+  addressTitle: { color: "#102152", fontFamily: "PlusJakartaSans_700Bold", fontSize: 17 },
+  addressBody: { color: "#607384", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20, marginTop: 7 },
+  uploadButton: { minHeight: 48, borderRadius: 13, backgroundColor: "#DDF7F0", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginTop: 14 },
+  uploadButtonText: { color: "#102152", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  pendingText: { color: "#117F78", fontFamily: "Inter_600SemiBold", fontSize: 12, lineHeight: 18, marginTop: 9 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

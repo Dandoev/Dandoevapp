@@ -71,6 +71,7 @@ function App() {
     null,
   );
   const [bnplResumeStep, setBnplResumeStep] = useState<number | null>(null);
+  const [bnplIdentity, setBnplIdentity] = useState({ nin: "", bvn: "" });
   const [prevScreenBeforeDetail, setPrevScreenBeforeDetail] =
     useState<ScreenType>("Dashboard");
   const [token, setToken] = useState<string | null>(null);
@@ -290,6 +291,7 @@ function App() {
               onBack={() => setCurrentScreen(prevScreenBeforeDetail)}
               onApplyBNPL={(prod, _tenure) => {
                 setSelectedProduct(prod);
+                setBnplIdentity({ nin: "", bvn: "" });
                 setBnplResumeStep(0);
                 setCurrentScreen("BnplApplication");
               }}
@@ -321,7 +323,9 @@ function App() {
               token={token}
               product={selectedProduct}
               resumeStep={bnplResumeStep}
-              onRequestKyc={() => {
+              initialIdentity={bnplIdentity}
+              onRequestKyc={(identity) => {
+                setBnplIdentity(identity);
                 setBnplResumeStep(1);
                 setCurrentScreen("Kyc");
               }}

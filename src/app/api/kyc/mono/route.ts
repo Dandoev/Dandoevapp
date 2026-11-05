@@ -114,9 +114,9 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     // MODE 2: Direct BVN & NIN Statutory KYC Validation
     // ---------------------------------------------------------
     if (action === "verify_kyc") {
-      if (!bvn && !nin) {
+      if (!/^\d{11}$/.test(String(bvn || "")) || !/^\d{11}$/.test(String(nin || ""))) {
         return NextResponse.json(
-          { error: "BVN or NIN is required for verification" },
+          { error: "Enter a valid 11-digit BVN and NIN" },
           { status: 400 },
         );
       }
@@ -130,6 +130,20 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         const { lookupMonoNin } = await import("@/lib/mono");
         ninResult = await lookupMonoNin(String(nin));
       }
+      if (!bvnResult?.verified || !ninResult?.verified || bvnResult.watchlistListed) {
+        return NextResponse.json(
+          { error: "Identity could not be verified with Mono Lookup" },
+          { status: 422 },
+        );
+      }
+      await prisma.auditLog.create({
+        data: {
+          userId: userCtx.sub,
+          action: "MONO_LOOKUP_IDENTITY_VERIFIED",
+          resource: "kyc",
+          details: JSON.stringify({ provider: "mono_lookup", bvnMasked: bvnResult.bvnMasked, ninMasked: ninResult.ninMasked }),
+        },
+      });
       return NextResponse.json({
         success: true,
         message: "KYC identity verified via Mono Lookup",

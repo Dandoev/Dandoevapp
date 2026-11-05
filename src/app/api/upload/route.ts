@@ -27,6 +27,11 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'File size too large (Max 5MB)' }, { status: 413 });
       }
 
+      const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (file.type && !allowed.includes(file.type)) {
+        return NextResponse.json({ error: 'Only PDF, JPEG, and PNG files are accepted' }, { status: 415 });
+      }
+
       // Read file to buffer
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);

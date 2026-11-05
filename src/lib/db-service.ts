@@ -106,6 +106,7 @@ export interface LoanEntity {
   bike?: any;
   guarantors?: any[];
   repayments?: any[];
+  documents?: any[];
 }
 
 export interface RepaymentEntity {
@@ -857,6 +858,7 @@ class DbService {
           user: true,
           guarantors: true,
           repayments: true,
+          documents: true,
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -915,6 +917,7 @@ class DbService {
           } : undefined,
           guarantors: l.guarantors || [],
           repayments: l.repayments || [],
+          documents: l.documents || [],
         }));
       }
     } catch {

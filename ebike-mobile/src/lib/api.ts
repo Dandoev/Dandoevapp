@@ -204,6 +204,30 @@ export const MobileApi = {
       },
     );
   },
+  async verifyMonoBankAccount(data: { accountNumber: string; bankName: string; firstName?: string; lastName?: string }, token: string) {
+    return apiRequest<{ success: boolean; message: string; data: any }>("/kyc/mono", {
+      method: "POST",
+      body: { action: "lookup_account", ...data },
+      token,
+    });
+  },
+  async uploadDocument(file: { uri: string; name: string; mimeType?: string }, token: string) {
+    const form = new FormData();
+    form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/octet-stream" } as any);
+    form.append("folder", "bnpl-earning-dashboards");
+    const response = await fetch(`${APP_CONFIG.apiEndpoint}/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Document upload failed");
+    return payload as { success: boolean; data: { url: string } };
+  },
+  async uploadProofOfAddress(file: { uri: string; name: string; mimeType?: string }, token: string) {
+    const form = new FormData();
+    form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/octet-stream" } as any);
+    const response = await fetch(`${APP_CONFIG.apiEndpoint}/kyc/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Proof of address upload failed");
+    return payload as { success: boolean; data: any };
+  },
   async initiateMonoProve(redirectUrl: string, token: string) {
     return apiRequest<{
       success: boolean;

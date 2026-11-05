@@ -34,9 +34,15 @@ export async function uploadFile(
 
   if (hasSupabase) {
     const bucketName = 'dandoev-docs';
-    const filePath = `${folder}/${finalFileName}`;
+    const safeName = finalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
     
     try {
+      const { data: bucket } = await supabaseAdmin.storage.getBucket(bucketName);
+      if (!bucket) {
+        const { error: bucketError } = await supabaseAdmin.storage.createBucket(bucketName, { public: true, fileSizeLimit: '5MB', allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
+        if (bucketError && !/already exists/i.test(bucketError.message)) throw bucketError;
+      }
       const { data, error } = await supabaseAdmin.storage
         .from(bucketName)
         .upload(filePath, buffer, {
@@ -60,12 +66,5 @@ export async function uploadFile(
     }
   }
 
-  // Fallback to Mock for development if no credentials
-  console.warn('No Supabase credentials found. Using simulated upload.');
-  await new Promise((r) => setTimeout(r, 500));
-  return {
-    url: `https://mock-storage.com/${folder}/${finalFileName}`,
-    publicId: `mock_${Date.now()}`,
-    provider: 'mock'
-  };
+  throw new Error('Supabase Storage is not configured. Document was not saved.');
 }

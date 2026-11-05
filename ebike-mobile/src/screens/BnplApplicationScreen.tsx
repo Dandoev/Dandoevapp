@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Image,
   Modal,
   Platform,
@@ -13,6 +14,7 @@ import {
   View,
   SafeAreaView,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ArrowLeft,
@@ -49,12 +51,6 @@ type Guarantor = {
   relationship: string;
 };
 
-type UploadedFile = {
-  name: string;
-  uri: string;
-  size?: string;
-};
-
 type SubmittedLoanInfo = {
   loanId: string;
   bikeName: string;
@@ -79,7 +75,6 @@ const GIG_PLATFORMS = [
   "Bolt",
   "Glovo",
   "InDrive",
-  "Uber",
   "Lagride",
   "Waysdrop",
   "Fez Delivery",
@@ -133,6 +128,7 @@ export default function BnplApplicationScreen({
   token,
   product,
   resumeStep,
+  initialIdentity,
   onRequestKyc,
   onBack,
   onComplete,
@@ -140,7 +136,8 @@ export default function BnplApplicationScreen({
   token: string;
   product: DemoProduct;
   resumeStep?: number | null;
-  onRequestKyc?: () => void;
+  initialIdentity?: { nin: string; bvn: string };
+  onRequestKyc?: (identity: { nin: string; bvn: string }) => void;
   onBack: () => void;
   onComplete: () => void;
 }) {
@@ -168,23 +165,19 @@ export default function BnplApplicationScreen({
   const [employerName, setEmployerName] = useState("");
   const [customEmployerName, setCustomEmployerName] = useState("");
   const [joinedDate, setJoinedDate] = useState("");
+  const [showJoinDatePicker, setShowJoinDatePicker] = useState(false);
   const [employerAddress, setEmployerAddress] = useState("");
 
   // Courier Dashboard Screenshot
-  const [dashboardFile, setDashboardFile] = useState<UploadedFile | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   // Delivery Option
-  const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery_lagos" | "delivery_outside">("pickup");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryCity, setDeliveryCity] = useState("Ikeja");
-  const [deliveryState, setDeliveryState] = useState("Lagos");
+  const deliveryType = "pickup" as const;
 
   // Step 1: In-App Identity & NIN
-  const [idType, setIdType] = useState("NIN");
-  const [idNumber, setIdNumber] = useState("");
-  const [bvn, setBvn] = useState("");
+  const [idNumber, setIdNumber] = useState(initialIdentity?.nin || "");
+  const [bvn, setBvn] = useState(initialIdentity?.bvn || "");
   const [faceVerified, setFaceVerified] = useState(false);
+  const [lookupVerified, setLookupVerified] = useState(false);
 
   // Step 2: In-App Bank & Repayment Mandate
   const [bankName, setBankName] = useState("");
@@ -209,15 +202,34 @@ export default function BnplApplicationScreen({
   const [dobDay, setDobDay] = useState(14);
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [showBankPicker, setShowBankPicker] = useState(false);
+  const [showPlatformPicker, setShowPlatformPicker] = useState(false);
+  const [dashboardFile, setDashboardFile] = useState<{ name: string; uri: string; size?: string } | null>(null);
+  const [accountChecking, setAccountChecking] = useState(false);
+  const [accountVerified, setAccountVerified] = useState(false);
 
   const draftKey = `@dandoev_bnpl_draft_${product.id}`;
 
   useEffect(() => {
     if (resumeStep === 1) {
-      setFaceVerified(true);
       setStep(1);
     }
   }, [resumeStep]);
+
+  useEffect(() => {
+    let active = true;
+    MobileApi.getProfile(token)
+      .then((result) => {
+        if (active) {
+          const profile = (result as any).user ?? result.data;
+          setFaceVerified(profile?.kycStatus === "verified" && profile?.faceVerified === true);
+          setLookupVerified(profile?.identityLookupVerified === true);
+        }
+      })
+      .catch(() => {
+        if (active) setFaceVerified(false);
+      });
+    return () => { active = false; };
+  }, [token, resumeStep]);
 
   // Restore Draft
   useEffect(() => {
@@ -246,7 +258,6 @@ export default function BnplApplicationScreen({
           if (draft.employerName) setEmployerName(draft.employerName);
           if (draft.joinedDate) setJoinedDate(draft.joinedDate);
           if (draft.employerAddress) setEmployerAddress(draft.employerAddress);
-          if (draft.idNumber) setIdNumber(draft.idNumber);
           if (draft.bankName) setBankName(draft.bankName);
           if (draft.accountNumber) setAccountNumber(draft.accountNumber);
           if (draft.accountName) setAccountName(draft.accountName);
@@ -326,17 +337,42 @@ export default function BnplApplicationScreen({
     setShowDobPicker(false);
   };
 
-  // Pure In-App Mobile Dashboard Screenshot Upload
-  const handlePickDashboardScreenshot = () => {
-    setIsUploading(true);
-    setTimeout(() => {
-      setIsUploading(false);
-      setDashboardFile({
-        name: `${employerName.toLowerCase()}_active_dashboard.png`,
-        uri: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=80",
-        size: "1.4 MB",
-      });
-    }, 600);
+  const handleConfirmJoinDate = () => {
+    setJoinedDate(`${dobYear}-${String(dobMonth + 1).padStart(2, "0")}-${String(dobDay).padStart(2, "0")}`);
+    setShowJoinDatePicker(false);
+  };
+
+  const handlePickDashboard = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png", "application/pdf"], copyToCacheDirectory: true });
+      if (!result.canceled && result.assets[0]) {
+        const file = result.assets[0];
+        setDashboardFile({ name: file.name, uri: file.uri, size: file.size ? `${Math.round(file.size / 1024)} KB` : undefined });
+      }
+    } catch {
+      setError("We could not open your files. Please try again.");
+    }
+  };
+
+  const verifyBankAccount = async () => {
+    if (!bankName || accountNumber.length !== 10) {
+      setError("Select your bank and enter the 10-digit account number first.");
+      return;
+    }
+    setAccountChecking(true);
+    setError("");
+    try {
+      const result = await MobileApi.verifyMonoBankAccount({ accountNumber, bankName, firstName, lastName }, token);
+      const details = result.data || {};
+      setAccountName(details.accountName || details.account_name || "");
+      setAccountVerified(Boolean(details.verified ?? details.accountName ?? details.account_name));
+      if (!details.accountName && !details.account_name) setError("Mono could not confirm this account. Check the bank and account number.");
+    } catch (cause) {
+      setAccountVerified(false);
+      setError(cause instanceof Error ? cause.message : "Account verification failed. Please try again.");
+    } finally {
+      setAccountChecking(false);
+    }
   };
 
   // Step 0 Validator
@@ -350,15 +386,13 @@ export default function BnplApplicationScreen({
     if (!dateOfBirth) {
       return "Please select your date of birth.";
     }
+    if (!joinedDate) return "Please select when you joined your courier or delivery platform.";
     const [y, m, d] = dateOfBirth.split("-").map(Number);
     if (calculateAge(y, m - 1, d) < 18) {
       return "Applicant must be at least 18 years old to qualify for BNPL.";
     }
     if (!address.trim() || !city.trim() || !state.trim()) {
       return "Please complete your residential street address.";
-    }
-    if (deliveryType !== "pickup" && !deliveryAddress.trim()) {
-      return "Please provide your delivery street address.";
     }
     return null;
   };
@@ -372,9 +406,10 @@ export default function BnplApplicationScreen({
 
   // Step 2 Validator
   const validateStep2 = () => {
-    if (!bankName.trim() || !accountNumber.trim() || accountNumber.length < 10) {
+    if (!bankName.trim() || !accountNumber.trim() || accountNumber.length !== 10) {
       return "Please select your bank and enter a valid 10-digit NUBAN account number.";
     }
+    if (!accountVerified) return "Verify your bank account with Mono before continuing.";
     return null;
   };
 
@@ -401,6 +436,11 @@ export default function BnplApplicationScreen({
     setError("");
     try {
       const finalEmployer = employerName === "Other Corporate Logistics" && customEmployerName ? customEmployerName : employerName;
+      let uploadedDocuments;
+      if (dashboardFile) {
+        const uploaded = await MobileApi.uploadDocument({ uri: dashboardFile.uri, name: dashboardFile.name, mimeType: dashboardFile.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg" }, token);
+        uploadedDocuments = [{ type: "earning_dashboard", fileName: dashboardFile.name, fileUrl: uploaded.data.url }];
+      }
       const res = await MobileApi.applyForLoan(
         {
           bikeId: product.id,
@@ -412,7 +452,7 @@ export default function BnplApplicationScreen({
           insuranceFee: 60000,
           serviceFee: 20000,
           deliveryType,
-          deliveryFee: deliveryType === "pickup" ? 0 : deliveryType === "delivery_lagos" ? 20000 : 50000,
+          deliveryFee: 0,
           deductionFrequency: frequency,
           tenure,
           monthlyRepayment: monthly,
@@ -429,20 +469,18 @@ export default function BnplApplicationScreen({
           address,
           city,
           state,
-          deliveryAddress: deliveryType === "pickup" ? "Lagos Central Pickup Hub, Ikeja" : deliveryAddress,
-          deliveryCity: deliveryType === "pickup" ? "Ikeja" : deliveryCity,
-          deliveryState: deliveryType === "pickup" ? "Lagos" : deliveryState,
+          deliveryAddress: "DandoEv Office, Ikeja, Lagos",
+          deliveryCity: "Ikeja",
+          deliveryState: "Lagos",
           ninNumber: idNumber,
           bvn,
           bankName,
           bankAccountNumber: accountNumber,
           bankAccountName: accountName,
+          documents: uploadedDocuments,
           agreementAccepted: true,
           agreementVersion: "bnpl-v1",
           guarantors,
-          documents: dashboardFile
-            ? [{ type: "work_id", fileName: dashboardFile.name, fileUrl: dashboardFile.uri }]
-            : undefined,
         },
         token,
         applicationKey,
@@ -546,7 +584,7 @@ export default function BnplApplicationScreen({
                 </View>
                 <View style={styles.timelineBody}>
                   <Text style={styles.timelineTitle}>3. Credit Approval (Within 24 Hours)</Text>
-                  <Text style={styles.timelineSub}>Risk team reviews rider dashboard and approves.</Text>
+                  <Text style={styles.timelineSub}>Our team reviews your identity, finances, and guarantors.</Text>
                 </View>
               </View>
 
@@ -605,7 +643,8 @@ export default function BnplApplicationScreen({
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 24}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Selected Product Mini Header Card */}
         <View style={styles.productHeaderCard}>
           <View style={styles.productHeaderLeft}>
@@ -615,7 +654,7 @@ export default function BnplApplicationScreen({
             </View>
             <Text style={styles.productName}>{product.name}</Text>
             <Text style={styles.productWeekly}>
-              ₦{weekly.toLocaleString()}<Text style={styles.productWeeklySub}> / week (12 mos)</Text>
+              ₦{weekly.toLocaleString()}<Text style={styles.productWeeklySub}> / week estimate</Text>
             </Text>
           </View>
           <View style={styles.productHeaderRight}>
@@ -626,6 +665,11 @@ export default function BnplApplicationScreen({
           </View>
         </View>
 
+        <View style={styles.progressHeading}>
+          <Text style={styles.progressEyebrow}>YOUR APPLICATION</Text>
+          <Text style={styles.progressCount}>Step {step + 1} of 5</Text>
+        </View>
+        <Text style={styles.progressTitle}>{["Tell us about yourself", "Verify your identity", "Set up repayment", "Add your guarantors", "Review and apply"][step]}</Text>
         {/* In-App Mobile Step Progress Indicators */}
         <View style={styles.progressRow}>
           {[
@@ -659,6 +703,11 @@ export default function BnplApplicationScreen({
             </TouchableOpacity>
           ))}
         </View>
+        <View style={styles.progressLabels}>
+          {["Details", "Identity", "Bank", "People", "Review"].map((label, index) => (
+            <Text key={label} style={[styles.progressLabel, index === step && styles.progressLabelActive]}>{label}</Text>
+          ))}
+        </View>
 
         {/* Error Alert Banner */}
         {error ? (
@@ -675,7 +724,7 @@ export default function BnplApplicationScreen({
         ) : null}
 
         {/* ========================================================= */}
-        {/* STEP 0: APPLICANT PROFILE, GIG WORK & DASHBOARD UPLOAD */}
+        {/* STEP 0: APPLICANT PROFILE AND WORK */}
         {/* ========================================================= */}
         {step === 0 && (
           <>
@@ -696,7 +745,7 @@ export default function BnplApplicationScreen({
                   <Text style={styles.inputLabel}>First Name</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. Solomon"
+                    placeholder="Legal first name"
                     placeholderTextColor="#94A3B8"
                     value={firstName}
                     onChangeText={setFirstName}
@@ -706,7 +755,7 @@ export default function BnplApplicationScreen({
                   <Text style={styles.inputLabel}>Last Name</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. Dunu"
+                    placeholder="Legal last name"
                     placeholderTextColor="#94A3B8"
                     value={lastName}
                     onChangeText={setLastName}
@@ -849,26 +898,11 @@ export default function BnplApplicationScreen({
                 })}
               </View>
 
-              {/* Platform Chips */}
               <Text style={[styles.inputLabel, { marginTop: 14 }]}>Courier / Delivery Platform</Text>
-              <View style={styles.platformGrid}>
-                {GIG_PLATFORMS.map((plat) => {
-                  const isSelected = employerName === plat;
-                  return (
-                    <TouchableOpacity
-                      key={plat}
-                      style={[styles.platformChip, isSelected && styles.platformChipActive]}
-                      onPress={() => setEmployerName(plat)}
-                      activeOpacity={0.7}
-                    >
-                      {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
-                      <Text style={[styles.platformChipText, isSelected && styles.platformChipTextActive]}>
-                        {plat}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <TouchableOpacity style={styles.selectorTrigger} onPress={() => setShowPlatformPicker(true)}>
+                <Text style={[styles.selectorTriggerText, !employerName && styles.selectorPlaceholder]}>{employerName || "Select your platform"}</Text>
+                <ChevronDown size={16} color="#64748B" />
+              </TouchableOpacity>
 
               {employerName === "Other Corporate Logistics" && (
                 <View style={{ marginTop: 10 }}>
@@ -886,13 +920,10 @@ export default function BnplApplicationScreen({
               <View style={styles.rowTwoCol}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>When Did You Join?</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. March 2023"
-                    placeholderTextColor="#94A3B8"
-                    value={joinedDate}
-                    onChangeText={setJoinedDate}
-                  />
+                  <TouchableOpacity style={styles.selectorTrigger} onPress={() => setShowJoinDatePicker(true)}>
+                    <View style={styles.selectorTriggerLeft}><Calendar size={17} color="#167E83" /><Text style={[styles.selectorTriggerText, !joinedDate && styles.selectorPlaceholder]}>{joinedDate || "Select date"}</Text></View>
+                    <ChevronDown size={16} color="#64748B" />
+                  </TouchableOpacity>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>Dispatch Hub / Office</Text>
@@ -906,112 +937,30 @@ export default function BnplApplicationScreen({
                 </View>
               </View>
 
-              {/* 4. RIDER DASHBOARD SCREENSHOT UPLOAD */}
-              <View style={styles.dashboardSection}>
-                <Text style={styles.inputLabel}>Rider / Courier Earning Dashboard</Text>
-                <Text style={styles.helperText}>
-                  Screenshot of your Chowdeck, Bolt, Glovo, or InDrive rider profile showing your total deliveries, ratings, or weekly activity.
-                </Text>
-
-                {dashboardFile ? (
-                  <View style={styles.uploadedCard}>
-                    <View style={styles.uploadedLeft}>
-                      <Image source={{ uri: dashboardFile.uri }} style={styles.uploadedThumb} resizeMode="cover" />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.uploadedFileName} numberOfLines={1}>
-                          {dashboardFile.name}
-                        </Text>
-                        <View style={styles.uploadedBadgeRow}>
-                          <CheckCircle2 size={12} color="#10B981" />
-                          <Text style={styles.uploadedBadgeText}>
-                            Ready for Underwriting • {dashboardFile.size || "1.4 MB"}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                    <View style={styles.uploadedActions}>
-                      <TouchableOpacity style={styles.replaceBtn} onPress={handlePickDashboardScreenshot}>
-                        <Text style={styles.replaceBtnText}>Replace</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.removeBtn} onPress={() => setDashboardFile(null)}>
-                        <Trash2 size={16} color="#DC2626" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.uploadDropzone}
-                    onPress={handlePickDashboardScreenshot}
-                    disabled={isUploading}
-                    activeOpacity={0.7}
-                  >
-                    {isUploading ? (
-                      <ActivityIndicator color="#0A154F" />
-                    ) : (
-                      <>
-                        <View style={styles.uploadCircle}>
-                          <BarChart3 size={24} color="#2E3192" />
-                        </View>
-                        <Text style={styles.uploadTitle}>Tap to select dashboard screenshot</Text>
-                        <Text style={styles.uploadSub}>PNG, JPG, or PDF from courier app</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
+              <View style={styles.dashboardUploadCard}>
+                <Text style={styles.inputLabel}>Earning dashboard proof</Text>
+                <Text style={styles.helperText}>Upload a clear screenshot or PDF showing recent rider or courier earnings.</Text>
+                <TouchableOpacity style={styles.uploadButton} onPress={() => void handlePickDashboard()}>
+                  <Upload size={18} color="#0A154F" />
+                  <Text style={styles.uploadButtonText}>{dashboardFile ? `Selected: ${dashboardFile.name}` : "Choose screenshot or PDF"}</Text>
+                </TouchableOpacity>
+                {dashboardFile && <Text style={styles.uploadSuccess}>✓ Ready to send with your application{dashboardFile.size ? ` · ${dashboardFile.size}` : ""}</Text>}
               </View>
+
             </View>
 
-            {/* 5. DELIVERY OPTION */}
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
                 <View style={styles.iconCircle}>
                   <ShoppingBag size={18} color="#2E3192" />
                 </View>
                 <View>
-                  <Text style={styles.cardTitle}>Vehicle Handover Option</Text>
-                  <Text style={styles.cardSub}>Where to collect your electric bike</Text>
+                  <Text style={styles.cardTitle}>Office collection</Text>
+                  <Text style={styles.cardSub}>All BNPL bikes are collected from the DandoEv office.</Text>
                 </View>
               </View>
 
-              <View style={styles.deliveryRow}>
-                {(
-                  [
-                    { id: "pickup", title: "Central Hub Pickup", price: "Free (Ikeja, Lagos)" },
-                    { id: "delivery_lagos", title: "Lagos Delivery", price: "+₦20,000" },
-                    { id: "delivery_outside", title: "Outside Lagos", price: "+₦50,000" },
-                  ] as const
-                ).map((opt) => {
-                  const isSelected = deliveryType === opt.id;
-                  return (
-                    <TouchableOpacity
-                      key={opt.id}
-                      style={[styles.deliveryCard, isSelected && styles.deliveryCardActive]}
-                      onPress={() => setDeliveryType(opt.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.deliveryCardTitle, isSelected && styles.deliveryCardTitleActive]}>
-                        {opt.title}
-                      </Text>
-                      <Text style={[styles.deliveryCardPrice, isSelected && styles.deliveryCardPriceActive]}>
-                        {opt.price}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {deliveryType !== "pickup" && (
-                <View style={{ marginTop: 12 }}>
-                  <Text style={styles.inputLabel}>Delivery Street Address</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter landmark and street address"
-                    placeholderTextColor="#94A3B8"
-                    value={deliveryAddress}
-                    onChangeText={setDeliveryAddress}
-                  />
-                </View>
-              )}
+              <View style={styles.officeNotice}><MapPin size={18} color="#167E83" /><Text style={styles.officeNoticeText}>DandoEv Office · Ikeja, Lagos{`\n`}Collection is free. No delivery fee is added.</Text></View>
             </View>
 
             <TouchableOpacity
@@ -1048,44 +997,31 @@ export default function BnplApplicationScreen({
                 </View>
               </View>
 
-              <Text style={styles.bodyText}>
-                Under CBN & FRSC consumer credit guidelines, every vehicle lease applicant must verify their national identity.
-              </Text>
-
-              <Text style={styles.inputLabel}>ID Document Type</Text>
-              <View style={styles.choiceRow}>
-                {(["NIN", "Driver's License", "Voter's Card"] as const).map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[styles.choiceBtn, idType === t && styles.choiceBtnActive]}
-                    onPress={() => setIdType(t)}
-                  >
-                    <Text style={[styles.choiceBtnText, idType === t && styles.choiceBtnTextActive]}>
-                      {t}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <Text style={styles.bodyText}>Confirm your identity before we review your application. Your details are sent securely for verification.</Text>
 
               <Text style={styles.inputLabel}>
-                {idType === "NIN" ? "11-Digit National Identification Number (NIN)" : `${idType} Number`}
+                11-digit National Identification Number (NIN)
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder={idType === "NIN" ? "e.g. 22334455667" : "Enter ID number"}
+                placeholder="Enter your NIN"
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
-                maxLength={idType === "NIN" ? 11 : 20}
+                maxLength={11}
                 value={idNumber}
-                onChangeText={setIdNumber}
+                onChangeText={(value) => { setIdNumber(value.replace(/\D/g, "")); setLookupVerified(false); }}
               />
+
+              <Text style={styles.inputLabel}>11-digit Bank Verification Number (BVN)</Text>
+              <TextInput style={styles.input} placeholder="Enter your BVN" placeholderTextColor="#94A3B8" keyboardType="numeric" maxLength={11} value={bvn} onChangeText={(value) => { setBvn(value.replace(/\D/g, "")); setLookupVerified(false); }} />
+              <Text style={styles.helperText}>Your BVN helps us verify your banking identity and assess affordability.</Text>
 
               <View style={styles.verifiedNoticeBox}>
                 <ShieldCheck size={18} color="#10B981" />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.verifiedNoticeTitle}>NIMC Direct Verification Ready</Text>
+                  <Text style={styles.verifiedNoticeTitle}>{faceVerified ? "Facial verification complete" : "Facial verification required"}</Text>
                   <Text style={styles.verifiedNoticeSub}>
-                    Your identity will be encrypted and authenticated directly with Nigerian Identity Management Commission.
+                    {faceVerified ? "Your Mono Prove identity check is complete." : "Continue to Mono Prove for a secure face check, then return to this form."}
                   </Text>
                 </View>
               </View>
@@ -1093,17 +1029,36 @@ export default function BnplApplicationScreen({
 
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => {
+              disabled={busy}
+              onPress={async () => {
                 const msg = validateStep1();
                 if (msg) setError(msg);
-                else {
+                else if (!lookupVerified || !faceVerified) {
+                  setError("");
+                  setBusy(true);
+                  try {
+                    if (!lookupVerified) {
+                      const lookup = await MobileApi.verifyMonoKyc({ nin: idNumber, bvn }, token);
+                      if (!lookup.data?.bvn?.verified || !lookup.data?.nin?.verified) {
+                        throw new Error("We could not verify your BVN and NIN. Check both numbers and try again.");
+                      }
+                      setLookupVerified(true);
+                    }
+                    if (faceVerified) setStep(2);
+                    else onRequestKyc?.({ nin: idNumber, bvn });
+                  } catch (cause) {
+                    setError(cause instanceof Error ? cause.message : "Identity verification could not start. Please retry.");
+                  } finally {
+                    setBusy(false);
+                  }
+                } else {
                   setError("");
                   setStep(2);
                 }
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.primaryBtnText}>Continue to Bank Repayment</Text>
+              <Text style={styles.primaryBtnText}>{busy ? "Checking identity…" : faceVerified ? "Continue to bank details" : "Verify identity and face"}</Text>
               <ChevronRight size={18} color="#0A154F" />
             </TouchableOpacity>
           </>
@@ -1150,8 +1105,12 @@ export default function BnplApplicationScreen({
                 keyboardType="numeric"
                 maxLength={10}
                 value={accountNumber}
-                onChangeText={setAccountNumber}
+                onChangeText={(value) => { setAccountNumber(value.replace(/\D/g, "")); setAccountVerified(false); }}
               />
+              <TouchableOpacity style={styles.verifyAccountButton} onPress={() => void verifyBankAccount()} disabled={accountChecking}>
+                {accountChecking ? <ActivityIndicator color="#0A154F" /> : <ShieldCheck size={17} color="#0A154F" />}
+                <Text style={styles.verifyAccountText}>{accountChecking ? "Checking with Mono…" : accountVerified ? "Account confirmed by Mono" : "Confirm account with Mono"}</Text>
+              </TouchableOpacity>
 
               <Text style={styles.inputLabel}>Account Name (Auto-Verified)</Text>
               <TextInput
@@ -1342,9 +1301,9 @@ export default function BnplApplicationScreen({
                 <Text style={styles.reviewItemVal}>{bankName} ({accountNumber})</Text>
               </View>
               <View style={styles.reviewItem}>
-                <Text style={styles.reviewItemLabel}>Delivery:</Text>
+          <Text style={styles.reviewItemLabel}>Collection:</Text>
                 <Text style={styles.reviewItemVal}>
-                  {deliveryType === "pickup" ? "Hub Pickup (Free - Ikeja)" : `${deliveryAddress}, ${city}`}
+                  "DandoEv Office, Ikeja (Free)"
                 </Text>
               </View>
               <View style={[styles.reviewItem, { borderBottomWidth: 0 }]}>
@@ -1391,19 +1350,20 @@ export default function BnplApplicationScreen({
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* ========================================================= */}
       {/* IN-APP DATE OF BIRTH PICKER MODAL */}
       {/* ========================================================= */}
-      <Modal visible={showDobPicker} transparent animationType="slide">
+      <Modal visible={showDobPicker || showJoinDatePicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Select Date of Birth</Text>
-                <Text style={styles.modalSub}>Must be at least 18 years old to apply</Text>
+                <Text style={styles.modalTitle}>{showJoinDatePicker ? "When did you join?" : "Select Date of Birth"}</Text>
+                <Text style={styles.modalSub}>{showJoinDatePicker ? "Choose the date you started with this platform." : "Must be at least 18 years old to apply"}</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowDobPicker(false)} style={styles.modalCloseBtn}>
+              <TouchableOpacity onPress={() => { setShowDobPicker(false); setShowJoinDatePicker(false); }} style={styles.modalCloseBtn}>
                 <X size={20} color="#0A154F" />
               </TouchableOpacity>
             </View>
@@ -1460,10 +1420,21 @@ export default function BnplApplicationScreen({
               ))}
             </ScrollView>
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleConfirmDob}>
-              <Text style={styles.primaryBtnText}>Confirm Date of Birth</Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={showJoinDatePicker ? handleConfirmJoinDate : handleConfirmDob}>
+              <Text style={styles.primaryBtnText}>{showJoinDatePicker ? "Confirm start date" : "Confirm Date of Birth"}</Text>
               <Check size={18} color="#0A154F" strokeWidth={2.5} />
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showPlatformPicker} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { maxHeight: "75%" }]}>
+            <View style={styles.modalHeader}><View><Text style={styles.modalTitle}>Select platform</Text><Text style={styles.modalSub}>Choose the platform where you earn.</Text></View><TouchableOpacity onPress={() => setShowPlatformPicker(false)} style={styles.modalCloseBtn}><X size={20} color="#0A154F" /></TouchableOpacity></View>
+            <ScrollView>
+              {GIG_PLATFORMS.map((platform) => <TouchableOpacity key={platform} style={styles.platformOption} onPress={() => { setEmployerName(platform); setShowPlatformPicker(false); }}><Text style={styles.platformOptionText}>{platform}</Text>{employerName === platform && <Check size={18} color="#167E83" />}</TouchableOpacity>)}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1534,7 +1505,7 @@ export default function BnplApplicationScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F6F7FC" },
+  container: { flex: 1, backgroundColor: "#F2F7FA" },
   topNav: {
     flexDirection: "row",
     alignItems: "center",
@@ -1550,14 +1521,21 @@ const styles = StyleSheet.create({
   navTitle: { color: "#0A154F", fontSize: 16, fontWeight: "900", fontFamily: "PlusJakartaSans_800ExtraBold" },
   navSub: { color: "#64748B", fontSize: 11, fontWeight: "600", marginTop: 1 },
 
-  scrollContent: { padding: 16, paddingBottom: 60 },
+  scrollContent: { padding: 20, paddingBottom: 80 },
+  progressHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  progressEyebrow: { color: "#167E83", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
+  progressCount: { color: "#466176", fontSize: 13, fontWeight: "700" },
+  progressTitle: { color: "#0A154F", fontSize: 23, lineHeight: 30, fontFamily: "PlusJakartaSans_800ExtraBold", marginBottom: 16 },
+  progressLabels: { flexDirection: "row", marginTop: -5, marginBottom: 24 },
+  progressLabel: { flex: 1, textAlign: "center", color: "#70859A", fontSize: 10, fontWeight: "600" },
+  progressLabelActive: { color: "#0A154F", fontWeight: "800" },
 
   // Product Mini Header Card
   productHeaderCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     flexDirection: "row",
@@ -1577,8 +1555,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   zeroDepositText: { color: "#047857", fontSize: 10, fontWeight: "800" },
-  productName: { color: "#0A154F", fontSize: 16, fontWeight: "800", marginBottom: 2 },
-  productWeekly: { color: "#2E3192", fontSize: 15, fontWeight: "900" },
+  productName: { color: "#0A154F", fontSize: 19, fontFamily: "PlusJakartaSans_800ExtraBold", marginBottom: 4 },
+  productWeekly: { color: "#167E83", fontSize: 17, fontWeight: "800" },
   productWeeklySub: { color: "#64748B", fontSize: 12, fontWeight: "600" },
   productHeaderRight: { alignItems: "flex-end" },
   verifiedFleetPill: {
@@ -1593,17 +1571,17 @@ const styles = StyleSheet.create({
   verifiedFleetText: { color: "#2E3192", fontSize: 11, fontWeight: "700" },
 
   // Mobile In-App Progress Segment Row
-  progressRow: { flexDirection: "row", gap: 6, marginBottom: 16 },
+  progressRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   progressSegment: {
     flex: 1,
-    height: 28,
-    borderRadius: 14,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
   },
   progressSegmentActive: { backgroundColor: "#0A154F" },
-  progressSegmentDone: { backgroundColor: "#10B981" },
+  progressSegmentDone: { backgroundColor: "#32CBAA" },
   progressSegmentText: { color: "#64748B", fontSize: 12, fontWeight: "800" },
   progressSegmentTextActive: { color: "#FFFFFF" },
   progressSegmentTextDone: { color: "#FFFFFF" },
@@ -1611,9 +1589,9 @@ const styles = StyleSheet.create({
   // Cards
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     shadowColor: "#000",
@@ -1622,34 +1600,44 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 },
   iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#EEF2FF",
     alignItems: "center",
     justifyContent: "center",
   },
-  cardTitle: { color: "#0A154F", fontSize: 15, fontWeight: "800" },
-  cardSub: { color: "#64748B", fontSize: 11, marginTop: 1 },
-  bodyText: { color: "#475569", fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  cardTitle: { color: "#0A154F", fontSize: 18, fontFamily: "PlusJakartaSans_700Bold" },
+  cardSub: { color: "#64748B", fontSize: 13, lineHeight: 19, marginTop: 2 },
+  bodyText: { color: "#475569", fontSize: 14, lineHeight: 22, marginBottom: 12 },
 
   // Inputs & Selectors
-  inputLabel: { color: "#0A154F", fontSize: 12, fontWeight: "700", marginTop: 10, marginBottom: 5 },
-  helperText: { color: "#64748B", fontSize: 11, marginBottom: 8, lineHeight: 16 },
+  inputLabel: { color: "#0A154F", fontSize: 14, fontWeight: "700", marginTop: 14, marginBottom: 7 },
+  helperText: { color: "#64748B", fontSize: 12, marginBottom: 8, lineHeight: 18 },
+  dashboardUploadCard: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: "#E6EEF2" },
+  uploadButton: { minHeight: 54, borderWidth: 1.5, borderColor: "#52CDB5", borderStyle: "dashed", borderRadius: 14, backgroundColor: "#F0FCF8", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, paddingHorizontal: 12 },
+  uploadButtonText: { color: "#0A154F", fontSize: 14, fontWeight: "700", flexShrink: 1 },
+  uploadSuccess: { color: "#087F67", fontSize: 12, fontWeight: "700", marginTop: 8 },
+  officeNotice: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#ECFBF7", borderRadius: 14, padding: 14 },
+  officeNoticeText: { color: "#145C62", fontSize: 14, lineHeight: 21, fontWeight: "600" },
+  verifyAccountButton: { marginTop: 10, minHeight: 46, borderRadius: 12, backgroundColor: "#DDF7EF", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  verifyAccountText: { color: "#0A154F", fontSize: 14, fontWeight: "800" },
+  platformOption: { minHeight: 52, borderBottomWidth: 1, borderBottomColor: "#E6EEF2", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  platformOptionText: { color: "#0A154F", fontSize: 15, fontWeight: "700" },
   input: {
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     color: "#0A154F",
-    backgroundColor: "#F8FAFC",
-    fontSize: 14,
+    backgroundColor: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "500",
   },
-  rowTwoCol: { flexDirection: "row", gap: 10 },
+  rowTwoCol: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
 
   selectorTrigger: {
     flexDirection: "row",
@@ -1847,7 +1835,7 @@ const styles = StyleSheet.create({
   primaryBtn: {
     backgroundColor: "#52E0C1",
     borderRadius: 14,
-    padding: 15,
+    padding: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1855,7 +1843,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
   },
-  primaryBtnText: { color: "#0A154F", fontWeight: "900", fontSize: 14 },
+  primaryBtnText: { color: "#0A154F", fontWeight: "800", fontSize: 16 },
   secondaryBtn: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,

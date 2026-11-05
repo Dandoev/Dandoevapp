@@ -342,13 +342,22 @@ export async function POST(req: NextRequest) {
           "Mono Mandate auto-deduction failed",
         );
 
-        await prisma.paymentTransaction.updateMany({
-          where: {
-            provider: "mono",
-            providerRef: reference,
-            status: { in: ["initiated", "pending"] },
-          },
-          data: { status: "failed", reconciledAt: new Date(), metadata: data },
+        await prisma.$transaction(async (tx) => {
+          const attempts = await tx.paymentTransaction.findMany({
+            where: { provider: "mono", providerRef: reference, status: { in: ["initiated", "pending"] } },
+          });
+          for (const attempt of attempts) {
+            await tx.paymentTransaction.update({
+              where: { id: attempt.id },
+              data: { status: "failed", reconciledAt: new Date(), metadata: data },
+            });
+            if (attempt.repaymentId) {
+              await tx.repayment.updateMany({
+                where: { id: attempt.repaymentId, paymentReference: reference, status: { not: "paid" } },
+                data: { paymentReference: null, status: "failed", retryCount: { increment: 1 } },
+              });
+            }
+          }
         });
 
         await dbService

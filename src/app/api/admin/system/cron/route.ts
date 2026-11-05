@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    log.error('CRON_SECRET is not configured');
+    return NextResponse.json({ error: 'Cron is not configured' }, { status: 503 });
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     log.warn('Unauthorized cron request rejected: invalid CRON_SECRET');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -128,6 +132,7 @@ export async function GET(req: NextRequest) {
     const repaymentSweep = await runRepaymentCollectionSweep(now);
     results.repaymentsAutoDeducted = repaymentSweep.successCount;
     results.repaymentsFailed = repaymentSweep.failCount;
+    results.repaymentsPendingSettlement = repaymentSweep.pendingCount || 0;
     log.info(repaymentSweep, 'Loan-term Mono Mandate auto-deduction sweep completed');
   } catch (err: any) {
     errors.push(`Repayment auto-deduction sweep failed: ${err.message}`);

@@ -76,6 +76,7 @@ function App() {
     useState<ScreenType>("Dashboard");
   const [token, setToken] = useState<string | null>(null);
   const [isSplashVisible, setIsSplashVisible] = useState(true);
+  const [sessionRestoring, setSessionRestoring] = useState(true);
 
   // Initialize Push Notifications
   usePushNotifications();
@@ -96,30 +97,26 @@ function App() {
           data: { session },
         } = await supabase.auth.getSession();
         if (session?.access_token) {
-          await MobileApi.getProfile(session.access_token);
           setToken(session.access_token);
           await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
           setCurrentTab("bikes");
           setCurrentScreen("Dashboard");
+          MobileApi.getProfile(session.access_token).catch(() => {});
           return;
         }
 
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
-          try {
-            if (!storedToken.startsWith("demo-")) {
-              await MobileApi.getProfile(storedToken);
-            }
-            setToken(storedToken);
-            setCurrentTab("bikes");
-            setCurrentScreen("Dashboard");
-            return;
-          } catch {
-            await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
-          }
+          setToken(storedToken);
+          setCurrentTab("bikes");
+          setCurrentScreen("Dashboard");
+          if (!storedToken.startsWith("demo-")) MobileApi.getProfile(storedToken).catch(() => {});
+          return;
         }
       } catch (err) {
         console.warn("Session restoration skipped:", err);
+      } finally {
+        setSessionRestoring(false);
       }
     }
     restoreSession();
@@ -181,7 +178,7 @@ function App() {
     return null;
   }
 
-  if (isSplashVisible) {
+  if (isSplashVisible || sessionRestoring) {
     return (
       <>
         <StatusBar barStyle="light-content" backgroundColor="#0A154F" />

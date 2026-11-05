@@ -80,13 +80,25 @@ export const PATCH = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const amount = Number(repayment.amount) + Number(repayment.lateFee) - Number(repayment.amountPaid);
   const reference = `DD-${crypto.randomUUID().replace(/-/g, '').slice(0, 21)}`;
   try {
-    const debit = await chargeMonoMandate({ mandateId: repayment.loanRelation.monoMandateId, amount, reference, narration: `DandoEv installment ${repayment.installmentNumber}` });
+    const claimed = await prisma.repayment.updateMany({
+      where: { id: repayment.id, paymentReference: null, status: { in: ['upcoming', 'overdue', 'failed', 'partial'] } },
+      data: { paymentReference: reference },
+    });
+    if (claimed.count !== 1) return NextResponse.json({ error: 'A debit is already processing for this repayment' }, { status: 409 });
     await prisma.paymentTransaction.create({ data: {
       userId: repayment.userId, loanId: repayment.loanId, repaymentId: repayment.id,
-      provider: 'mono', providerRef: debit.reference, amount, currency: 'NGN',
-      status: debit.status === 'failed' ? 'failed' : 'pending',
-      metadata: { mandateId: repayment.loanRelation.monoMandateId, monoDebitId: debit.id },
+      provider: 'mono', providerRef: reference, amount, currency: 'NGN', status: 'initiated',
+      metadata: { mandateId: repayment.loanRelation.monoMandateId },
     }});
+    const debit = await chargeMonoMandate({ mandateId: repayment.loanRelation.monoMandateId, amount, reference, narration: `DandoEv installment ${repayment.installmentNumber}` });
+    await prisma.paymentTransaction.updateMany({
+      where: { provider: 'mono', providerRef: reference, status: 'initiated' },
+      data: { status: debit.status === 'failed' ? 'failed' : 'pending' },
+    });
+    if (debit.status === 'failed') {
+      await prisma.repayment.updateMany({ where: { id: repayment.id, paymentReference: reference }, data: { paymentReference: null } });
+      return NextResponse.json({ error: 'Mono declined this debit' }, { status: 502 });
+    }
     return NextResponse.json({ success: true, message: 'Debit submitted; settlement is pending Mono confirmation', data: debit }, { status: 202 });
   } catch (error) {
     logger.error({ error, repaymentId: repayment.id }, 'Mono mandate debit failed');

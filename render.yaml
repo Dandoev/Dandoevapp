@@ -49,3 +49,26 @@ services:
         sync: false
       - key: MONO_PAYMENTS_WEBHOOK_SECRET
         sync: false
+      - key: CRON_SECRET
+        generateValue: true
+  - type: cron
+    name: dandoev-daily-collections
+    runtime: node
+    region: frankfurt
+    branch: main
+    schedule: '0 6 * * *'
+    buildCommand: node --version
+    startCommand: node scripts/run-daily-cron.js
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: CRON_SECRET
+        fromService:
+          name: dandoev-dashboard
+          type: web
+          envVarKey: CRON_SECRET
+      - key: CRON_TARGET_URL
+        fromService:
+          name: dandoev-dashboard
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL

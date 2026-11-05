@@ -6,6 +6,7 @@ import { chargePaystackAuthorization } from './paystack';
 import { chargeMonoMandate } from './mono';
 import { enqueueNotification } from './queue';
 import dbService from './db-service';
+import { isDemoAllowed } from './env';
 
 /**
  * Sweeps all pending DailySaving records for a given date (default today).
@@ -209,11 +210,14 @@ export async function runRepaymentCollectionSweep(targetDate: Date = new Date())
 
     let successCount = 0;
     let failCount = 0;
+    let pendingCount = 0;
 
     for (const repayment of dueRepayments) {
       try {
         const result = await collectRepaymentById(repayment);
-        if (result.success) successCount++;
+        if (result.method === 'mono_mandate_pending') pendingCount++;
+        else if (result.status === 'pending_settlement' || result.status === 'already_processing' || result.status === 'reconciliation_required') pendingCount++;
+        else if (result.success) successCount++;
         else failCount++;
       } catch (err: any) {
         log.error({ error: err.message, repaymentId: repayment.id }, 'Repayment sweep loop failed');
@@ -222,19 +226,20 @@ export async function runRepaymentCollectionSweep(targetDate: Date = new Date())
     }
 
     // Also run sweep on dbService JSON store for hybrid/demo environments
-    const localSweep = await dbService.runMandateAutoDeductionSweep(endOfToday).catch(() => ({
+    const localSweep = isDemoAllowed() ? await dbService.runMandateAutoDeductionSweep(endOfToday).catch(() => ({
       successCount: 0,
       failCount: 0,
-    }));
+    })) : { successCount: 0, failCount: 0 };
 
     const totalSuccess = successCount + localSweep.successCount;
     const totalFail = failCount + localSweep.failCount;
 
-    log.info({ successCount: totalSuccess, failCount: totalFail }, 'Repayment collection sweep completed');
-    return { successCount: totalSuccess, failCount: totalFail };
+    log.info({ successCount: totalSuccess, failCount: totalFail, pendingCount }, 'Repayment collection sweep completed');
+    return { successCount: totalSuccess, failCount: totalFail, pendingCount };
   } catch (error: any) {
+    if (!isDemoAllowed()) throw error;
     log.warn({ error: error.message }, 'Prisma repayment sweep fallback to dbService');
-    return await dbService.runMandateAutoDeductionSweep(endOfToday);
+    return { ...(await dbService.runMandateAutoDeductionSweep(endOfToday)), pendingCount: 0 };
   }
 }
 
@@ -250,6 +255,8 @@ export async function collectRepaymentById(repayment: any) {
   const amount = Number(repayment.amount) + Number(repayment.lateFee || 0);
 
   try {
+    // A reference on an unpaid repayment means a provider debit is still in flight.
+    if (repayment.paymentReference) return { success: false, status: 'pending_settlement' };
     // --- Path 1: Try Wallet Debit ---
     const walletBalance = user?.wallet ? Number(user.wallet.mainBalance) : 0;
     if (walletBalance >= amount) {
@@ -287,8 +294,20 @@ export async function collectRepaymentById(repayment: any) {
     // --- Path 2: Mono Direct Debit Mandate Auto-Deduction (Loan Term Mandate Order) ---
     const monoMandateId = loan?.monoMandateId || user?.monoMandateId;
     if (monoMandateId) {
+      const monoRef = `RPY-${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
       try {
-        const monoRef = `RPY-${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+        const claimed = await prisma.repayment.updateMany({
+          where: { id: repayment.id, paymentReference: null, status: { in: ['upcoming', 'failed', 'overdue'] } },
+          data: { paymentReference: monoRef },
+        });
+        if (claimed.count !== 1) return { success: false, status: 'already_processing' };
+        await prisma.paymentTransaction.create({
+          data: {
+            userId: user.id, loanId: repayment.loanId, repaymentId: repayment.id,
+            provider: 'mono', providerRef: monoRef, amount, currency: 'NGN', status: 'initiated',
+            metadata: { mandateId: monoMandateId, installmentNumber: repayment.installmentNumber },
+          },
+        });
         const monoCharge = await chargeMonoMandate({
           mandateId: monoMandateId,
           amount,
@@ -297,23 +316,10 @@ export async function collectRepaymentById(repayment: any) {
         });
 
         if (monoCharge.status === 'successful' || monoCharge.status === 'pending') {
-            await prisma.paymentTransaction.create({
-              data: {
-                userId: user.id,
-                loanId: repayment.loanId,
-                repaymentId: repayment.id,
-                provider: 'mono',
-                providerRef: monoCharge.reference,
-                amount,
-                currency: 'NGN',
-                status: 'pending',
-                metadata: {
-                  mandateId: monoMandateId,
-                  installmentNumber: repayment.installmentNumber,
-                  deductionFrequency: loan?.deductionFrequency || 'bidaily',
-                },
-              },
-            });
+          await prisma.paymentTransaction.updateMany({
+            where: { provider: 'mono', providerRef: monoRef, status: 'initiated' },
+            data: { status: 'pending' },
+          });
 
           await enqueueNotification({
             userId: user.id,
@@ -325,7 +331,23 @@ export async function collectRepaymentById(repayment: any) {
 
           return { success: true, method: 'mono_mandate_pending', reference: monoCharge.reference };
         }
+        await prisma.paymentTransaction.updateMany({
+          where: { provider: 'mono', providerRef: monoRef, status: { in: ['initiated', 'pending'] } },
+          data: { status: 'failed' },
+        });
+        await prisma.repayment.updateMany({
+          where: { id: repayment.id, paymentReference: monoRef }, data: { paymentReference: null },
+        });
       } catch (monoErr: any) {
+        // If Mono accepted the debit but a local write failed, retain the claim
+        // until reconciliation so we never submit a second debit blindly.
+        const attempt = await prisma.paymentTransaction.findFirst({ where: { provider: 'mono', providerRef: monoRef } }).catch(() => null);
+        if (attempt?.status === 'initiated') {
+          return { success: false, status: 'reconciliation_required' };
+        }
+        await prisma.repayment.updateMany({
+          where: { id: repayment.id, paymentReference: monoRef }, data: { paymentReference: null },
+        });
         logger.warn(
           { userId: user?.id, mandateId: monoMandateId, error: monoErr.message },
           'Mono Mandate auto-charge failed, attempting Paystack fallback'

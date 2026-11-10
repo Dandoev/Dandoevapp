@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ArrowLeft,
   ShieldCheck,
+  ScanFace,
   X,
 } from 'lucide-react';
 
@@ -59,6 +60,59 @@ export default function KYCPage() {
 
   const [uploading, setUploading] = useState<'selfie' | 'doc' | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isStartingProve, setIsStartingProve] = useState(false);
+
+  useEffect(() => {
+    // Check if returning from Mono Prove session callback
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status') === 'successful' || params.get('reference')) {
+      const token = document.cookie.split('token=')[1]?.split(';')[0];
+      fetch('/api/kyc/prove/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.verified) {
+            setSelfieData({ url: '/verified-face.png', name: 'Mono_Prove_Verified_Face.liveness' });
+            showToast('Mono Prove facial verification complete!');
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleMonoProve = async () => {
+    setIsStartingProve(true);
+    try {
+      const token = document.cookie.split('token=')[1]?.split(';')[0];
+      const res = await fetch('/api/kyc/prove/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          redirectUrl: window.location.href,
+          bvn: bvn || undefined,
+          nin: nin || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.url) {
+        window.location.href = data.data.url;
+      } else {
+        showToast(data.error || 'Failed to start Mono Prove session');
+      }
+    } catch {
+      showToast('Network error starting Mono Prove');
+    } finally {
+      setIsStartingProve(false);
+    }
+  };
 
   useEffect(() => {
     const saved = sessionStorage.getItem('bnpl_data');
@@ -312,14 +366,25 @@ export default function KYCPage() {
 
         {/* Selfie Capture */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
-          <div>
-            <h3 className="font-extrabold text-primary text-sm flex items-center gap-2">
-              <Camera size={17} className="text-secondary" />
-              <span>3. Live Selfie Capture</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Upload or snap a clear selfie to match against your government ID.
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="font-extrabold text-primary text-sm flex items-center gap-2">
+                <Camera size={17} className="text-secondary" />
+                <span>3. Live Selfie & Biometric Check</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Verify securely with Mono Prove or upload a clear photo of your face.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleMonoProve}
+              disabled={isStartingProve}
+              className="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-secondary font-extrabold text-xs transition-all inline-flex items-center gap-1.5"
+            >
+              {isStartingProve ? <Loader2 size={14} className="animate-spin" /> : <ScanFace size={15} />}
+              <span>Verify with Mono Prove</span>
+            </button>
           </div>
 
           <input

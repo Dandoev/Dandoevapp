@@ -115,7 +115,9 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     setError('');
     setIsLinkingMono(true);
     const MonoConnect = (window as any).MonoConnect;
-    const publicKey = process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY;
+    const publicKey = process.env.NEXT_PUBLIC_MONO_ENVIRONMENT === 'sandbox'
+      ? process.env.NEXT_PUBLIC_MONO_SANDBOX_PUBLIC_KEY
+      : process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY;
     if (!MonoConnect || !publicKey) {
       setError('Mono Connect is unavailable. Please reload and try again.');
       setIsLinkingMono(false);

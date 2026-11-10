@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { isDemoAllowed } from '@/lib/env';
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { normalizeNigerianPhone, phoneLookupVariants, phoneToPlaceholderEmail } from '@/lib/phone';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
@@ -32,7 +33,35 @@ export async function POST(req: NextRequest) {
     }
 
     const data = sanitizeObject(validation.data!);
-    const cleanEmail = data.email.toLowerCase().trim();
+
+    // ---- Identity: email, phone, or both ----
+    const normalizedPhone = data.phone ? normalizeNigerianPhone(data.phone) : null;
+    if (data.phone && !normalizedPhone) {
+      return NextResponse.json(
+        { error: 'Enter a valid Nigerian phone number, e.g. 0803 123 4567' },
+        { status: 400 }
+      );
+    }
+    const providedEmail = data.email ? String(data.email).toLowerCase().trim() : null;
+    // Phone-only sign-ups get a private placeholder email so Supabase Auth has a unique login id.
+    const cleanEmail = providedEmail || phoneToPlaceholderEmail(normalizedPhone!);
+
+    // Reject a phone number that already belongs to another account.
+    if (normalizedPhone) {
+      const phoneOwner = await prisma.user.findFirst({
+        where: {
+          phone: { in: phoneLookupVariants(normalizedPhone) },
+          NOT: { email: cleanEmail },
+        },
+        select: { id: true },
+      });
+      if (phoneOwner) {
+        return NextResponse.json(
+          { error: 'An account with this phone number already exists. Please sign in instead.' },
+          { status: 409 }
+        );
+      }
+    }
 
     // ---- Rate Limiting (Relaxed for shared mobile/NAT proxies, bypassed in test/demo) ----
     const isDemoOrReviewer = isDemoAllowed() && cleanEmail.endsWith('@demo.com');
@@ -94,6 +123,7 @@ export async function POST(req: NextRequest) {
             user_metadata: {
                 firstName: data.firstName,
                 lastName: data.lastName,
+                phone: normalizedPhone,
                 role: 'customer'
             }
         });
@@ -108,7 +138,7 @@ export async function POST(req: NextRequest) {
                 email: cleanEmail,
                 firstName: data.firstName,
                 lastName: data.lastName,
-                phone: data.phone || null,
+                phone: normalizedPhone,
                 passwordHash: 'SUPABASE_AUTH', 
                 role: 'customer',
                 customerStatus: 'registered',
@@ -145,7 +175,7 @@ export async function POST(req: NextRequest) {
       error.code === 'P2002'
     ) {
       return NextResponse.json(
-        { error: 'An account with this email address already exists. Please sign in instead.' },
+        { error: 'An account with these details already exists. Please sign in instead.' },
         { status: 409 }
       );
     }

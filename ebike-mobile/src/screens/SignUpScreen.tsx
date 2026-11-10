@@ -49,16 +49,26 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
       setErrorMessage('Please enter both first and last name.');
       return;
     }
-    if (!email.trim() || !email.includes('@')) {
+    const hasEmail = email.trim().length > 0;
+    const hasPhone = phone.trim().length > 0;
+    if (!hasEmail && !hasPhone) {
+      setErrorMessage('Enter a phone number or an email address to create your account.');
+      return;
+    }
+    if (hasEmail && !/^\S+@\S+\.\S+$/.test(email.trim())) {
       setErrorMessage('Please enter a valid email address.');
       return;
     }
-    if (!phone || phone.trim().length < 8) {
-      setErrorMessage('Please enter a valid phone number for rider delivery & verification.');
+    if (hasPhone && phone.replace(/\D/g, '').length < 10) {
+      setErrorMessage('Please enter a valid Nigerian phone number, e.g. 0803 123 4567.');
       return;
     }
-    if (!password || password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters.');
+    if (!password || password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters.');
+      return;
+    }
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      setErrorMessage('Password needs an uppercase letter, a number and a special character.');
       return;
     }
     if (!acceptedTerms) {
@@ -69,14 +79,15 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
     setLoading(true);
 
     try {
-      const cleanEmail = email.trim().toLowerCase();
+      const cleanEmail = hasEmail ? email.trim().toLowerCase() : undefined;
+      const cleanPhone = hasPhone ? phone.trim() : undefined;
       // 1. Try Backend API endpoint if reachable (auto-confirms user and synchronizes profile)
       try {
         const apiData = await MobileApi.signUp({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: cleanEmail,
-          phone: phone ? phone.trim() : '+234 800 000 0000',
+          phone: cleanPhone,
           password,
         });
         if (apiData.success) {
@@ -93,6 +104,11 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
           throw backendError;
         }
 
+        // Phone-only accounts can only be created by the backend (no email for Supabase).
+        if (!cleanEmail) {
+          throw backendError;
+        }
+
         // 2. Direct Supabase Fallback (on network timeout / server sleeping)
         try {
           const { data: supaData, error: supaError } = await supabase.auth.signUp({
@@ -102,7 +118,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
               data: {
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
-                phone: phone ? phone.trim() : null,
+                phone: cleanPhone ?? null,
                 role: 'customer',
               },
             },
@@ -194,8 +210,26 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
               </View>
             </View>
 
+            {/* Phone Input */}
+            <Text style={styles.label}>Phone Number</Text>
+            <View style={styles.inputContainer}>
+              <Phone size={16} color="#9CA3AF" />
+              <TextInput
+                style={styles.input}
+                placeholder="0803 123 4567"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                value={phone}
+                onChangeText={(t) => {
+                  setPhone(t);
+                  setErrorMessage(null);
+                }}
+              />
+            </View>
+
             {/* Email Input */}
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>Email Address (optional if you use a phone number)</Text>
             <View style={styles.inputContainer}>
               <Mail size={16} color="#9CA3AF" />
               <TextInput
@@ -211,22 +245,8 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
                 }}
               />
             </View>
-
-            {/* Phone Input */}
-            <Text style={styles.label}>Phone Number (WhatsApp Contact)</Text>
-            <View style={styles.inputContainer}>
-              <Phone size={16} color="#9CA3AF" />
-              <TextInput
-                style={styles.input}
-                placeholder="+234 800 000 0000"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
-            </View>
             <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter_400Regular', marginTop: -8, marginBottom: 12 }}>
-              Used for delivery coordination and account notifications.
+              Sign in with your phone number or email. Provide at least one.
             </Text>
 
             {/* Password Input */}
@@ -235,7 +255,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
               <Lock size={16} color="#9CA3AF" />
               <TextInput
                 style={styles.input}
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 chars, A-Z, 0-9, symbol"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry
                 value={password}

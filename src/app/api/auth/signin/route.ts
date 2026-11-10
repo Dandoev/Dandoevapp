@@ -11,6 +11,11 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { isDemoAllowed } from "@/lib/env";
 import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
+import {
+  looksLikeEmail,
+  normalizeNigerianPhone,
+  phoneLookupVariants,
+} from "@/lib/phone";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -34,26 +39,70 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, password } = validation.data!;
+    const { password } = validation.data!;
+    const rawIdentifier = String(
+      validation.data!.identifier ||
+        validation.data!.email ||
+        validation.data!.phone ||
+        "",
+    ).trim();
+    const identifierIsEmail = looksLikeEmail(rawIdentifier);
+    const normalizedPhone = identifierIsEmail
+      ? null
+      : normalizeNigerianPhone(rawIdentifier);
+
+    if (!identifierIsEmail && !normalizedPhone) {
+      return NextResponse.json(
+        { error: "Enter a valid email address or Nigerian phone number" },
+        { status: 400 },
+      );
+    }
+    // Stable key used for rate limiting / logging before any DB lookup.
+    const identifierKey = identifierIsEmail
+      ? rawIdentifier.toLowerCase()
+      : normalizedPhone!;
+    let email = identifierIsEmail ? rawIdentifier.toLowerCase() : "";
 
     // ---- Rate Limiting (Bypassed for demo users only in dev/demo environments) ----
     const demoAllowed = isDemoAllowed();
     const isDemoAccount =
       demoAllowed &&
-      (email.toLowerCase().endsWith("@demo.com") ||
-        email.toLowerCase() === "admin@dandoev.com" ||
-        email.toLowerCase() === "finance@dandoev.com" ||
-        email.toLowerCase() === "ops@dandoev.com");
+      (identifierKey.endsWith("@demo.com") ||
+        identifierKey === "admin@dandoev.com" ||
+        identifierKey === "finance@dandoev.com" ||
+        identifierKey === "ops@dandoev.com");
 
     if (!isDemoAccount) {
       const ip = getClientIp(req);
       const rlResult = await checkRateLimit(
-        `signin:${ip}:${email}`,
+        `signin:${ip}:${identifierKey}`,
         RATE_LIMITS.AUTH_SIGNIN,
       );
       if (!rlResult.allowed) {
         return rateLimitResponse(rlResult);
       }
+    }
+
+    // ---- Resolve phone number -> account email (Supabase signs in by email) ----
+    if (!identifierIsEmail) {
+      const phoneUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: { in: phoneLookupVariants(normalizedPhone!) } },
+            { phone: { endsWith: normalizedPhone!.slice(4) } },
+          ],
+        },
+        select: { email: true },
+      });
+      if (!phoneUser) {
+        // Same response as a wrong password so phone numbers cannot be enumerated.
+        log.warn({ phone: normalizedPhone }, "Invalid credentials attempt");
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 },
+        );
+      }
+      email = phoneUser.email.toLowerCase();
     }
 
     // ---- Authenticate via Supabase with Demo Presentation Fallback ----

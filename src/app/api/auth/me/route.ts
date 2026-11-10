@@ -92,16 +92,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const faceVerification = await prisma.auditLog.findFirst({
-      where: { userId: user.id, action: 'MONO_PROVE_FACE_VERIFIED' },
-      select: { id: true },
+    const latestFaceLog = await prisma.auditLog.findFirst({
+      where: {
+        userId: user.id,
+        action: { in: ['MONO_PROVE_FACE_VERIFIED', 'MONO_PROVE_FACE_REJECTED'] },
+      },
       orderBy: { createdAt: 'desc' },
+      select: { action: true },
     });
+    const faceVerified = Boolean(
+      user.kycStatus === 'verified' || (latestFaceLog && latestFaceLog.action === 'MONO_PROVE_FACE_VERIFIED')
+    );
     const identityLookup = await prisma.auditLog.findFirst({
       where: { userId: user.id, action: 'MONO_LOOKUP_IDENTITY_VERIFIED' },
       select: { id: true },
     });
-    return NextResponse.json({ user: { ...user, faceVerified: Boolean(faceVerification), identityLookupVerified: Boolean(identityLookup) } });
+    return NextResponse.json({ user: { ...user, faceVerified, identityLookupVerified: Boolean(identityLookup) } });
   } catch (error: any) {
     return NextResponse.json({ error: 'Authentication internal error' }, { status: 500 });
   }

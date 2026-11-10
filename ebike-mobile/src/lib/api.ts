@@ -125,7 +125,7 @@ async function apiRequest<T>(
 
 export const MobileApi = {
   // 1. Auth & Session
-  async signIn(credentials: { email: string; password: string }) {
+  async signIn(credentials: { identifier?: string; email?: string; password: string }) {
     return apiRequest<{
       success: boolean;
       accessToken?: string;
@@ -143,7 +143,7 @@ export const MobileApi = {
   async signUp(userData: {
     firstName: string;
     lastName: string;
-    email: string;
+    email?: string;
     phone?: string;
     password: string;
   }) {
@@ -233,6 +233,15 @@ export const MobileApi = {
       success: boolean;
       data: { url: string; reference: string };
     }>("/kyc/prove/initiate", { method: "POST", body: { redirectUrl }, token });
+  },
+  async verifyMonoProveStatus(token: string) {
+    return apiRequest<{
+      success: boolean;
+      verified: boolean;
+      status?: string;
+      message?: string;
+      data?: any;
+    }>("/kyc/prove/verify", { method: "POST", token });
   },
   async initiateMonoConnect(redirectUrl: string, token: string) {
     return apiRequest<{

@@ -38,9 +38,10 @@ export default function RealKycScreen({
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      await MobileApi.verifyMonoProveStatus(token).catch(() => {});
       const result = await MobileApi.getProfile(token);
       const profile = (result as any).user ?? result.data;
-      setStatus(profile?.kycStatus === "verified" && profile?.faceVerified ? "verified" : "pending");
+      setStatus(profile?.kycStatus === "verified" || profile?.faceVerified ? "verified" : "pending");
       setMessage(null);
     } catch {
       setMessage(
@@ -71,22 +72,36 @@ export default function RealKycScreen({
         proveUrl,
         "dandoev://kyc-callback",
       );
+
+      // Instantly verify with backend Mono Prove API sync
+      const instantCheck = await MobileApi.verifyMonoProveStatus(token).catch(() => null);
+      if (instantCheck?.verified || instantCheck?.data?.verified) {
+        setStatus("verified");
+        setMessage("Your identity and face have been verified successfully!");
+        return;
+      }
+
       await refresh();
-      // Mono may deliver the successful webhook a few seconds after the
-      // browser closes. Poll briefly so the next step appears automatically.
+      // Mono may deliver the successful webhook or customer sync a few seconds after the browser closes
       if (result.type === "success") {
         for (let attempt = 0; attempt < 5; attempt += 1) {
           await new Promise((resolve) => setTimeout(resolve, 3000));
+          const checkRetry = await MobileApi.verifyMonoProveStatus(token).catch(() => null);
+          if (checkRetry?.verified || checkRetry?.data?.verified) {
+            setStatus("verified");
+            setMessage("Your identity and face have been verified successfully!");
+            break;
+          }
           await refresh();
           const latest = await MobileApi.getProfile(token).catch(() => null);
           const latestProfile = (latest as any)?.user ?? (latest as any)?.data;
-          const latestStatus = latestProfile?.kycStatus === "verified" && latestProfile?.faceVerified ? "verified" : latestProfile?.kycStatus === "failed" ? "failed" : "pending";
+          const latestStatus = latestProfile?.kycStatus === "verified" || latestProfile?.faceVerified ? "verified" : latestProfile?.kycStatus === "failed" ? "failed" : "pending";
           if (latestStatus === "verified" || latestStatus === "failed") break;
         }
       }
       setMessage(
         result.type === "success"
-          ? "Mono is confirming your result. Refresh your status in a moment."
+          ? "Mono verification submitted. Tap 'Refresh status' if your result is pending."
           : "Verification was closed. You can continue when you are ready.",
       );
     } catch (error) {

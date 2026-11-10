@@ -73,11 +73,15 @@ function SignUpForm() {
       setError('Please enter your first and last name as shown on your BVN.');
       return;
     }
-    if (!form.email.includes('@')) {
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError('Enter a phone number or an email address.');
+      return;
+    }
+    if (form.email.trim() && !form.email.includes('@')) {
       setError('Please enter a valid email address.');
       return;
     }
-    if (form.phone.replace(/\D/g, '').length < 10) {
+    if (form.phone.trim() && form.phone.replace(/\D/g, '').length < 10) {
       setError('Please enter a valid 10 or 11-digit Nigerian phone number.');
       return;
     }
@@ -330,12 +334,11 @@ function SignUpForm() {
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Email Address *
+                    Email Address (optional if you add a phone number)
                   </label>
                   <input
                     type="email"
-                    required
-                    placeholder="solomon@example.com"
+                                        placeholder="solomon@example.com"
                     value={form.email}
                     onChange={(e) => updateForm('email', e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-primary focus:outline-none"
@@ -344,7 +347,7 @@ function SignUpForm() {
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Nigerian Phone Number *
+                    Nigerian Phone Number (use it to sign in)
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3.5 text-xs font-bold text-slate-500">
@@ -352,8 +355,7 @@ function SignUpForm() {
                     </span>
                     <input
                       type="tel"
-                      required
-                      placeholder="8031234567"
+                                            placeholder="8031234567"
                       value={form.phone}
                       onChange={(e) => updateForm('phone', e.target.value)}
                       className="w-full pl-20 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-primary focus:outline-none"

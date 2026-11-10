@@ -2,11 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from './config';
 
-if (Platform.OS !== 'web') {
+// Expo Go no longer supports remote push notifications from SDK 53 onward.
+// Keep notification setup out of Expo Go so it cannot crash the app at launch;
+// native push registration runs in development/production builds instead.
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+const supportsRemoteNotifications = Platform.OS !== 'web' && !isExpoGo;
+
+if (supportsRemoteNotifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -31,7 +40,7 @@ export function usePushNotifications() {
     let registeredToken: string | undefined;
 
     // Push notifications are optional and unsupported in the web client.
-    if (Platform.OS !== 'web') {
+    if (supportsRemoteNotifications) {
       registerForPushNotificationsAsync()
         .then(token => {
           if (!isMounted) return;
@@ -53,7 +62,7 @@ export function usePushNotifications() {
       }
     });
 
-    if (Platform.OS !== 'web') {
+    if (supportsRemoteNotifications) {
       notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
         console.log('Received notification:', notification);
       });

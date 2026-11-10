@@ -19,6 +19,7 @@ import {
   verifyMonoBankAccount,
   setupMonoRecurringMandate,
   isLiveMonoConfigured,
+  MonoFeatureUnavailableError,
   type DeductionInterval,
 } from "@/lib/mono";
 import { encryptField } from "@/lib/encryption";
@@ -411,6 +412,13 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       },
     });
   } catch (error: any) {
+    if (error instanceof MonoFeatureUnavailableError) {
+      log.error({ product: error.product }, "Mono product access is not enabled");
+      return NextResponse.json(
+        { error: `Identity verification is unavailable because Mono ${error.product === "lookup" ? "Lookup" : "verification"} is not enabled for DandoEv yet. Please contact DandoEv support; your identity has not been verified.`, code: "MONO_FEATURE_NOT_ENABLED", product: error.product },
+        { status: 503 },
+      );
+    }
     log.error(
       { error: error.message },
       "Mono KYC & Financial verification failed",

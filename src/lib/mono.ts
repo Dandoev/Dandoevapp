@@ -12,7 +12,26 @@ const MONO_API_V3 = "https://api.withmono.com/v3";
 const MONO_PAYMENTS_V2 = "https://api.withmono.com/v2/payments";
 type MonoProduct = "connect" | "lookup" | "prove" | "payments";
 
+const monoEnvironment = (process.env.MONO_ENVIRONMENT || "live").toLowerCase();
+const isMonoSandbox = monoEnvironment === "sandbox" || monoEnvironment === "test";
+
+export class MonoFeatureUnavailableError extends Error {
+  constructor(public readonly product: MonoProduct) {
+    super(`Mono ${product} is not enabled for this business`);
+    this.name = "MonoFeatureUnavailableError";
+  }
+}
+
 export function getMonoProductKey(product: MonoProduct): string {
+  const sandboxKeyNames: Record<MonoProduct, string> = {
+    connect: "MONO_SANDBOX_CONNECT_SECRET_KEY",
+    lookup: "MONO_SANDBOX_LOOKUP_SECRET_KEY",
+    prove: "MONO_SANDBOX_PROVE_SECRET_KEY",
+    payments: "MONO_SANDBOX_PAYMENTS_SECRET_KEY",
+  };
+  const sandboxKey = process.env[sandboxKeyNames[product]] || process.env.MONO_SANDBOX_SECRET_KEY || "";
+  if (isMonoSandbox) return sandboxKey;
+
   switch (product) {
     case "connect":
       return (
@@ -36,7 +55,8 @@ export function getMonoProductKey(product: MonoProduct): string {
 }
 
 export function isMonoProductConfigured(product: MonoProduct): boolean {
-  return /^(live|test)_sk_/.test(getMonoProductKey(product));
+  const key = getMonoProductKey(product);
+  return isMonoSandbox ? /^test_sk_/.test(key) : /^live_sk_/.test(key);
 }
 
 function requireMonoKey(product: MonoProduct): string {
@@ -51,10 +71,23 @@ export const isLiveMonoConfigured = isMonoProductConfigured("connect");
 export async function initiateMonoProve(params: {
   reference: string;
   redirectUrl: string;
-  customer: { name: string; email: string; phone?: string; address?: string };
+  customer: {
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    identity?: { number: string; type: "bvn" | "nin" };
+  };
 }) {
   if (isMonoProductConfigured("prove")) {
     const secret = requireMonoKey("prove");
+    const payload: Record<string, any> = {
+      customer: params.customer,
+      reference: params.reference,
+      redirect_url: params.redirectUrl,
+      kyc_level: "tier_1",
+      bank_accounts: false,
+    };
     const res = await fetch(`${MONO_PROVE_URL}/initiate`, {
       method: "POST",
       headers: {
@@ -62,15 +95,12 @@ export async function initiateMonoProve(params: {
         Accept: "application/json",
         "mono-sec-key": secret,
       },
-      body: JSON.stringify({
-        customer: params.customer,
-        reference: params.reference,
-        redirect_url: params.redirectUrl,
-        kyc_level: "tier_1",
-        bank_accounts: false,
-      }),
+      body: JSON.stringify(payload),
     });
     const body = await res.json();
+    if (res.status === 401 && /feature is not enabled for your business/i.test(String(body?.message || ""))) {
+      throw new MonoFeatureUnavailableError("prove");
+    }
     if (!res.ok || !body?.data?.mono_url)
       throw new Error(
         body?.message || "Mono Prove session could not be created",
@@ -84,11 +114,69 @@ export async function initiateMonoProve(params: {
 
   if (!isDemoAllowed())
     throw new Error("Mono prove credentials are not configured");
+  const fallbackUrl = params.redirectUrl.includes("?")
+    ? `${params.redirectUrl}&status=successful&reference=${encodeURIComponent(params.reference)}`
+    : `${params.redirectUrl}?status=successful&reference=${encodeURIComponent(params.reference)}`;
   return {
-    url: `https://prove.withmono.com/demo?reference=${encodeURIComponent(params.reference)}`,
+    url: fallbackUrl,
     reference: params.reference,
     id: `prove_${params.reference}`,
   };
+}
+
+export async function fetchMonoProveCustomer(reference: string): Promise<{
+  reference: string;
+  status: "successful" | "failed" | "pending";
+  verified: boolean;
+  customer?: any;
+  verification?: any;
+} | null> {
+  if (isMonoProductConfigured("prove")) {
+    const secret = requireMonoKey("prove");
+    const res = await fetch(
+      `${MONO_PROVE_URL}/customers/${encodeURIComponent(reference)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "mono-sec-key": secret,
+        },
+      },
+    );
+    if (res.status === 404) return null;
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        body?.message || `Failed to fetch Mono Prove customer: ${res.status}`,
+      );
+    }
+    const data = body?.data || {};
+    const livenessPassed = Boolean(data.verification?.liveness?.passed);
+    const isSuccessful =
+      data.status === "successful" ||
+      body.status === "success" ||
+      body.status === "successful" ||
+      livenessPassed;
+    return {
+      reference: data.reference || reference,
+      status: isSuccessful ? "successful" : "pending",
+      verified: isSuccessful,
+      customer: data.customer,
+      verification: data.verification,
+    };
+  }
+
+  if (isDemoAllowed()) {
+    return {
+      reference,
+      status: "successful",
+      verified: true,
+      customer: { name: "Demo User", email: "demo@dandoev.com" },
+      verification: { liveness: { passed: true, confidence_score: 99 } },
+    };
+  }
+
+  throw new Error("Mono prove credentials are not configured");
 }
 
 // ---- Nigerian CBN / NIP Bank Code Directory ----
@@ -170,6 +258,9 @@ async function monoFetch<T>(
 
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 401 && /feature is not enabled for your business/i.test(body)) {
+      throw new MonoFeatureUnavailableError(product);
+    }
     throw new Error(`Mono API error [${res.status}]: ${body}`);
   }
 

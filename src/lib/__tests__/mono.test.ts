@@ -10,6 +10,34 @@ describe("Mono production integration", () => {
     delete process.env.MONO_PROVE_SECRET_KEY;
   });
 
+  it("identifies a disabled Mono Lookup entitlement without treating identity as verified", async () => {
+    process.env.MONO_LOOKUP_SECRET_KEY = "test_sk_lookup";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: async () => JSON.stringify({ message: "This feature is not enabled for your business. Please contact support to enable it." }),
+    }));
+    const { lookupMonoBvn, MonoFeatureUnavailableError } = await import("../mono");
+    await expect(lookupMonoBvn("22233344455")).rejects.toMatchObject({
+      name: "MonoFeatureUnavailableError", product: "lookup",
+    });
+    expect(MonoFeatureUnavailableError).toBeDefined();
+  }, 30000);
+
+  it("identifies a disabled Mono Prove entitlement before opening Face ID", async () => {
+    process.env.MONO_PROVE_SECRET_KEY = "test_sk_prove";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: "This feature is not enabled for your business. Please contact support to enable it." }),
+    }));
+    const { initiateMonoProve } = await import("../mono");
+    await expect(initiateMonoProve({
+      reference: "prove-test", redirectUrl: "dandoev://kyc-callback",
+      customer: { name: "Test User", email: "test@example.com" },
+    })).rejects.toMatchObject({ name: "MonoFeatureUnavailableError", product: "prove" });
+  });
+
   it("uses the current v3 mandate debit endpoint and preserves processing state", async () => {
     process.env.MONO_PAYMENTS_SECRET_KEY = "test_sk_configured";
     const fetchMock = vi.fn().mockResolvedValue({

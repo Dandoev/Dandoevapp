@@ -46,7 +46,7 @@ function SignInForm() {
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToUse, password: passwordToUse }),
+        body: JSON.stringify({ identifier: emailToUse, password: passwordToUse }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -55,7 +55,7 @@ function SignInForm() {
         setError(
           res.status === 429
             ? 'Too many attempts. Please try again shortly.'
-            : 'Invalid email or password.'
+            : 'Invalid email, phone number or password.'
         );
         return;
       }
@@ -77,7 +77,7 @@ function SignInForm() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.password) {
-      setError('Please provide both email address and password.');
+      setError('Please provide your email address or phone number, and password.');
       return;
     }
     await executeSignIn(form.email, form.password);
@@ -251,16 +251,16 @@ function SignInForm() {
           <form onSubmit={handleManualSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                {portalMode === 'rider' ? 'Email Address' : 'Official Staff Email'}
+                {portalMode === 'rider' ? 'Email or Phone Number' : 'Official Staff Email'}
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="email"
+                  type={portalMode === 'rider' ? 'text' : 'email'}
                   required
                   placeholder={
                     portalMode === 'rider'
-                      ? 'solomon.dunu@rider.dandoev.com'
+                      ? 'you@example.com or 0803 123 4567'
                       : 'admin@dandoev.com'
                   }
                   value={form.email}

@@ -56,12 +56,6 @@
       "expo-font",
       "expo-web-browser",
       "expo-notifications"
-    ],
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/9427d0a4-004d-4f04-8378-3f16a336dbaf"
-    }
+    ]
   }
 }

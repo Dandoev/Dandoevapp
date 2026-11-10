@@ -33,9 +33,15 @@ export default function SignInScreen({
 
   const handleSignIn = async () => {
     setErrorMessage(null);
+    // The account can be identified by email OR phone number.
     const cleanEmail = email.trim().toLowerCase();
+    const isEmail = cleanEmail.includes("@");
     if (!cleanEmail || !password) {
-      setErrorMessage("Please enter both your email and password.");
+      setErrorMessage("Please enter your email or phone number and password.");
+      return;
+    }
+    if (!isEmail && cleanEmail.replace(/\D/g, "").length < 10) {
+      setErrorMessage("Enter a valid email address or a Nigerian phone number.");
       return;
     }
 
@@ -45,7 +51,11 @@ export default function SignInScreen({
 
       // 1. Primary: Attempt sign-in via Backend API (auto-confirms unconfirmed emails & syncs DB profile)
       try {
-        const resData = await MobileApi.signIn({ email: cleanEmail, password });
+        const resData = await MobileApi.signIn({
+          identifier: cleanEmail,
+          email: isEmail ? cleanEmail : undefined,
+          password,
+        });
         authToken =
           resData.accessToken ||
           resData.session?.access_token ||
@@ -79,6 +89,10 @@ export default function SignInScreen({
           }
         }
 
+        // Phone sign-in can only be resolved by the backend (Supabase signs in by email).
+        if (!isEmail) {
+          throw backendError;
+        }
         // 2. Direct Supabase Fallback (immediate fallback if Render backend is sleeping or unreachable)
         try {
           const { data: supaData, error: supaError } =
@@ -172,18 +186,19 @@ export default function SignInScreen({
             </View>
           )}
 
-          {/* Email Input */}
-          <Text style={styles.label}>Email Address</Text>
+          {/* Email or Phone Input */}
+          <Text style={styles.label}>Email or Phone Number</Text>
           <View style={styles.inputContainer}>
             <Mail size={18} color="#9CA3AF" />
             <TextInput
               style={styles.input}
-              placeholder="you@example.com"
+              placeholder="you@example.com or 0803 123 4567"
               placeholderTextColor="#9CA3AF"
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
-              accessibilityLabel="Email address"
+              autoCorrect={false}
+              autoComplete="username"
+              accessibilityLabel="Email address or phone number"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);

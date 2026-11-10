@@ -5,24 +5,47 @@ import { z } from 'zod';
 
 // ---- Auth ----
 
-export const signupSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters').max(100).trim(),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters').max(100).trim(),
-  email: z.string().email('Invalid email address').max(255).trim().toLowerCase(),
-  phone: z.string().optional(),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128)
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-});
+const emptyToUndefined = (v: unknown) =>
+  typeof v === 'string' && v.trim() === '' ? undefined : v;
 
-export const signinSchema = z.object({
-  email: z.string().email('Invalid email address').trim().toLowerCase(),
-  password: z.string().min(1, 'Password is required'),
-});
+const passwordRules = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(128)
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+
+// Sign up with an email, a phone number, or both.
+export const signupSchema = z
+  .object({
+    firstName: z.string().min(2, 'First name must be at least 2 characters').max(100).trim(),
+    lastName: z.string().min(2, 'Last name must be at least 2 characters').max(100).trim(),
+    email: z.preprocess(
+      emptyToUndefined,
+      z.string().email('Invalid email address').max(255).trim().toLowerCase().optional(),
+    ),
+    phone: z.preprocess(emptyToUndefined, z.string().max(30).optional()),
+    password: passwordRules,
+  })
+  .refine((d) => Boolean(d.email) || Boolean(d.phone), {
+    message: 'Provide an email address or a phone number',
+    path: ['email'],
+  });
+
+// Sign in with email OR phone. `email` is kept for older app builds;
+// `identifier` accepts either value; `phone` is explicit.
+export const signinSchema = z
+  .object({
+    identifier: z.preprocess(emptyToUndefined, z.string().trim().max(255).optional()),
+    email: z.preprocess(emptyToUndefined, z.string().trim().max(255).optional()),
+    phone: z.preprocess(emptyToUndefined, z.string().trim().max(30).optional()),
+    password: z.string().min(1, 'Password is required'),
+  })
+  .refine((d) => Boolean(d.identifier || d.email || d.phone), {
+    message: 'Enter your email address or phone number',
+    path: ['identifier'],
+  });
 
 // ---- Orders ----
 

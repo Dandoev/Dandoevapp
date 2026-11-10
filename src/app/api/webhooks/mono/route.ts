@@ -106,52 +106,112 @@ export async function POST(req: NextRequest) {
       case "mono.prove.data_verification_rejected":
       case "mono.prove.data_verification_failed":
       case "mono.prove.data_verification_expired":
-      case "mono.prove.data_verification_cancelled": {
+      case "mono.prove.data_verification_cancelled":
+      case "mono.prove.data_verification_awaiting_review": {
         const successful =
           payload.event === "mono.prove.data_verification_successful";
+        const awaitingReview =
+          payload.event === "mono.prove.data_verification_awaiting_review";
         const email = data.customer?.email || data.email;
-        const reference = data.reference;
-        const initiation = reference
-          ? await prisma.auditLog.findFirst({
-              where: { action: "MONO_PROVE_STARTED", resourceId: reference },
-            })
-          : null;
-        const user = initiation?.userId
-          ? await prisma.user.findUnique({ where: { id: initiation.userId } })
-          : null;
-        if (
-          user &&
-          (!email || user.email.toLowerCase() === String(email).toLowerCase())
-        ) {
+        const phone = data.customer?.phone || data.phone;
+        const reference = data.reference || data.id || data.session_id;
+
+        // Resolve user through multi-strategy matching
+        let user = null;
+        if (reference) {
+          const initiation = await prisma.auditLog.findFirst({
+            where: { action: "MONO_PROVE_STARTED", resourceId: reference },
+          });
+          if (initiation?.userId) {
+            user = await prisma.user.findUnique({ where: { id: initiation.userId } });
+          }
+        }
+
+        // Secondary: check if session id was stored in auditLog details
+        if (!user && (data.id || data.session_id)) {
+          const sessionId = data.id || data.session_id;
+          const initiation = await prisma.auditLog.findFirst({
+            where: {
+              action: "MONO_PROVE_STARTED",
+              details: { contains: sessionId },
+            },
+          });
+          if (initiation?.userId) {
+            user = await prisma.user.findUnique({ where: { id: initiation.userId } });
+          }
+        }
+
+        // Tertiary: match by customer email
+        if (!user && email) {
+          user = await prisma.user.findFirst({
+            where: { email: { equals: String(email).trim(), mode: "insensitive" } },
+          });
+        }
+
+        // Quaternary: match by customer phone
+        if (!user && phone) {
+          const rawPhone = String(phone).replace(/\D/g, "");
+          user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { phone: String(phone) },
+                { phone: { endsWith: rawPhone.slice(-10) } },
+              ],
+            },
+          });
+        }
+
+        if (user) {
+          const newStatus = successful
+            ? "verified"
+            : awaitingReview
+            ? "pending"
+            : "failed";
+
           if (successful || user.kycStatus !== "verified") {
+            const updateData: Record<string, any> = { kycStatus: newStatus };
+            if (data.customer?.bvn && !user.bvn) {
+              updateData.bvn = String(data.customer.bvn);
+            }
+            if (data.customer?.nin && !user.ninNumber) {
+              updateData.ninNumber = String(data.customer.nin);
+            }
             await prisma.user.update({
               where: { id: user.id },
-              data: { kycStatus: successful ? "verified" : "failed" },
+              data: updateData,
             });
           }
+
+          const action = successful
+            ? "MONO_PROVE_FACE_VERIFIED"
+            : awaitingReview
+            ? "MONO_PROVE_AWAITING_REVIEW"
+            : "MONO_PROVE_FACE_REJECTED";
+
           await prisma.auditLog.create({
             data: {
               userId: user.id,
-              action: successful
-                ? "MONO_PROVE_FACE_VERIFIED"
-                : "MONO_PROVE_FACE_REJECTED",
+              action,
               resource: "kyc",
-              resourceId: reference,
+              resourceId: reference || user.id,
               details: JSON.stringify({
                 provider: "mono_prove",
                 event: payload.event,
+                sessionId: data.id,
+                reference: data.reference,
               }),
             },
           });
+          log.info(
+            { userId: user.id, reference, successful, event: payload.event },
+            "Mono Prove facial verification processed successfully"
+          );
         } else {
-          throw new Error(
-            "Mono Prove reference or customer did not match an initiated session",
+          log.warn(
+            { reference, email, phone, event: payload.event },
+            "Mono Prove webhook could not locate corresponding user"
           );
         }
-        log.info(
-          { reference, email, successful },
-          "Mono Prove facial verification processed",
-        );
         break;
       }
 

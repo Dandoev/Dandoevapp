@@ -119,6 +119,21 @@ const NIGERIAN_STATES = [
   "Other State",
 ];
 
+const GENDER_OPTIONS = ["Male", "Female", "Other"];
+
+const GUARANTOR_RELATIONSHIPS = [
+  "Parent",
+  "Spouse / Partner",
+  "Brother / Sister",
+  "Other Relative",
+  "Friend",
+  "Colleague / Fellow Rider",
+  "Employer / Supervisor",
+  "Landlord",
+  "Community / Union Leader",
+  "Other",
+];
+
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -203,6 +218,13 @@ export default function BnplApplicationScreen({
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [showBankPicker, setShowBankPicker] = useState(false);
   const [showPlatformPicker, setShowPlatformPicker] = useState(false);
+  // Generic dropdown used by Employment Status, Gender and Guarantor Relationship.
+  const [optionPicker, setOptionPicker] = useState<{
+    title: string;
+    options: string[];
+    value: string;
+    onSelect: (value: string) => void;
+  } | null>(null);
   const [dashboardFile, setDashboardFile] = useState<{ name: string; uri: string; size?: string } | null>(null);
   const [accountChecking, setAccountChecking] = useState(false);
   const [accountVerified, setAccountVerified] = useState(false);
@@ -221,7 +243,7 @@ export default function BnplApplicationScreen({
       .then((result) => {
         if (active) {
           const profile = (result as any).user ?? result.data;
-          setFaceVerified(profile?.kycStatus === "verified" && profile?.faceVerified === true);
+          setFaceVerified(profile?.kycStatus === "verified" || profile?.faceVerified === true);
           setLookupVerified(profile?.identityLookupVerified === true);
         }
       })
@@ -792,19 +814,14 @@ export default function BnplApplicationScreen({
               </TouchableOpacity>
 
               <Text style={styles.inputLabel}>Gender</Text>
-              <View style={styles.choiceRow}>
-                {(["Male", "Female", "Other"] as const).map((g) => (
-                  <TouchableOpacity
-                    key={g}
-                    style={[styles.choiceBtn, gender === g && styles.choiceBtnActive]}
-                    onPress={() => setGender(g)}
-                  >
-                    <Text style={[styles.choiceBtnText, gender === g && styles.choiceBtnTextActive]}>
-                      {g}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <TouchableOpacity
+                style={styles.selectorTrigger}
+                onPress={() => setOptionPicker({ title: "Select Gender", options: GENDER_OPTIONS, value: gender, onSelect: setGender })}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.selectorTriggerText, !gender && styles.selectorPlaceholder]}>{gender || "Select gender"}</Text>
+                <ChevronDown size={16} color="#64748B" />
+              </TouchableOpacity>
             </View>
 
             {/* 2. RESIDENTIAL ADDRESS */}
@@ -867,36 +884,21 @@ export default function BnplApplicationScreen({
 
               {/* Employment Status Options */}
               <Text style={styles.inputLabel}>Employment Status</Text>
-              <View style={{ gap: 8 }}>
-                {EMPLOYMENT_STATUS_OPTIONS.map((opt) => {
-                  const isSelected = employmentStatus === opt.label;
-                  return (
-                    <TouchableOpacity
-                      key={opt.id}
-                      style={[styles.employmentRow, isSelected && styles.employmentRowActive]}
-                      onPress={() => setEmploymentStatus(opt.label)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.employmentRowLeft}>
-                        <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
-                        <View>
-                          <Text style={[styles.employmentRowText, isSelected && styles.employmentRowTextActive]}>
-                            {opt.label}
-                          </Text>
-                          {opt.badge && (
-                            <View style={styles.optBadge}>
-                              <Text style={styles.optBadgeText}>{opt.badge}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                      <View style={[styles.radioDot, isSelected && styles.radioDotActive]}>
-                        {isSelected && <View style={styles.radioDotInner} />}
-                      </View>
-                    </TouchableOpacity>
-                  );
+              <TouchableOpacity
+                style={styles.selectorTrigger}
+                onPress={() => setOptionPicker({
+                  title: "Employment Status",
+                  options: EMPLOYMENT_STATUS_OPTIONS.map((opt) => opt.label),
+                  value: employmentStatus,
+                  onSelect: setEmploymentStatus,
                 })}
-              </View>
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.selectorTriggerText, !employmentStatus && styles.selectorPlaceholder]}>
+                  {employmentStatus || "Select employment status"}
+                </Text>
+                <ChevronDown size={16} color="#64748B" />
+              </TouchableOpacity>
 
               <Text style={[styles.inputLabel, { marginTop: 14 }]}>Courier / Delivery Platform</Text>
               <TouchableOpacity style={styles.selectorTrigger} onPress={() => setShowPlatformPicker(true)}>
@@ -1240,13 +1242,21 @@ export default function BnplApplicationScreen({
                 />
 
                 <Text style={styles.inputLabel}>Relationship</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Senior Colleague, Union Leader, Brother"
-                  placeholderTextColor="#94A3B8"
-                  value={g.relationship}
-                  onChangeText={(v) => updateGuarantor(i, "relationship", v)}
-                />
+                <TouchableOpacity
+                  style={styles.selectorTrigger}
+                  onPress={() => setOptionPicker({
+                    title: "Relationship to you",
+                    options: GUARANTOR_RELATIONSHIPS,
+                    value: g.relationship,
+                    onSelect: (v) => updateGuarantor(i, "relationship", v),
+                  })}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.selectorTriggerText, !g.relationship && styles.selectorPlaceholder]}>
+                    {g.relationship || "Select relationship"}
+                  </Text>
+                  <ChevronDown size={16} color="#64748B" />
+                </TouchableOpacity>
               </View>
             ))}
 
@@ -1496,6 +1506,38 @@ export default function BnplApplicationScreen({
                   {bankName === b && <Check size={16} color="#2E3192" />}
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Generic dropdown (Gender, Employment Status, Guarantor Relationship) */}
+      <Modal visible={optionPicker !== null} transparent animationType="fade" onRequestClose={() => setOptionPicker(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { maxHeight: "75%" }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{optionPicker?.title}</Text>
+              <TouchableOpacity onPress={() => setOptionPicker(null)} style={styles.modalCloseBtn}>
+                <X size={20} color="#0A154F" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ marginTop: 10 }}>
+              {optionPicker?.options.map((opt) => {
+                const selected = optionPicker.value === opt;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.sheetItem, selected && styles.sheetItemActive]}
+                    onPress={() => {
+                      optionPicker.onSelect(opt);
+                      setOptionPicker(null);
+                    }}
+                  >
+                    <Text style={[styles.sheetItemText, selected && styles.sheetItemTextActive]}>{opt}</Text>
+                    {selected && <Check size={16} color="#2E3192" />}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>

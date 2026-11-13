@@ -451,10 +451,14 @@ export default function BikeDetailPage() {
                       Total Outright Cash Price
                     </div>
                     <div className="text-3xl font-black text-primary tabular-nums mt-0.5">
-                      {formatNaira(grossAssetPrice + Math.round(grossAssetPrice * 0.10))}
+                      {formatNaira(
+                        grossAssetPrice +
+                          Math.round(grossAssetPrice * 0.10) +
+                          Math.round(grossAssetPrice * 0.075)
+                      )}
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Includes 10% comprehensive insurance + 1-year motor & battery warranty + free Lagos delivery.
+                      Includes 7.5% VAT, 10% comprehensive insurance + 1-year motor & battery warranty + free Lagos delivery.
                     </p>
                   </div>
                   <button
@@ -668,7 +672,11 @@ export default function BikeDetailPage() {
                 <span className="text-xs font-medium text-slate-500">{cadenceLabel}</span>
               </>
             ) : (
-              formatNaira(grossAssetPrice + Math.round(grossAssetPrice * 0.10))
+              formatNaira(
+                grossAssetPrice +
+                  Math.round(grossAssetPrice * 0.10) +
+                  Math.round(grossAssetPrice * 0.075)
+              )
             )}
           </div>
         </div>

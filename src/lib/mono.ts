@@ -12,8 +12,10 @@ const MONO_API_V3 = "https://api.withmono.com/v3";
 const MONO_PAYMENTS_V2 = "https://api.withmono.com/v2/payments";
 type MonoProduct = "connect" | "lookup" | "prove" | "payments";
 
-const monoEnvironment = (process.env.MONO_ENVIRONMENT || "live").toLowerCase();
-const isMonoSandbox = monoEnvironment === "sandbox" || monoEnvironment === "test";
+function isMonoSandboxEnvironment(): boolean {
+  const environment = (process.env.MONO_ENVIRONMENT || "live").toLowerCase();
+  return environment === "sandbox" || environment === "test";
+}
 
 export class MonoFeatureUnavailableError extends Error {
   constructor(public readonly product: MonoProduct) {
@@ -29,8 +31,21 @@ export function getMonoProductKey(product: MonoProduct): string {
     prove: "MONO_SANDBOX_PROVE_SECRET_KEY",
     payments: "MONO_SANDBOX_PAYMENTS_SECRET_KEY",
   };
-  const sandboxKey = process.env[sandboxKeyNames[product]] || process.env.MONO_SANDBOX_SECRET_KEY || "";
-  if (isMonoSandbox) return sandboxKey;
+  const productKeyNames: Record<MonoProduct, string> = {
+    connect: "MONO_CONNECT_SECRET_KEY",
+    lookup: "MONO_LOOKUP_SECRET_KEY",
+    prove: "MONO_PROVE_SECRET_KEY",
+    payments: "MONO_PAYMENTS_SECRET_KEY",
+  };
+  // Accept both explicit sandbox names and product names containing test_sk_
+  // credentials. This supports existing deployments while keeping the key
+  // prefix validation below as the final environment guard.
+  const sandboxKey =
+    process.env[sandboxKeyNames[product]] ||
+    process.env[productKeyNames[product]] ||
+    process.env.MONO_SANDBOX_SECRET_KEY ||
+    "";
+  if (isMonoSandboxEnvironment()) return sandboxKey;
 
   switch (product) {
     case "connect":
@@ -56,7 +71,7 @@ export function getMonoProductKey(product: MonoProduct): string {
 
 export function isMonoProductConfigured(product: MonoProduct): boolean {
   const key = getMonoProductKey(product);
-  return isMonoSandbox ? /^test_sk_/.test(key) : /^live_sk_/.test(key);
+  return isMonoSandboxEnvironment() ? /^test_sk_/.test(key) : /^live_sk_/.test(key);
 }
 
 function requireMonoKey(product: MonoProduct): string {
@@ -66,6 +81,8 @@ function requireMonoKey(product: MonoProduct): string {
 }
 const MONO_PROVE_URL = "https://api.withmono.com/v1/prove";
 
+// Compatibility export for older routes. This is product-specific (Connect)
+// and supports both test and live keys according to MONO_ENVIRONMENT.
 export const isLiveMonoConfigured = isMonoProductConfigured("connect");
 
 export async function initiateMonoProve(params: {
@@ -429,7 +446,7 @@ export async function exchangeMonoToken(code: string): Promise<{ id: string }> {
     code.startsWith("mono_demo_") || code.startsWith("test_code_");
   if (isDemoCode && !isDemoAllowed())
     throw new Error("Demo Mono codes are disabled");
-  if (!isLiveMonoConfigured || isDemoCode) {
+  if (!isMonoProductConfigured("connect") || isDemoCode) {
     if (!isDemoAllowed()) throw new Error("Mono Connect is not configured");
     const deterministicHash = crypto
       .createHash("md5")
@@ -506,7 +523,7 @@ export async function getMonoIdentity(
 ): Promise<MonoIdentity> {
   logger.info({ accountId }, "Fetching Mono identity");
 
-  if (isLiveMonoConfigured && !accountId.startsWith("mono_acct_")) {
+  if (isMonoProductConfigured("connect") && !accountId.startsWith("mono_acct_")) {
     try {
       const res = await monoFetch<{ data: any }>(
         `/accounts/${accountId}/identity`,
@@ -532,7 +549,7 @@ export async function getMonoIdentity(
     }
   }
 
-  if (isLiveMonoConfigured || !isDemoAllowed())
+  if (isMonoProductConfigured("connect") || !isDemoAllowed())
     throw new Error("Mono identity is unavailable");
   const fullName =
     hint?.firstName && hint?.lastName

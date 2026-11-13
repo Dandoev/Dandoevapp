@@ -893,6 +893,9 @@ export default function BnplApplicationScreen({
                   onSelect: setEmploymentStatus,
                 })}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Employment status dropdown"
+                accessibilityHint="Opens a list of employment options"
               >
                 <Text style={[styles.selectorTriggerText, !employmentStatus && styles.selectorPlaceholder]}>
                   {employmentStatus || "Select employment status"}
@@ -901,7 +904,13 @@ export default function BnplApplicationScreen({
               </TouchableOpacity>
 
               <Text style={[styles.inputLabel, { marginTop: 14 }]}>Courier / Delivery Platform</Text>
-              <TouchableOpacity style={styles.selectorTrigger} onPress={() => setShowPlatformPicker(true)}>
+              <TouchableOpacity
+                style={styles.selectorTrigger}
+                onPress={() => setShowPlatformPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Courier or delivery platform dropdown"
+                accessibilityHint="Opens a list of delivery platforms"
+              >
                 <Text style={[styles.selectorTriggerText, !employerName && styles.selectorPlaceholder]}>{employerName || "Select your platform"}</Text>
                 <ChevronDown size={16} color="#64748B" />
               </TouchableOpacity>
@@ -922,7 +931,13 @@ export default function BnplApplicationScreen({
               <View style={styles.rowTwoCol}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>When Did You Join?</Text>
-                  <TouchableOpacity style={styles.selectorTrigger} onPress={() => setShowJoinDatePicker(true)}>
+                  <TouchableOpacity
+                    style={styles.selectorTrigger}
+                    onPress={() => setShowJoinDatePicker(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Courier platform start date dropdown"
+                    accessibilityHint="Opens the date selector"
+                  >
                     <View style={styles.selectorTriggerLeft}><Calendar size={17} color="#167E83" /><Text style={[styles.selectorTriggerText, !joinedDate && styles.selectorPlaceholder]}>{joinedDate || "Select date"}</Text></View>
                     <ChevronDown size={16} color="#64748B" />
                   </TouchableOpacity>
@@ -1438,7 +1453,7 @@ export default function BnplApplicationScreen({
         </View>
       </Modal>
 
-      <Modal visible={showPlatformPicker} transparent animationType="fade">
+      <Modal visible={showPlatformPicker} transparent animationType="fade" onRequestClose={() => setShowPlatformPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { maxHeight: "75%" }]}>
             <View style={styles.modalHeader}><View><Text style={styles.modalTitle}>Select platform</Text><Text style={styles.modalSub}>Choose the platform where you earn.</Text></View><TouchableOpacity onPress={() => setShowPlatformPicker(false)} style={styles.modalCloseBtn}><X size={20} color="#0A154F" /></TouchableOpacity></View>
@@ -1452,7 +1467,7 @@ export default function BnplApplicationScreen({
       {/* ========================================================= */}
       {/* IN-APP NIGERIAN STATE SELECTOR MODAL */}
       {/* ========================================================= */}
-      <Modal visible={showStatePicker} transparent animationType="fade">
+      <Modal visible={showStatePicker} transparent animationType="fade" onRequestClose={() => setShowStatePicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { maxHeight: "75%" }]}>
             <View style={styles.modalHeader}>
@@ -1483,7 +1498,7 @@ export default function BnplApplicationScreen({
       {/* ========================================================= */}
       {/* IN-APP NIGERIAN BANK SELECTOR MODAL */}
       {/* ========================================================= */}
-      <Modal visible={showBankPicker} transparent animationType="fade">
+      <Modal visible={showBankPicker} transparent animationType="fade" onRequestClose={() => setShowBankPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { maxHeight: "75%" }]}>
             <View style={styles.modalHeader}>

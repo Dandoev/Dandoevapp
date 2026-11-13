@@ -7,7 +7,10 @@ import logger from './logger';
 // ---- Shared Connection ----
 
 function getConnection(): ConnectionOptions {
-  const url = process.env.REDIS_URL || 'redis://localhost:6379';
+  const url = process.env.REDIS_URL;
+  if (!url) {
+    throw new Error('Redis is not configured. Set REDIS_URL before creating a BullMQ queue or worker.');
+  }
   const parsed = new URL(url);
   const isTls = parsed.protocol === 'rediss:';
 

@@ -7,8 +7,7 @@ const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined;
 };
 
-function createRedisClient(): Redis {
-  const url = process.env.REDIS_URL || 'redis://localhost:6379';
+function createRedisClient(url: string): Redis {
   return new Redis(url, {
     maxRetriesPerRequest: 3,
     retryStrategy(times: number) {
@@ -19,8 +18,16 @@ function createRedisClient(): Redis {
   });
 }
 
-export const redis = globalForRedis.redis ?? createRedisClient();
+/**
+ * Redis is an optional production dependency. When REDIS_URL is not set we
+ * deliberately do not create a localhost client: that would make every
+ * request attempt a connection to an unavailable Redis instance.
+ */
+export const redis =
+  process.env.REDIS_URL
+    ? (globalForRedis.redis ?? createRedisClient(process.env.REDIS_URL))
+    : undefined;
 
-if (process.env.NODE_ENV !== 'production') globalForRedis.redis = redis;
+if (process.env.NODE_ENV !== 'production' && redis) globalForRedis.redis = redis;
 
 export default redis;

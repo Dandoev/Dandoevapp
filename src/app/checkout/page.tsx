@@ -134,6 +134,7 @@ function CheckoutContent() {
     0
   );
   const subtotal = bikePrice + accessoriesPrice;
+  const vatAmount = Math.round(subtotal * 0.075);
   const insuranceFee = Math.round(subtotal * 0.10);
 
   const deliveryFee =
@@ -144,7 +145,7 @@ function CheckoutContent() {
       : delivery.state
       ? 50000
       : 0;
-  const total = subtotal + insuranceFee + deliveryFee;
+  const total = subtotal + vatAmount + insuranceFee + deliveryFee;
 
   const step1Valid = Boolean(
     buyer.firstName.trim() &&
@@ -551,6 +552,12 @@ function CheckoutContent() {
                   <span className="text-slate-500">Comprehensive Insurance (10%)</span>
                   <span className="font-bold text-slate-800 tabular-nums">
                     {formatNaira(insuranceFee)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">VAT (7.5%)</span>
+                  <span className="font-bold text-slate-800 tabular-nums">
+                    {formatNaira(vatAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between">

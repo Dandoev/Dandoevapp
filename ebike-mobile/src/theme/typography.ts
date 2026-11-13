@@ -52,7 +52,7 @@ export const typography: Record<string, TextStyle> = {
     letterSpacing: -0.3,
   },
 
-  // Card Subtitle / Meta - e.g. "Premium commuter e-bike", "Sports fat-tire e-bike"
+  // Card Subtitle / Meta - e.g. "All terrain e-bike", "Sports fat-tire e-bike"
   bodyLarge: {
     fontSize: 14,
     fontFamily: 'Inter_500Medium',

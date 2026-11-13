@@ -172,7 +172,7 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
                   </View>
                   <Text style={styles.bikeName}>{product.name}</Text>
                   <Text style={styles.bikeBrand}>
-                    {isFlagship ? 'Premium commuter e-bike' : isSports ? 'Sports fat-tire e-bike' : product.brand}
+                    {isFlagship ? 'All terrain e-bike' : isSports ? 'Sports fat-tire e-bike' : product.brand}
                   </Text>
                 </View>
                 <View style={styles.priceBox}>

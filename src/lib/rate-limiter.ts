@@ -50,6 +50,16 @@ export async function checkRateLimit(
   const now = Date.now();
   const windowStart = now - config.windowSeconds * 1000;
 
+  // Rate limiting is best-effort when Redis is intentionally disabled. Keep
+  // auth and API requests available instead of trying localhost:6379.
+  if (!redis) {
+    return {
+      allowed: true,
+      remaining: config.maxRequests,
+      resetAt: 0,
+    };
+  }
+
   try {
     const pipeline = redis.pipeline();
     // Remove expired entries

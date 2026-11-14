@@ -25,12 +25,29 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
   const isDemo = Boolean(token?.startsWith('demo-'));
   const [products, setProducts] = useState<DemoProduct[]>(isDemo ? demoStore.getProducts() : []);
   const [catalogError, setCatalogError] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(!isDemo);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
   useEffect(() => {
     if (isDemo) return;
     let active = true;
-    getLiveBikes().then((bikes) => { if (active) setProducts(bikes); }).catch(() => { if (active) setCatalogError(true); });
+    setCatalogLoading(true);
+    setCatalogError(false);
+    getLiveBikes()
+      .catch(() => getLiveBikes())
+      .then((bikes) => {
+        if (active) {
+          setProducts(bikes);
+          setCatalogError(false);
+        }
+      })
+      .catch(() => {
+        if (active) setCatalogError(true);
+      })
+      .finally(() => {
+        if (active) setCatalogLoading(false);
+      });
     return () => { active = false; };
-  }, [isDemo]);
+  }, [isDemo, catalogAttempt]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const cadence: MobileCadence = 'weekly';
@@ -118,7 +135,15 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
 
       {/* Product Cards List */}
       <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-        {catalogError && <Text style={styles.emptyDescription}>The live catalog is unavailable. Please try again later.</Text>}
+        {catalogLoading && <Text style={styles.emptyDescription}>Loading the live catalog…</Text>}
+        {catalogError && (
+          <View style={styles.catalogError}>
+            <Text style={styles.emptyDescription}>The live catalog is taking longer than expected.</Text>
+            <TouchableOpacity onPress={() => setCatalogAttempt((attempt) => attempt + 1)} accessibilityRole="button" style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Retry catalog</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.countRow}>
           <Text style={styles.countText}>{filteredProducts.length} pieces to explore</Text>
           <Text style={styles.tagText}>BUILT TO MOVE</Text>
@@ -279,6 +304,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E3192',
   },
   emptyButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
+  catalogError: {
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#2E3192',
+  },
+  retryButtonText: {
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
     fontSize: 13,

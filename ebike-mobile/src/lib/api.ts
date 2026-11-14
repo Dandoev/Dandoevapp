@@ -180,7 +180,12 @@ export const MobileApi = {
 
   // 2. Bikes & Marketplace
   async getBikes() {
-    return apiRequest<{ success: boolean; data: any[] }>("/bikes");
+    // Render can take a little longer to wake after inactivity. Keep the
+    // catalog request patient so the app does not turn a cold start into an
+    // empty shop screen.
+    return apiRequest<{ success: boolean; data: any[] }>("/bikes", {
+      timeout: 60000,
+    });
   },
 
   async getBikeById(id: string) {

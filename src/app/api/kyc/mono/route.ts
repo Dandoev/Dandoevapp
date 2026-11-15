@@ -152,6 +152,20 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       });
     }
 
+    if (action === "submit_identity_for_review") {
+      if (!/^\d{11}$/.test(String(bvn || "")) || !/^\d{11}$/.test(String(nin || ""))) {
+        return NextResponse.json({ error: "Enter a valid 11-digit BVN and NIN" }, { status: 400 });
+      }
+      await prisma.user.update({
+        where: { id: userCtx.sub },
+        data: { bvn: encryptField(String(bvn)), ninNumber: encryptField(String(nin)) },
+      });
+      await prisma.auditLog.create({
+        data: { userId: userCtx.sub, action: "IDENTITY_SUBMITTED_FOR_MANUAL_REVIEW", resource: "kyc", details: JSON.stringify({ provider: "manual_admin", status: "pending" }) },
+      });
+      return NextResponse.json({ success: true, message: "BVN and NIN saved for admin review. Continue to facial verification.", data: { status: "pending_manual_review" } });
+    }
+
     // ---------------------------------------------------------
     // MODE 3: Full Mono Connect Exchange + Identity + 6-Month Statement
     // ---------------------------------------------------------

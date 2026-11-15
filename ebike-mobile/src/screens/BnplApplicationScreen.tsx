@@ -1056,13 +1056,7 @@ export default function BnplApplicationScreen({
                   setError("");
                   setBusy(true);
                   try {
-                    if (!lookupVerified) {
-                      const lookup = await MobileApi.verifyMonoKyc({ nin: idNumber, bvn }, token);
-                      if (!lookup.data?.bvn?.verified || !lookup.data?.nin?.verified) {
-                        throw new Error("We could not verify your BVN and NIN. Check both numbers and try again.");
-                      }
-                      setLookupVerified(true);
-                    }
+                    if (!lookupVerified) await MobileApi.submitIdentityForReview({ nin: idNumber, bvn }, token);
                     if (faceVerified) setStep(2);
                     else onRequestKyc?.({ nin: idNumber, bvn });
                   } catch (cause) {

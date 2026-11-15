@@ -209,6 +209,11 @@ export const MobileApi = {
       },
     );
   },
+  async submitIdentityForReview(data: { bvn: string; nin: string }, token: string) {
+    return apiRequest<{ success: boolean; data: { status: string } }>("/kyc/mono", {
+      method: "POST", body: { action: "submit_identity_for_review", ...data }, token,
+    });
+  },
   async verifyMonoBankAccount(data: { accountNumber: string; bankName: string; firstName?: string; lastName?: string }, token: string) {
     return apiRequest<{ success: boolean; message: string; data: any }>("/kyc/mono", {
       method: "POST",

@@ -46,6 +46,8 @@ export default function ApplicationDetailDrawer({
   const [assessment, setAssessment] = useState<any | null>(null);
   const [sensitiveData, setSensitiveData] = useState<any | null>(null);
   const [loadingSensitive, setLoadingSensitive] = useState(false);
+  const [confirmingIdentity, setConfirmingIdentity] = useState(false);
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
   useEffect(() => {
     if (!loan?.userId && !loan?.user?.id) return;
     const userId = loan.userId || loan.user.id;
@@ -67,6 +69,26 @@ export default function ApplicationDetailDrawer({
       console.error("Sensitive applicant data could not be loaded", error);
     } finally {
       setLoadingSensitive(false);
+    }
+  };
+  const confirmIdentityManually = async () => {
+    const userId = loan?.userId || loan?.user?.id;
+    if (!userId || confirmingIdentity) return;
+    if (!sensitiveData?.bvn || !sensitiveData?.ninNumber) {
+      window.alert("Reveal the applicant's BVN and NIN first so you can inspect them before confirming.");
+      return;
+    }
+    if (!window.confirm("Confirm that you reviewed and matched this applicant's BVN and NIN? This manual confirmation will be recorded for compliance.")) return;
+    setConfirmingIdentity(true);
+    try {
+      const response = await fetch(`/api/admin/identity-verification/${userId}`, { method: "POST" });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || "Unable to confirm identity");
+      setIdentityConfirmed(true);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to confirm identity");
+    } finally {
+      setConfirmingIdentity(false);
     }
   };
   if (!isOpen || !loan) return null;
@@ -133,6 +155,13 @@ export default function ApplicationDetailDrawer({
                 disabled={loadingSensitive}
               >
                 {loadingSensitive ? "Loading…" : "Reveal securely"}
+              </button>
+              <button
+                onClick={confirmIdentityManually}
+                className="ml-2 text-amber-700 font-semibold disabled:opacity-50"
+                disabled={confirmingIdentity || identityConfirmed}
+              >
+                {identityConfirmed ? "BVN/NIN confirmed manually" : confirmingIdentity ? "Confirming…" : "Confirm BVN/NIN manually"}
               </button>
             </div>
           </div>

@@ -30,6 +30,8 @@ export default function RealKycScreen({
   onKycComplete: () => void;
 }) {
   const [status, setStatus] = useState("pending");
+  const [stage, setStage] = useState("identity_lookup");
+  const [nextAction, setNextAction] = useState("verify_identity");
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,6 +44,8 @@ export default function RealKycScreen({
       const result = await MobileApi.getProfile(token);
       const profile = (result as any).user ?? result.data;
       setStatus(profile?.faceVerified === true ? "verified" : profile?.kycStatus === "failed" ? "failed" : "pending");
+      setStage(profile?.kycStage || "identity_lookup");
+      setNextAction(profile?.kycNextAction || "verify_identity");
       setMessage(null);
     } catch {
       setMessage(
@@ -145,7 +149,7 @@ export default function RealKycScreen({
         <View style={styles.icon}>
           <ShieldCheck size={28} color="#102152" />
         </View>
-        <Text style={styles.eyebrow}>NEXT: IDENTITY VERIFICATION</Text>
+        <Text style={styles.eyebrow}>KYC PROGRESS · {stage.replace(/_/g, " ").toUpperCase()}</Text>
         <Text style={styles.heading}>Verify your identity securely.</Text>
         <Text style={styles.intro}>
           Your application details are saved. Complete this Mono identity check
@@ -184,6 +188,7 @@ export default function RealKycScreen({
                   ? "The last check did not complete. You can start a new secure session."
                   : "Your status updates after Mono confirms your result."}
             </Text>
+            {!verified && <Text style={styles.statusHint}>You can continue from this stage without repeating completed checks.</Text>}
           </>
         )}
       </View>
@@ -233,7 +238,7 @@ export default function RealKycScreen({
               <Text style={styles.buttonText}>
                 {status === "failed"
                   ? "Try verification again"
-                  : "Start secure verification"}
+                  : nextAction === "complete_face_check" ? "Continue face check" : "Start secure verification"}
               </Text>
               <ChevronRight size={19} color="#102152" />
             </>

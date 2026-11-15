@@ -108,7 +108,25 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id, action: 'MONO_LOOKUP_IDENTITY_VERIFIED' },
       select: { id: true },
     });
-    return NextResponse.json({ user: { ...user, faceVerified, identityLookupVerified: Boolean(identityLookup) } });
+    const [proveStarted, connectStarted, financialAssessment, proofOfAddress] = await Promise.all([
+      prisma.auditLog.findFirst({ where: { userId: user.id, action: 'MONO_PROVE_STARTED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      prisma.auditLog.findFirst({ where: { userId: user.id, action: 'MONO_CONNECT_STARTED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      prisma.auditLog.findFirst({ where: { userId: user.id, action: 'KYC_AND_STATEMENT_VERIFIED_MONO' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      prisma.kycDocument.findFirst({ where: { userId: user.id, type: 'utility_bill' }, orderBy: { uploadedAt: 'desc' }, select: { verificationStatus: true, uploadedAt: true } }),
+    ]);
+    const kycStage = faceVerified
+      ? (financialAssessment ? (proofOfAddress?.verificationStatus === 'verified' ? 'completed' : 'proof_of_address') : connectStarted ? 'bank_verification' : 'identity_lookup')
+      : proveStarted ? 'facial_verification' : identityLookup ? 'facial_verification' : 'identity_lookup';
+    const kycNextAction = kycStage === 'identity_lookup'
+      ? 'verify_identity'
+      : kycStage === 'facial_verification'
+      ? 'complete_face_check'
+      : kycStage === 'bank_verification'
+      ? 'connect_bank'
+      : kycStage === 'completed' && proofOfAddress?.verificationStatus !== 'verified'
+      ? 'upload_proof_of_address'
+      : 'none';
+    return NextResponse.json({ user: { ...user, faceVerified, identityLookupVerified: Boolean(identityLookup), kycStage, kycNextAction, proofOfAddressStatus: proofOfAddress?.verificationStatus || 'not_started' } });
   } catch (error: any) {
     return NextResponse.json({ error: 'Authentication internal error' }, { status: 500 });
   }

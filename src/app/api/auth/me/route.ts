@@ -100,9 +100,10 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
       select: { action: true },
     });
-    const faceVerified = Boolean(
-      user.kycStatus === 'verified' || (latestFaceLog && latestFaceLog.action === 'MONO_PROVE_FACE_VERIFIED')
-    );
+    // `kycStatus` is an overall account/application status and may be set by
+    // Lookup or Connect. It must never imply that Mono Prove facial liveness
+    // was completed. Only the explicit Prove success audit is authoritative.
+    const faceVerified = latestFaceLog?.action === 'MONO_PROVE_FACE_VERIFIED';
     const identityLookup = await prisma.auditLog.findFirst({
       where: { userId: user.id, action: 'MONO_LOOKUP_IDENTITY_VERIFIED' },
       select: { id: true },

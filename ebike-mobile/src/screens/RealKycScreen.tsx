@@ -41,7 +41,7 @@ export default function RealKycScreen({
       await MobileApi.verifyMonoProveStatus(token).catch(() => {});
       const result = await MobileApi.getProfile(token);
       const profile = (result as any).user ?? result.data;
-      setStatus(profile?.kycStatus === "verified" || profile?.faceVerified ? "verified" : "pending");
+      setStatus(profile?.faceVerified === true ? "verified" : profile?.kycStatus === "failed" ? "failed" : "pending");
       setMessage(null);
     } catch {
       setMessage(
@@ -95,7 +95,7 @@ export default function RealKycScreen({
           await refresh();
           const latest = await MobileApi.getProfile(token).catch(() => null);
           const latestProfile = (latest as any)?.user ?? (latest as any)?.data;
-          const latestStatus = latestProfile?.kycStatus === "verified" || latestProfile?.faceVerified ? "verified" : latestProfile?.kycStatus === "failed" ? "failed" : "pending";
+          const latestStatus = latestProfile?.faceVerified === true ? "verified" : latestProfile?.kycStatus === "failed" ? "failed" : "pending";
           if (latestStatus === "verified" || latestStatus === "failed") break;
         }
       }
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
-  backText: { color: "#102152", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  backText: { color: "#102152", fontFamily: "Inter_600SemiBold", fontSize: 16 },
   hero: {
     backgroundColor: "#DDF7F0",
     borderRadius: 24,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: "#117F78",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 1.3,
   },
   heading: {
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
   },
   intro: {
     color: "#475C70",
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 16,
     lineHeight: 22,
     marginTop: 10,
   },
@@ -321,10 +321,10 @@ const styles = StyleSheet.create({
   },
   addressCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, borderWidth: 1, borderColor: "#DDE8ED", marginTop: 14 },
   addressTitle: { color: "#102152", fontFamily: "PlusJakartaSans_700Bold", fontSize: 17 },
-  addressBody: { color: "#607384", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20, marginTop: 7 },
+  addressBody: { color: "#607384", fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 20, marginTop: 7 },
   uploadButton: { minHeight: 48, borderRadius: 13, backgroundColor: "#DDF7F0", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginTop: 14 },
-  uploadButtonText: { color: "#102152", fontFamily: "Inter_600SemiBold", fontSize: 14 },
-  pendingText: { color: "#117F78", fontFamily: "Inter_600SemiBold", fontSize: 12, lineHeight: 18, marginTop: 9 },
+  uploadButtonText: { color: "#102152", fontFamily: "Inter_600SemiBold", fontSize: 16 },
+  pendingText: { color: "#117F78", fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 18, marginTop: 9 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   cardLabel: {
     color: "#667A89",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 1,
   },
   status: {
@@ -345,8 +345,8 @@ const styles = StyleSheet.create({
   },
   statusHint: {
     color: "#607384",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
     lineHeight: 20,
     marginTop: 5,
   },
@@ -378,12 +378,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     color: "#102152",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontSize: 16,
   },
   stepBody: {
     color: "#607384",
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
     lineHeight: 18,
     marginTop: 3,
   },
@@ -401,27 +401,27 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#102152",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
+    fontSize: 17,
   },
   refreshButton: { padding: 15, alignItems: "center" },
   refreshText: {
     color: "#117F78",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontSize: 16,
   },
   message: {
     color: "#102152",
     backgroundColor: "#E5FAF5",
     borderRadius: 12,
     padding: 13,
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
     lineHeight: 20,
   },
   footnote: {
     color: "#718394",
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
     lineHeight: 18,
     marginTop: 16,
   },

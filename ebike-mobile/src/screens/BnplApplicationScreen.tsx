@@ -243,7 +243,9 @@ export default function BnplApplicationScreen({
       .then((result) => {
         if (active) {
           const profile = (result as any).user ?? result.data;
-          setFaceVerified(profile?.kycStatus === "verified" || profile?.faceVerified === true);
+          // Overall KYC status can come from Lookup/Connect. Facial
+          // verification is a separate Mono Prove status.
+          setFaceVerified(profile?.faceVerified === true);
           setLookupVerified(profile?.identityLookupVerified === true);
         }
       })
@@ -933,7 +935,7 @@ export default function BnplApplicationScreen({
                   <Text style={styles.inputLabel}>When Did You Join?</Text>
                   <TouchableOpacity
                     style={styles.selectorTrigger}
-                    onPress={() => setShowJoinDatePicker(true)}
+                    onPress={() => { const currentYear = new Date().getFullYear(); setDobYear(joinedDate ? Number(joinedDate.slice(0, 4)) : currentYear); setShowJoinDatePicker(true); }}
                     accessibilityRole="button"
                     accessibilityLabel="Courier platform start date dropdown"
                     accessibilityHint="Opens the date selector"
@@ -1380,7 +1382,7 @@ export default function BnplApplicationScreen({
       {/* ========================================================= */}
       {/* IN-APP DATE OF BIRTH PICKER MODAL */}
       {/* ========================================================= */}
-      <Modal visible={showDobPicker || showJoinDatePicker} transparent animationType="slide">
+      <Modal visible={showDobPicker || showJoinDatePicker} transparent animationType="slide" onRequestClose={() => { setShowDobPicker(false); setShowJoinDatePicker(false); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
@@ -1394,17 +1396,17 @@ export default function BnplApplicationScreen({
             </View>
 
             {/* Live Age Indicator */}
-            <View style={styles.ageIndicatorBox}>
+            {!showJoinDatePicker && <View style={styles.ageIndicatorBox}>
               <Sparkles size={16} color="#047857" />
               <Text style={styles.ageIndicatorText}>
                 {dobDay} {MONTHS[dobMonth]} {dobYear} • {calculateAge(dobYear, dobMonth, dobDay)} Years Old (Eligible)
               </Text>
-            </View>
+            </View>}
 
             {/* Year Selector */}
             <Text style={styles.pickerSectionLabel}>Year</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalChips}>
-              {Array.from({ length: 50 }, (_, i) => 2008 - i).map((yr) => (
+              {Array.from({ length: showJoinDatePicker ? 60 : 50 }, (_, i) => (showJoinDatePicker ? new Date().getFullYear() : 2008) - i).map((yr) => (
                 <TouchableOpacity
                   key={yr}
                   style={[styles.chipItem, dobYear === yr && styles.chipItemActive]}
@@ -1576,15 +1578,15 @@ const styles = StyleSheet.create({
   navBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18 },
   navCloseBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18 },
   navTitle: { color: "#0A154F", fontSize: 16, fontWeight: "900", fontFamily: "PlusJakartaSans_800ExtraBold" },
-  navSub: { color: "#64748B", fontSize: 11, fontWeight: "600", marginTop: 1 },
+  navSub: { color: "#64748B", fontSize: 13, fontWeight: "600", marginTop: 1 },
 
   scrollContent: { padding: 20, paddingBottom: 80 },
   progressHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  progressEyebrow: { color: "#167E83", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
-  progressCount: { color: "#466176", fontSize: 13, fontWeight: "700" },
+  progressEyebrow: { color: "#167E83", fontSize: 13, fontWeight: "800", letterSpacing: 1.4 },
+  progressCount: { color: "#466176", fontSize: 15, fontWeight: "700" },
   progressTitle: { color: "#0A154F", fontSize: 23, lineHeight: 30, fontFamily: "PlusJakartaSans_800ExtraBold", marginBottom: 16 },
   progressLabels: { flexDirection: "row", marginTop: -5, marginBottom: 24 },
-  progressLabel: { flex: 1, textAlign: "center", color: "#70859A", fontSize: 10, fontWeight: "600" },
+  progressLabel: { flex: 1, textAlign: "center", color: "#70859A", fontSize: 12, fontWeight: "600" },
   progressLabelActive: { color: "#0A154F", fontWeight: "800" },
 
   // Product Mini Header Card
@@ -1611,10 +1613,10 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 6,
   },
-  zeroDepositText: { color: "#047857", fontSize: 10, fontWeight: "800" },
+  zeroDepositText: { color: "#047857", fontSize: 12, fontWeight: "800" },
   productName: { color: "#0A154F", fontSize: 19, fontFamily: "PlusJakartaSans_800ExtraBold", marginBottom: 4 },
   productWeekly: { color: "#167E83", fontSize: 17, fontWeight: "800" },
-  productWeeklySub: { color: "#64748B", fontSize: 12, fontWeight: "600" },
+  productWeeklySub: { color: "#64748B", fontSize: 14, fontWeight: "600" },
   productHeaderRight: { alignItems: "flex-end" },
   verifiedFleetPill: {
     flexDirection: "row",
@@ -1625,7 +1627,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  verifiedFleetText: { color: "#2E3192", fontSize: 11, fontWeight: "700" },
+  verifiedFleetText: { color: "#2E3192", fontSize: 13, fontWeight: "700" },
 
   // Mobile In-App Progress Segment Row
   progressRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
@@ -1639,7 +1641,7 @@ const styles = StyleSheet.create({
   },
   progressSegmentActive: { backgroundColor: "#0A154F" },
   progressSegmentDone: { backgroundColor: "#32CBAA" },
-  progressSegmentText: { color: "#64748B", fontSize: 12, fontWeight: "800" },
+  progressSegmentText: { color: "#64748B", fontSize: 14, fontWeight: "800" },
   progressSegmentTextActive: { color: "#FFFFFF" },
   progressSegmentTextDone: { color: "#FFFFFF" },
 
@@ -1667,22 +1669,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cardTitle: { color: "#0A154F", fontSize: 18, fontFamily: "PlusJakartaSans_700Bold" },
-  cardSub: { color: "#64748B", fontSize: 13, lineHeight: 19, marginTop: 2 },
-  bodyText: { color: "#475569", fontSize: 14, lineHeight: 22, marginBottom: 12 },
+  cardSub: { color: "#64748B", fontSize: 15, lineHeight: 19, marginTop: 2 },
+  bodyText: { color: "#475569", fontSize: 16, lineHeight: 22, marginBottom: 12 },
 
   // Inputs & Selectors
-  inputLabel: { color: "#0A154F", fontSize: 14, fontWeight: "700", marginTop: 14, marginBottom: 7 },
-  helperText: { color: "#64748B", fontSize: 12, marginBottom: 8, lineHeight: 18 },
+  inputLabel: { color: "#0A154F", fontSize: 16, fontWeight: "700", marginTop: 14, marginBottom: 7 },
+  helperText: { color: "#64748B", fontSize: 14, marginBottom: 8, lineHeight: 18 },
   dashboardUploadCard: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: "#E6EEF2" },
   uploadButton: { minHeight: 54, borderWidth: 1.5, borderColor: "#52CDB5", borderStyle: "dashed", borderRadius: 14, backgroundColor: "#F0FCF8", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, paddingHorizontal: 12 },
-  uploadButtonText: { color: "#0A154F", fontSize: 14, fontWeight: "700", flexShrink: 1 },
-  uploadSuccess: { color: "#087F67", fontSize: 12, fontWeight: "700", marginTop: 8 },
+  uploadButtonText: { color: "#0A154F", fontSize: 16, fontWeight: "700", flexShrink: 1 },
+  uploadSuccess: { color: "#087F67", fontSize: 14, fontWeight: "700", marginTop: 8 },
   officeNotice: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#ECFBF7", borderRadius: 14, padding: 14 },
-  officeNoticeText: { color: "#145C62", fontSize: 14, lineHeight: 21, fontWeight: "600" },
+  officeNoticeText: { color: "#145C62", fontSize: 16, lineHeight: 21, fontWeight: "600" },
   verifyAccountButton: { marginTop: 10, minHeight: 46, borderRadius: 12, backgroundColor: "#DDF7EF", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  verifyAccountText: { color: "#0A154F", fontSize: 14, fontWeight: "800" },
+  verifyAccountText: { color: "#0A154F", fontSize: 16, fontWeight: "800" },
   platformOption: { minHeight: 52, borderBottomWidth: 1, borderBottomColor: "#E6EEF2", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  platformOptionText: { color: "#0A154F", fontSize: 15, fontWeight: "700" },
+  platformOptionText: { color: "#0A154F", fontSize: 17, fontWeight: "700" },
   input: {
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -1708,7 +1710,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   selectorTriggerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  selectorTriggerText: { color: "#0A154F", fontSize: 13, fontWeight: "600" },
+  selectorTriggerText: { color: "#0A154F", fontSize: 15, fontWeight: "600" },
   selectorPlaceholder: { color: "#94A3B8", fontWeight: "400" },
 
   // Choice Buttons
@@ -1723,7 +1725,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   choiceBtnActive: { backgroundColor: "#EEF2FF", borderColor: "#2E3192" },
-  choiceBtnText: { color: "#64748B", fontSize: 12, fontWeight: "700" },
+  choiceBtnText: { color: "#64748B", fontSize: 14, fontWeight: "700" },
   choiceBtnTextActive: { color: "#2E3192" },
 
   // Employment List
@@ -1739,10 +1741,10 @@ const styles = StyleSheet.create({
   },
   employmentRowActive: { borderColor: "#2E3192", backgroundColor: "#EEF2FF" },
   employmentRowLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  employmentRowText: { color: "#0A154F", fontSize: 12, fontWeight: "700" },
+  employmentRowText: { color: "#0A154F", fontSize: 14, fontWeight: "700" },
   employmentRowTextActive: { color: "#2E3192" },
   optBadge: { backgroundColor: "#FEF3C7", paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, marginTop: 2, alignSelf: "flex-start" },
-  optBadgeText: { color: "#92400E", fontSize: 9, fontWeight: "700" },
+  optBadgeText: { color: "#92400E", fontSize: 11, fontWeight: "700" },
   radioDot: {
     width: 18,
     height: 18,
@@ -1769,7 +1771,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   platformChipActive: { backgroundColor: "#0A154F", borderColor: "#0A154F" },
-  platformChipText: { color: "#0A154F", fontSize: 11, fontWeight: "600" },
+  platformChipText: { color: "#0A154F", fontSize: 13, fontWeight: "600" },
   platformChipTextActive: { color: "#FFFFFF", fontWeight: "700" },
 
   // Dashboard Upload Dropzone
@@ -1794,8 +1796,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 6,
   },
-  uploadTitle: { color: "#0A154F", fontSize: 12, fontWeight: "700", textAlign: "center" },
-  uploadSub: { color: "#64748B", fontSize: 10, marginTop: 2, textAlign: "center" },
+  uploadTitle: { color: "#0A154F", fontSize: 14, fontWeight: "700", textAlign: "center" },
+  uploadSub: { color: "#64748B", fontSize: 12, marginTop: 2, textAlign: "center" },
 
   uploadedCard: {
     flexDirection: "row",
@@ -1810,9 +1812,9 @@ const styles = StyleSheet.create({
   },
   uploadedLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
   uploadedThumb: { width: 40, height: 40, borderRadius: 8 },
-  uploadedFileName: { color: "#0A154F", fontSize: 12, fontWeight: "700" },
+  uploadedFileName: { color: "#0A154F", fontSize: 14, fontWeight: "700" },
   uploadedBadgeRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
-  uploadedBadgeText: { color: "#047857", fontSize: 10, fontWeight: "600" },
+  uploadedBadgeText: { color: "#047857", fontSize: 12, fontWeight: "600" },
   uploadedActions: { flexDirection: "row", alignItems: "center", gap: 6 },
   replaceBtn: {
     paddingHorizontal: 8,
@@ -1822,7 +1824,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CBD5E1",
   },
-  replaceBtnText: { color: "#0A154F", fontSize: 10, fontWeight: "700" },
+  replaceBtnText: { color: "#0A154F", fontSize: 12, fontWeight: "700" },
   removeBtn: { padding: 4 },
 
   // Delivery
@@ -1837,9 +1839,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   deliveryCardActive: { backgroundColor: "#EEF2FF", borderColor: "#2E3192" },
-  deliveryCardTitle: { color: "#64748B", fontSize: 10, fontWeight: "700", textAlign: "center" },
+  deliveryCardTitle: { color: "#64748B", fontSize: 12, fontWeight: "700", textAlign: "center" },
   deliveryCardTitleActive: { color: "#2E3192", fontWeight: "800" },
-  deliveryCardPrice: { color: "#94A3B8", fontSize: 9, marginTop: 2, textAlign: "center" },
+  deliveryCardPrice: { color: "#94A3B8", fontSize: 11, marginTop: 2, textAlign: "center" },
   deliveryCardPriceActive: { color: "#047857", fontWeight: "700" },
 
   // Verification Notice
@@ -1854,14 +1856,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
-  verifiedNoticeTitle: { color: "#065F46", fontSize: 12, fontWeight: "800" },
-  verifiedNoticeSub: { color: "#047857", fontSize: 10, lineHeight: 14, marginTop: 1 },
+  verifiedNoticeTitle: { color: "#065F46", fontSize: 14, fontWeight: "800" },
+  verifiedNoticeSub: { color: "#047857", fontSize: 12, lineHeight: 14, marginTop: 1 },
 
   // Repayment Summary
   repaymentSummaryBox: { backgroundColor: "#F8FAFC", borderRadius: 12, padding: 12, marginTop: 14, gap: 6 },
   repaymentSummaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  repaymentSummaryLabel: { color: "#64748B", fontSize: 12 },
-  repaymentSummaryVal: { color: "#0A154F", fontSize: 12, fontWeight: "800" },
+  repaymentSummaryLabel: { color: "#64748B", fontSize: 14 },
+  repaymentSummaryVal: { color: "#0A154F", fontSize: 14, fontWeight: "800" },
 
   // Review Items
   reviewItem: {
@@ -1872,8 +1874,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  reviewItemLabel: { color: "#64748B", fontSize: 12 },
-  reviewItemVal: { color: "#0A154F", fontSize: 12, fontWeight: "700" },
+  reviewItemLabel: { color: "#64748B", fontSize: 14 },
+  reviewItemVal: { color: "#0A154F", fontSize: 14, fontWeight: "700" },
 
   // Checkbox
   checkboxRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 14 },
@@ -1911,7 +1913,7 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     marginBottom: 20,
   },
-  secondaryBtnText: { color: "#64748B", fontWeight: "700", fontSize: 13 },
+  secondaryBtnText: { color: "#64748B", fontWeight: "700", fontSize: 15 },
   disabled: { opacity: 0.5 },
 
   // Error Card
@@ -1924,10 +1926,10 @@ const styles = StyleSheet.create({
     borderColor: "#FECDD3",
   },
   errorHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-  errorTitle: { color: "#991B1B", fontWeight: "800", fontSize: 12 },
-  errorBody: { color: "#B91C1C", fontSize: 11, lineHeight: 16 },
+  errorTitle: { color: "#991B1B", fontWeight: "800", fontSize: 14 },
+  errorBody: { color: "#B91C1C", fontSize: 13, lineHeight: 16 },
   errorDismissBtn: { alignSelf: "flex-end", marginTop: 4 },
-  errorDismissText: { color: "#991B1B", fontWeight: "700", fontSize: 10 },
+  errorDismissText: { color: "#991B1B", fontWeight: "700", fontSize: 12 },
 
   // Success Screen
   successCard: {
@@ -1948,9 +1950,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  successEyebrow: { color: "#10B981", fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 4 },
+  successEyebrow: { color: "#10B981", fontSize: 13, fontWeight: "800", letterSpacing: 1, marginBottom: 4 },
   successTitle: { color: "#0A154F", fontSize: 20, fontWeight: "900", textAlign: "center", marginBottom: 6 },
-  successSub: { color: "#64748B", fontSize: 12, lineHeight: 18, textAlign: "center", marginBottom: 14 },
+  successSub: { color: "#64748B", fontSize: 14, lineHeight: 18, textAlign: "center", marginBottom: 14 },
   refPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1960,8 +1962,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  refPillLabel: { color: "#64748B", fontSize: 10, fontWeight: "700" },
-  refPillVal: { color: "#0A154F", fontSize: 12, fontWeight: "800" },
+  refPillLabel: { color: "#64748B", fontSize: 12, fontWeight: "700" },
+  refPillVal: { color: "#0A154F", fontSize: 14, fontWeight: "800" },
 
   // Guarantors
   guarantorItem: {
@@ -1980,9 +1982,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  guarantorInitial: { color: "#2E3192", fontWeight: "800", fontSize: 13 },
-  guarantorName: { color: "#0A154F", fontSize: 12, fontWeight: "700" },
-  guarantorSub: { color: "#64748B", fontSize: 11, marginTop: 1 },
+  guarantorInitial: { color: "#2E3192", fontWeight: "800", fontSize: 15 },
+  guarantorName: { color: "#0A154F", fontSize: 14, fontWeight: "700" },
+  guarantorSub: { color: "#64748B", fontSize: 13, marginTop: 1 },
   invitedBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -1992,7 +1994,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
   },
-  invitedBadgeText: { color: "#92400E", fontSize: 10, fontWeight: "700" },
+  invitedBadgeText: { color: "#92400E", fontSize: 12, fontWeight: "700" },
 
   // Timeline
   timelineList: { marginTop: 4 },
@@ -2016,17 +2018,17 @@ const styles = StyleSheet.create({
   },
   timelineDotDone: { backgroundColor: "#10B981" },
   timelineDotActive: { backgroundColor: "#2E3192" },
-  timelineNum: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
+  timelineNum: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
   timelineBody: { flex: 1, marginTop: -2 },
-  timelineTitle: { color: "#0A154F", fontSize: 12, fontWeight: "800" },
-  timelineSub: { color: "#64748B", fontSize: 11, lineHeight: 15, marginTop: 1 },
+  timelineTitle: { color: "#0A154F", fontSize: 14, fontWeight: "800" },
+  timelineSub: { color: "#64748B", fontSize: 13, lineHeight: 15, marginTop: 1 },
 
   // Modals
   modalOverlay: { flex: 1, backgroundColor: "rgba(10, 21, 79, 0.6)", justifyContent: "flex-end" },
   modalSheet: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, maxHeight: "85%" },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   modalTitle: { color: "#0A154F", fontSize: 17, fontWeight: "800" },
-  modalSub: { color: "#64748B", fontSize: 11, marginTop: 1 },
+  modalSub: { color: "#64748B", fontSize: 13, marginTop: 1 },
   modalCloseBtn: { padding: 4 },
   ageIndicatorBox: {
     flexDirection: "row",
@@ -2037,21 +2039,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-  ageIndicatorText: { color: "#047857", fontSize: 11, fontWeight: "700" },
-  pickerSectionLabel: { color: "#0A154F", fontSize: 11, fontWeight: "800", marginTop: 8, marginBottom: 5 },
+  ageIndicatorText: { color: "#047857", fontSize: 13, fontWeight: "700" },
+  pickerSectionLabel: { color: "#0A154F", fontSize: 13, fontWeight: "800", marginTop: 8, marginBottom: 5 },
   horizontalChips: { flexDirection: "row", marginBottom: 4 },
   chipItem: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 8, backgroundColor: "#F1F5F9", marginRight: 6 },
   chipItemActive: { backgroundColor: "#0A154F" },
-  chipText: { color: "#475569", fontSize: 11, fontWeight: "700" },
+  chipText: { color: "#475569", fontSize: 13, fontWeight: "700" },
   chipTextActive: { color: "#FFFFFF" },
   monthsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginBottom: 4 },
   monthCell: { width: "23%", paddingVertical: 7, borderRadius: 8, backgroundColor: "#F1F5F9", alignItems: "center" },
   monthCellActive: { backgroundColor: "#0A154F" },
-  monthCellText: { color: "#475569", fontSize: 11, fontWeight: "700" },
+  monthCellText: { color: "#475569", fontSize: 13, fontWeight: "700" },
   monthCellTextActive: { color: "#FFFFFF" },
   dayChip: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center", marginRight: 5 },
   dayChipActive: { backgroundColor: "#0A154F" },
-  dayChipText: { color: "#475569", fontSize: 11, fontWeight: "700" },
+  dayChipText: { color: "#475569", fontSize: 13, fontWeight: "700" },
   dayChipTextActive: { color: "#FFFFFF" },
 
   sheetItem: {
@@ -2063,6 +2065,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   sheetItemActive: { backgroundColor: "#F8FAFC" },
-  sheetItemText: { color: "#0A154F", fontSize: 13, fontWeight: "600" },
+  sheetItemText: { color: "#0A154F", fontSize: 15, fontWeight: "600" },
   sheetItemTextActive: { color: "#2E3192", fontWeight: "800" },
 });

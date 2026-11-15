@@ -155,14 +155,6 @@ export const POST = withAuth(
             });
           }
 
-          if (user.kycStatus !== "verified") {
-            return NextResponse.json(
-              {
-                error: "Complete facial identity verification before applying.",
-              },
-              { status: 400 },
-            );
-          }
           const faceVerification = await prisma.auditLog.findFirst({
             where: { userId: user.id, action: "MONO_PROVE_FACE_VERIFIED" },
             select: { id: true },

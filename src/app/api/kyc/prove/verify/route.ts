@@ -8,17 +8,22 @@ async function handleVerification(req: NextRequest, ctx: ApiContext) {
   const user = await prisma.user.findUnique({ where: { id: ctx.user.sub } });
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  // 1. If user is already verified
-  if (user.kycStatus === 'verified') {
+  // `kycStatus` is shared with Lookup/Connect and cannot prove that facial
+  // liveness was completed. Check only an explicit Mono Prove session/result.
+  const latestFaceResult = await prisma.auditLog.findFirst({
+    where: { userId: user.id, action: 'MONO_PROVE_FACE_VERIFIED' },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (latestFaceResult) {
     return NextResponse.json({
       success: true,
       verified: true,
       status: 'verified',
-      message: 'Identity already verified',
+      message: 'Identity already verified with Mono Prove',
     });
   }
 
-  // 2. Check latest Mono Prove session
+  // Check latest Mono Prove session
   const latestInitiation = await prisma.auditLog.findFirst({
     where: { userId: user.id, action: 'MONO_PROVE_STARTED' },
     orderBy: { createdAt: 'desc' },

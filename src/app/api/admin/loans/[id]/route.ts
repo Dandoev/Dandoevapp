@@ -80,6 +80,7 @@ export const PATCH = withRoles(
           where: { id },
           include: {
             guarantors: true,
+            monoAssessment: true,
             repayments: true,
             user: true,
             bike: true,
@@ -123,6 +124,7 @@ export const PATCH = withRoles(
         }
 
         const blockers = getApprovalBlockers(loan);
+        const financialBlockers = blockers.filter((blocker) => blocker.includes('financial assessment') || blocker.includes('affordability'));
         if (Number(loan.downPayment) > 0) {
           const paidDownPayment = await prisma.paymentTransaction.findFirst({
             where: {
@@ -134,7 +136,7 @@ export const PATCH = withRoles(
           if (!paidDownPayment)
             blockers.push("BNPL down payment has not been confirmed");
         }
-        if (blockers.length && !data.overrideBlockers) {
+        if (financialBlockers.length || (blockers.length && !data.overrideBlockers)) {
           return NextResponse.json(
             { error: "Loan is not eligible for approval", blockers },
             { status: 409 },

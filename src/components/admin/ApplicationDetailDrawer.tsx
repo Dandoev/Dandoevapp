@@ -27,6 +27,7 @@ import {
   capitalize,
   getStatusColor,
 } from "@/lib/utils";
+import { getApprovalBlockers } from "@/lib/bnpl-workflow";
 
 interface ApplicationDetailDrawerProps {
   isOpen: boolean;
@@ -123,6 +124,7 @@ export default function ApplicationDetailDrawer({
     : monthlyInflow > 0
       ? Math.round((loanMonthly / monthlyInflow) * 100)
       : null;
+  const approvalBlockers = getApprovalBlockers({ ...loan, monoAssessment: assessment });
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-fade-in">
@@ -175,6 +177,10 @@ export default function ApplicationDetailDrawer({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+            <h3 className="font-bold">Approval readiness</h3>
+            {approvalBlockers.length ? <ul className="mt-2 list-disc pl-5 space-y-1">{approvalBlockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul> : <p className="mt-2">Core checks are ready. Confirm payment and asset details before approval.</p>}
+          </div>
           {/* 1. Financed Vehicle Summary */}
           <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
             <div>

@@ -3,12 +3,16 @@ export interface ApprovalSnapshot {
   agreementAcceptedAt: Date | null;
   monoMandateId: string | null;
   monoMandateStatus: string | null;
+  monoAssessment?: { underwritingDecision: string; source: string } | null;
   guarantors: Array<{ status: string; verifiedAt: Date | null; agreementAcceptedAt: Date | null }>;
 }
 
 export function getApprovalBlockers(loan: ApprovalSnapshot): string[] {
   const blockers: string[] = [];
   if (!loan.kycVerified) blockers.push('Applicant Mono KYC is not verified');
+  if (!loan.monoAssessment) blockers.push('Mono financial assessment is missing');
+  else if (loan.monoAssessment.source === 'mono_demo') blockers.push('Live Mono financial assessment is required');
+  else if (loan.monoAssessment.underwritingDecision !== 'APPROVED') blockers.push('Financial assessment has not approved affordability');
   if (!loan.agreementAcceptedAt) blockers.push('Applicant BNPL agreement is not accepted');
   const verifiedGuarantors = loan.guarantors.filter((g) => g.status === 'accepted' && g.verifiedAt && g.agreementAcceptedAt);
   if (verifiedGuarantors.length < 2) blockers.push('Two verified guarantors with signed agreements are required');

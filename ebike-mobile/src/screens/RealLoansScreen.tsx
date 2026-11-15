@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   label: {
     color: "#2E3192",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
+    fontSize: 13,
     marginBottom: 8,
   },
   title: {
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     fontFamily: "PlusJakartaSans_800ExtraBold",
     marginBottom: 8,
   },
-  body: { color: "#66728A", fontFamily: "Inter_400Regular", lineHeight: 21 },
+  body: { color: "#66728A", fontFamily: 'Inter_500Medium', lineHeight: 21 },
   errorBox: {
     backgroundColor: "#FEE4E2",
     borderRadius: 14,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   guarantorStatus: {
     color: "#117F78",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
+    fontSize: 14,
     textTransform: "capitalize",
   },
   schedule: { marginTop: 18 },

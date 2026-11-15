@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#15803D',
   },
   stepNum: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#64748B',
   },
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   stepLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Inter_500Medium',
     color: '#64748B',
   },
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#B91C1C',
     fontFamily: 'Inter_500Medium',
     flex: 1,
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#3730A3',
     letterSpacing: 0.5,
@@ -721,21 +721,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
     lineHeight: 19,
     marginBottom: 16,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0F172A',
     marginBottom: 6,
   },
   fieldHint: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
     marginTop: -4,
     marginBottom: 10,
@@ -753,12 +753,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'Inter_500Medium',
     color: '#0F172A',
   },
   currencyPrefix: {
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1E1B4B',
     marginRight: 6,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
     borderColor: '#1E1B4B',
   },
   platformChipText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
     color: '#475569',
   },
@@ -809,14 +809,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uploadTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
     marginBottom: 2,
   },
   uploadSubtitle: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
   },
   previewContainer: {
@@ -845,13 +845,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   previewBadgeText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#15803D',
   },
   previewHint: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
     marginBottom: 8,
   },
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   replaceBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
   },
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
   },
   idTypeChipText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     color: '#475569',
   },
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   verifiedTagText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#15803D',
   },
@@ -915,13 +915,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   docFileName: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
   },
   docFileSize: {
-    fontSize: 10,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
   },
   selfieCanvas: {
@@ -950,14 +950,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   selfieGuideTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
     marginBottom: 2,
   },
   selfieGuideSub: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
     marginBottom: 16,
   },
@@ -971,7 +971,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   captureBtnText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#FFFFFF',
   },
@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   selfieLoadingText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_500Medium',
     color: '#475569',
   },
@@ -996,8 +996,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selfieSuccessSub: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#475569',
     textAlign: 'center',
     marginBottom: 14,
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retakeBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
   },
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   trustText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_500Medium',
     color: '#3730A3',
     flex: 1,
@@ -1039,7 +1039,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   primaryBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
   },
@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   secondaryBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#475569',
   },
@@ -1080,8 +1080,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   successSub: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    fontFamily: 'Inter_500Medium',
     color: '#475569',
     textAlign: 'center',
     lineHeight: 19,
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   timelineText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_500Medium',
     color: '#1E293B',
   },

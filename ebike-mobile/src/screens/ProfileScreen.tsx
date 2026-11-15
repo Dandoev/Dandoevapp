@@ -430,9 +430,9 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#6B7280',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   content: {
@@ -474,9 +474,9 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   userEmail: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 1,
   },
   kycBadge: {
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   },
   kycBadgeText: {
     color: '#2E3192',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   verificationRow: {
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     borderColor: '#DBE2F0',
   },
   verifText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
     color: '#334155',
   },
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#1E293B',
@@ -546,14 +546,14 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EDF2FA',
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
     marginLeft: 8,
     flex: 1,
   },
   infoValue: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#0A154F',
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     borderColor: '#2E3192',
   },
   profilePillText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#66728A',
   },
@@ -596,13 +596,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EDF2FA',
   },
   prefTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
   },
   prefSub: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#66728A',
     marginTop: 2,
   },
@@ -615,13 +615,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EDF2FA',
   },
   actionTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
   },
   actionSub: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     color: '#66728A',
     marginTop: 2,
   },
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#DC2626',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
   },
   autopayBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#2E3192',
     letterSpacing: 0.5,
@@ -692,13 +692,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   paymentMethodTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
   paymentMethodSub: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_500Medium',
     color: '#66728A',
     marginTop: 2,
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#EDF2F7',
   },
   switchNote: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_500Medium',
     color: '#66728A',
   },
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E3192',
   },
   miniSwitchText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: '#66728A',

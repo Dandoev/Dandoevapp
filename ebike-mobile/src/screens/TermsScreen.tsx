@@ -97,9 +97,9 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   updatedDate: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#6B7280',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginBottom: 24,
   },
   section: {
@@ -122,9 +122,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   paragraph: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#4B5563',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   warningText: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#991B1B',
     lineHeight: 20,
     fontWeight: '500',

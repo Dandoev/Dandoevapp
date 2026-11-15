@@ -176,7 +176,11 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
               onPress={() => onSelectProduct?.(product)}
             >
               <View style={styles.cardHeader}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
+                <View style={styles.priceBox}>
+                  <Text style={styles.price} adjustsFontSizeToFit numberOfLines={1}>₦{product.price.toLocaleString()}</Text>
+                  <Text style={styles.dailyBadge}>₦{instAmt.toLocaleString()}{instSuffix}</Text>
+                </View>
+                <View style={styles.productIdentity}>
                   <View style={[
                     styles.categoryBadge,
                     isFlagship && styles.flagshipBadge,
@@ -199,16 +203,6 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
                   <Text style={styles.bikeBrand}>
                     {isFlagship ? 'All terrain e-bike' : isSports ? 'Sports fat-tire e-bike' : product.brand}
                   </Text>
-                </View>
-                <View style={styles.priceBox}>
-                  <Text style={styles.price}>₦{product.price.toLocaleString()}</Text>
-                  {product.type === 'bike' ? (
-                    <Text style={styles.dailyBadge}>
-                      ₦{instAmt.toLocaleString()}{instSuffix}
-                    </Text>
-                  ) : (
-                    <Text style={[styles.dailyBadge, { color: '#0284C7' }]}>Outright Only</Text>
-                  )}
                 </View>
               </View>
 
@@ -292,8 +286,8 @@ const styles = StyleSheet.create({
   },
   emptyDescription: {
     color: '#66728A',
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    fontFamily: 'Inter_500Medium',
     textAlign: 'center',
   },
   emptyButton: {
@@ -306,7 +300,7 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 15,
   },
   catalogError: {
     alignItems: 'center',
@@ -322,7 +316,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 15,
   },
   container: { flex: 1, backgroundColor: '#F6F7FC' },
   header: {
@@ -355,15 +349,15 @@ const styles = StyleSheet.create({
     borderColor: '#BFDBFE',
   },
   shopBadgeText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#2E3192',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 17,
     color: '#6B7280',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 5,
     marginBottom: 18,
   },
@@ -381,7 +375,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     marginLeft: 10,
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter_500Medium',
     color: '#0A154F',
   },
@@ -400,7 +394,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
   },
   categoryText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
     color: '#475569',
   },
@@ -419,7 +413,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   cadenceLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1E293B',
   },
@@ -436,7 +430,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
   },
   cadenceBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#64748B',
   },
@@ -454,12 +448,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   countText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_600SemiBold',
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#2E3192',
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
@@ -479,11 +473,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+    marginBottom: 18,
   },
+  productIdentity: { alignItems: 'flex-start', minWidth: 0 },
   categoryBadge: {
     backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
@@ -498,11 +493,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
   },
   flagshipCrown: {
-    fontSize: 11,
+    fontSize: 13,
   },
   flagshipBadgeText: {
     color: '#B45309',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: 0.5,
   },
@@ -511,41 +506,44 @@ const styles = StyleSheet.create({
   },
   sportsBadgeText: {
     color: '#3730A3',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: 0.5,
   },
   categoryBadgeText: {
     color: '#1E1B4B',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: 0.5,
   },
   bikeName: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
-    letterSpacing: -0.4,
+    letterSpacing: -0.8,
+    lineHeight: 36,
   },
   bikeBrand: {
-    fontSize: 14,
+    fontSize: 17,
     color: '#64748B',
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Inter_600SemiBold',
     marginTop: 2,
   },
   priceBox: {
     alignItems: 'flex-end',
+    alignSelf: 'flex-end',
+    width: '100%',
   },
   price: {
-    fontSize: 24,
+    fontSize: 31,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#1E1B4B',
     letterSpacing: -0.3,
   },
   dailyBadge: {
-    fontSize: 12,
+    fontSize: 16,
     color: '#1E1B4B',
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
@@ -579,7 +577,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   specText: {
-    fontSize: 11,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0F172A',
   },
@@ -590,7 +588,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   monthlyText: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#64748B',
     fontFamily: 'Inter_500Medium',
   },
@@ -600,7 +598,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailsButtonText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1E1B4B',

@@ -13,6 +13,7 @@ import prisma from "@/lib/prisma";
 import dbService from "@/lib/db-service";
 import logger from "@/lib/logger";
 import crypto from "crypto";
+import { encryptField } from "@/lib/encryption";
 import {
   notifyOrderConfirmed,
   notifyDownPaymentSuccess,
@@ -170,11 +171,11 @@ export async function POST(req: NextRequest) {
 
           if (successful || user.kycStatus !== "verified") {
             const updateData: Record<string, any> = { kycStatus: newStatus };
-            if (data.customer?.bvn && !user.bvn) {
-              updateData.bvn = String(data.customer.bvn);
+            if (successful && /^\d{11}$/.test(String(data.customer?.bvn || '')) && !user.bvn) {
+              updateData.bvn = encryptField(String(data.customer.bvn));
             }
-            if (data.customer?.nin && !user.ninNumber) {
-              updateData.ninNumber = String(data.customer.nin);
+            if (successful && /^\d{11}$/.test(String(data.customer?.nin || '')) && !user.ninNumber) {
+              updateData.ninNumber = encryptField(String(data.customer.nin));
             }
             await prisma.user.update({
               where: { id: user.id },

@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: '#F6F7FC',
     paddingHorizontal: 18,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 12,
+    paddingBottom: 8,
     paddingTop: 6,
   },
   container: {

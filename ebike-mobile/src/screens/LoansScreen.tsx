@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F7FC' },
   emptyStateCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#DBE2F0', marginBottom: 16 },
   emptyStateTitle: { fontSize: 18, fontWeight: '800', fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#0A154F' },
-  emptyStateText: { fontSize: 13, lineHeight: 20, color: '#66728A', fontFamily: 'Inter_400Regular' },
+  emptyStateText: { fontSize: 15, lineHeight: 20, color: '#66728A', fontFamily: 'Inter_500Medium' },
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
   },
   downloadReportText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#2E3192',
@@ -333,9 +333,9 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#6B7280',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   toastContainer: {
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
     flex: 1,
   },
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loanBadge: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#3730A3',
     backgroundColor: '#EEF2FF',
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
   loanContractId: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#64748B',
     fontFamily: 'Inter_500Medium',
     marginTop: 2,
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     color: '#15803D',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   progressContainer: {
@@ -434,12 +434,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressLabel: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#475569',
     fontFamily: 'Inter_600SemiBold',
   },
   progressValue: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#0F172A',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   freqTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0F172A',
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
   },
   freqBtnText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#FFFFFF',
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   freqSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#475569',
     fontFamily: 'Inter_500Medium',
     flex: 1,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dueLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#92400E',
     fontFamily: 'Inter_600SemiBold',
   },
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   dueDateText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#B45309',
     fontFamily: 'Inter_500Medium',
   },
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   payBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   breakdownLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#64748B',
     fontFamily: 'Inter_500Medium',
   },
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   savingsTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#065F46',
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   savingsNote: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#047857',
     fontFamily: 'Inter_500Medium',
   },
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionHeader: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
@@ -649,22 +649,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   repNum: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1E293B',
   },
   repDate: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   repRight: {
     alignItems: 'flex-end',
   },
   repAmount: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDF2FA',
   },
   statusText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   statusTextPaid: {

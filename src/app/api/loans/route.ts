@@ -165,16 +165,6 @@ export const POST = withAuth(
               { status: 400 },
             );
           }
-          const identityLookup = await prisma.auditLog.findFirst({
-            where: { userId: user.id, action: "MONO_LOOKUP_IDENTITY_VERIFIED" },
-            select: { id: true },
-          });
-          if (!identityLookup) {
-            return NextResponse.json(
-              { error: "Verify your BVN and NIN with Mono Lookup before applying." },
-              { status: 400 },
-            );
-          }
 
           if (!data.guarantors || data.guarantors.length !== 2) {
             return NextResponse.json(

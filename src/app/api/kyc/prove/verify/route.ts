@@ -3,6 +3,18 @@ import { withAuth, type ApiContext } from '@/lib/api-handler';
 import prisma from '@/lib/prisma';
 import { fetchMonoProveCustomer } from '@/lib/mono';
 import { isDemoAllowed } from '@/lib/env';
+import { encryptField } from '@/lib/encryption';
+
+function verifiedIdentities(result: { customer?: any; verification?: any }) {
+  const customer = result.customer || {};
+  const verification = result.verification || {};
+  const bvn = customer.bvn || verification.bvn?.number || verification.bvn?.data?.bvn;
+  const nin = customer.nin || verification.nin?.number || verification.nin?.data?.nin;
+  return {
+    bvn: /^\d{11}$/.test(String(bvn || '')) ? String(bvn) : null,
+    nin: /^\d{11}$/.test(String(nin || '')) ? String(nin) : null,
+  };
+}
 
 async function handleVerification(req: NextRequest, ctx: ApiContext) {
   const user = await prisma.user.findUnique({ where: { id: ctx.user.sub } });
@@ -33,9 +45,10 @@ async function handleVerification(req: NextRequest, ctx: ApiContext) {
     try {
       const proveResult = await fetchMonoProveCustomer(latestInitiation.resourceId);
       if (proveResult?.verified) {
+        const identity = verifiedIdentities(proveResult);
         await prisma.user.update({
           where: { id: user.id },
-          data: { kycStatus: 'verified' },
+          data: { kycStatus: 'verified', ...(identity.bvn ? { bvn: encryptField(identity.bvn) } : {}), ...(identity.nin ? { ninNumber: encryptField(identity.nin) } : {}) },
         });
 
         await prisma.auditLog.create({
@@ -47,7 +60,8 @@ async function handleVerification(req: NextRequest, ctx: ApiContext) {
             details: JSON.stringify({
               provider: 'mono_prove',
               verifiedVia: 'direct_status_sync',
-              data: proveResult,
+              bvnAvailable: Boolean(identity.bvn),
+              ninAvailable: Boolean(identity.nin),
             }),
           },
         });

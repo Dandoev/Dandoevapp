@@ -398,14 +398,14 @@ const styles = StyleSheet.create({
   atmBankBox: {},
   atmBankText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: 0.5,
   },
   atmSubText: {
     color: '#94A3B8',
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 1,
     marginTop: 1,
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   atmBalanceLabel: {
     color: '#94A3B8',
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 1,
   },
@@ -450,13 +450,13 @@ const styles = StyleSheet.create({
   },
   atmCardNumber: {
     color: '#DBE2F0',
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 2,
   },
   atmCardholder: {
     color: '#94A3B8',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 0.5,
     marginTop: 2,
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   },
   atmExpiryVal: {
     color: '#DBE2F0',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   mastercardCircle: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   fundingTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     borderColor: '#4A50AE',
   },
   presetText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#475569',
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     color: '#2E3192',
   },
   methodHeader: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#334155',
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     borderColor: '#2E3192',
   },
   methodTabText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
     color: '#66728A',
   },
@@ -600,9 +600,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   transferHint: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginBottom: 10,
     lineHeight: 16,
   },
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   nubanBank: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#66728A',
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   nubanName: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#2E3192',
     fontFamily: 'Inter_600SemiBold',
   },
@@ -646,12 +646,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   copyText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#2E3192',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   instantNotice: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#087F75',
     fontFamily: 'Inter_500Medium',
   },
@@ -673,13 +673,13 @@ const styles = StyleSheet.create({
     borderColor: '#2E3192',
   },
   savedCardTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
   },
   savedCardNum: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
   },
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
   },
   checkTagText: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#2E3192',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   },
   fundBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -775,9 +775,9 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   receiptSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 18,
@@ -791,12 +791,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EDF2FA',
   },
   receiptLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
   },
   receiptVal: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0A154F',
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
   },
   doneBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },

@@ -9,7 +9,7 @@ import { colors } from './colors';
 export const typography: Record<string, TextStyle> = {
   // Screen Title (H1) - e.g. "Find your ride.", "Your plans."
   h1: {
-    fontSize: 32,
+    fontSize: 34,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.textHeading,
@@ -18,7 +18,7 @@ export const typography: Record<string, TextStyle> = {
 
   // Major Section Title (H2) - e.g. "Featured Mobility", active loan name
   h2: {
-    fontSize: 22,
+    fontSize: 24,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.textHeading,
@@ -27,7 +27,7 @@ export const typography: Record<string, TextStyle> = {
 
   // Card Title / Product Name (H3) - e.g. "DandoEV G90", "DandoEV X5"
   h3: {
-    fontSize: 20,
+    fontSize: 23,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.textHeading,
@@ -36,7 +36,7 @@ export const typography: Record<string, TextStyle> = {
 
   // Hero Display Price - e.g. "₦10,500" due installment, "₦1,700,000"
   displayPrice: {
-    fontSize: 28,
+    fontSize: 31,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.amberAlert,
@@ -45,7 +45,7 @@ export const typography: Record<string, TextStyle> = {
 
   // Product Price - e.g. "₦1,700,000"
   price: {
-    fontSize: 24,
+    fontSize: 27,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.textPrice,
@@ -54,39 +54,39 @@ export const typography: Record<string, TextStyle> = {
 
   // Card Subtitle / Meta - e.g. "All terrain e-bike", "Sports fat-tire e-bike"
   bodyLarge: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-    fontWeight: '500',
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    fontWeight: '600',
     color: colors.textMuted,
   },
 
   // Standard Body Text - e.g. descriptions, terms
   body: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    fontWeight: '400',
+    fontSize: 15,
+    fontFamily: 'Inter_500Medium',
+    fontWeight: '500',
     color: colors.textSecondary,
-    lineHeight: 19,
+    lineHeight: 23,
   },
 
   // Secondary Meta / Dates / Subtexts - e.g. "Due: 2026-09-14 (In 7 days)"
   bodySmall: {
-    fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-    fontWeight: '500',
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    fontWeight: '600',
     color: colors.textMuted,
   },
 
   // Button Action Text - e.g. "Pay Now", "Apply BNPL", "See more details"
   button: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.textWhite,
   },
 
   buttonSecondary: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     color: colors.textPrice,
@@ -94,7 +94,7 @@ export const typography: Record<string, TextStyle> = {
 
   // Badges & Pills - e.g. "FLAGSHIP", "FAT-TIRE", "ACTIVE BNPL LOAN"
   badge: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -102,7 +102,7 @@ export const typography: Record<string, TextStyle> = {
 
   // Specs & Micro Labels - e.g. "750W", "20Ah", "48V"
   caption: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
     color: colors.textPrimary,

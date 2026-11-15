@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#FFFFFF',
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#36C0FE',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
     letterSpacing: 1.5,

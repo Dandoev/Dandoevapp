@@ -93,7 +93,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
             </Text>
           </View>
           <Pressable onPress={onComplete} accessibilityRole="button" accessibilityLabel="Sign in" style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
-            <Text style={{ color: '#0A154F', fontFamily: 'Inter_600SemiBold', fontSize: 15 }}>
+            <Text style={{ color: '#0A154F', fontFamily: 'Inter_600SemiBold', fontSize: 17 }}>
               Sign in
             </Text>
           </Pressable>
@@ -129,10 +129,10 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#36C0FE', fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
+              <Text style={{ color: '#36C0FE', fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
                 {slide.detailNum}{' '}
               </Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 1.2 }}>
                 / {slide.detailLabel}
               </Text>
             </View>
@@ -214,12 +214,12 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
               }}
             >
               <ShieldCheck size={16} color="#0A154F" />
-              <Text style={{ color: '#0A154F', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' }}>
+              <Text style={{ color: '#0A154F', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>
                 {slide.stat}
               </Text>
             </View>
 
-            <Text style={{ color: '#0A154F', fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.2 }}>
+            <Text style={{ color: '#0A154F', fontSize: 16, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.2 }}>
               DandoEv
             </Text>
           </View>
@@ -230,7 +230,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
           <Text
             style={{
               color: '#1768D1',
-              fontSize: 12,
+              fontSize: 14,
               fontFamily: 'PlusJakartaSans_800ExtraBold',
               letterSpacing: 2,
               marginBottom: 10,
@@ -254,7 +254,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
               color: '#334155',
               fontSize: 16,
               lineHeight: 25,
-              fontFamily: 'Inter_400Regular',
+              fontFamily: 'Inter_500Medium',
               marginTop: 12,
               maxWidth: 430,
             }}
@@ -285,7 +285,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
                 />
               ))}
             </View>
-            <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 14 }}>
+            <Text style={{ color: '#0A154F', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 16 }}>
               {String(index + 1).padStart(2, '0')} / 03
             </Text>
           </View>
@@ -324,7 +324,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
                 hitSlop={12}
                 style={{ paddingVertical: 4 }}
               >
-                <Text style={{ color: '#64748B', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
+                <Text style={{ color: '#64748B', fontFamily: 'Inter_600SemiBold', fontSize: 16 }}>
                   Back
                 </Text>
               </Pressable>

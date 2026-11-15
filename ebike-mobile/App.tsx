@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
-  SafeAreaView,
+  BackHandler,
   StatusBar,
   View,
   Platform,
@@ -41,6 +41,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./src/lib/supabase";
 import { MobileApi } from "./src/lib/api";
 import { TOKEN_STORAGE_KEY } from "./src/lib/auth-session";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -174,6 +175,24 @@ function App() {
     setCurrentScreen("SignIn");
   };
 
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const back = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (currentScreen === "Dashboard") {
+        if (currentTab !== "bikes") setCurrentTab("bikes");
+        return true;
+      }
+      if (currentScreen === "ProductDetail") setCurrentScreen(prevScreenBeforeDetail);
+      else if (currentScreen === "BnplApplication") setCurrentScreen("ProductDetail");
+      else if (currentScreen === "Kyc") setCurrentScreen(selectedProduct ? "BnplApplication" : "Dashboard");
+      else if (currentScreen === "SignUp") setCurrentScreen("SignIn");
+      else if (currentScreen === "Terms") setCurrentScreen(token ? "Dashboard" : "SignUp");
+      else if (currentScreen !== "Onboarding" && currentScreen !== "SignIn") setCurrentScreen("Dashboard");
+      return true;
+    });
+    return () => back.remove();
+  }, [currentScreen, currentTab, prevScreenBeforeDetail, selectedProduct, token]);
+
   if (!fontsLoaded) {
     return null;
   }
@@ -235,7 +254,8 @@ function App() {
 
   return (
     <AppErrorBoundary>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
         <StatusBar
           barStyle={
             ["Onboarding", "SignIn", "SignUp"].includes(currentScreen)
@@ -360,6 +380,7 @@ function App() {
           )}
         </View>
       </SafeAreaView>
+      </SafeAreaProvider>
     </AppErrorBoundary>
   );
 }

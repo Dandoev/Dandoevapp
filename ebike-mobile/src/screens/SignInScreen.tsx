@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   brandTagline: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#FFFFFF",
     fontFamily: "Inter_600SemiBold",
     marginTop: 5,
@@ -315,9 +315,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginBottom: 20,
   },
   errorBox: {
@@ -333,12 +333,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#B91C1C",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
     flex: 1,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#334155",
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     color: "#0A154F",
   },
   button: {
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: "#94A3B8",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
     marginHorizontal: 10,
   },
@@ -409,15 +409,15 @@ const styles = StyleSheet.create({
   },
   demoButtonText: {
     color: "#1768D1",
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
   },
   demoHint: {
     textAlign: "center",
-    fontSize: 12,
+    fontSize: 14,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginTop: 6,
     marginBottom: 12,
   },
@@ -429,12 +429,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: "#66728A",
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    fontFamily: 'Inter_500Medium',
   },
   linkText: {
     color: "#1768D1",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     fontFamily: "PlusJakartaSans_700Bold",
   },

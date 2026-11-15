@@ -7,9 +7,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { User, Mail, Lock, Phone, Check, AlertCircle, Sparkles } from 'lucide-react-native';
+import { User, Mail, Lock, Phone, Check, AlertCircle, Sparkles, Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import { demoStore } from '../lib/demo-data';
 import { MobileApi } from '../lib/api';
@@ -27,6 +28,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -146,8 +148,8 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent} contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
         <View style={styles.contentWrapper}>
           <View style={styles.brandHeader}>
             <BrandMark size={58} backgroundColor="#FFFFFF" />
@@ -245,7 +247,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
                 }}
               />
             </View>
-            <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter_400Regular', marginTop: -8, marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, color: '#64748B', fontFamily: 'Inter_500Medium', marginTop: -8, marginBottom: 12 }}>
               Sign in with your phone number or email. Provide at least one.
             </Text>
 
@@ -257,13 +259,16 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
                 style={styles.input}
                 placeholder="Min. 8 chars, A-Z, 0-9, symbol"
                 placeholderTextColor="#9CA3AF"
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={(t) => {
                   setPassword(t);
                   setErrorMessage(null);
                 }}
               />
+              <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
+                {showPassword ? <EyeOff size={20} color="#64748B" /> : <Eye size={20} color="#64748B" />}
+              </TouchableOpacity>
             </View>
 
             {/* Terms Checkbox */}
@@ -308,7 +313,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
           </View>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -341,7 +346,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   brandTagline: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
     marginTop: 5,
@@ -366,9 +371,9 @@ const styles = StyleSheet.create({
     color: '#0A154F',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   autofillBtn: {
@@ -381,7 +386,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   autofillText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#1768D1',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -398,7 +403,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#B91C1C',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_500Medium',
     flex: 1,
   },
@@ -410,7 +415,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#334155',
@@ -431,7 +436,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     color: '#0A154F',
   },
   termsRow: {
@@ -456,14 +461,14 @@ const styles = StyleSheet.create({
     borderColor: '#36C0FE',
   },
   termsText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     flex: 1,
   },
   termsLink: {
     color: '#1768D1',
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   button: {
@@ -491,12 +496,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#66728A',
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 16,
+    fontFamily: 'Inter_500Medium',
   },
   linkText: {
     color: '#1768D1',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
   },

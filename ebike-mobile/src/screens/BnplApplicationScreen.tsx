@@ -423,8 +423,6 @@ export default function BnplApplicationScreen({
 
   // Step 1 Validator
   const validateStep1 = () => {
-    if (!/^\d{11}$/.test(idNumber)) return "Enter your 11-digit NIN.";
-    if (!/^\d{11}$/.test(bvn)) return "Enter your 11-digit BVN.";
     return null;
   };
 
@@ -496,8 +494,8 @@ export default function BnplApplicationScreen({
           deliveryAddress: "DandoEv Office, Ikeja, Lagos",
           deliveryCity: "Ikeja",
           deliveryState: "Lagos",
-          ninNumber: idNumber,
-          bvn,
+          ...(idNumber ? { ninNumber: idNumber } : {}),
+          ...(bvn ? { bvn } : {}),
           bankName,
           bankAccountNumber: accountNumber,
           bankAccountName: accountName,
@@ -1018,22 +1016,7 @@ export default function BnplApplicationScreen({
 
               <Text style={styles.bodyText}>Confirm your identity before we review your application. Your details are sent securely for verification.</Text>
 
-              <Text style={styles.inputLabel}>
-                11-digit National Identification Number (NIN)
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your NIN"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                maxLength={11}
-                value={idNumber}
-                onChangeText={(value) => { setIdNumber(value.replace(/\D/g, "")); setLookupVerified(false); }}
-              />
-
-              <Text style={styles.inputLabel}>11-digit Bank Verification Number (BVN)</Text>
-              <TextInput style={styles.input} placeholder="Enter your BVN" placeholderTextColor="#94A3B8" keyboardType="numeric" maxLength={11} value={bvn} onChangeText={(value) => { setBvn(value.replace(/\D/g, "")); setLookupVerified(false); }} />
-              <Text style={styles.helperText}>Your BVN helps us verify your banking identity and assess affordability.</Text>
+              <Text style={styles.helperText}>Mono Prove securely collects your BVN and NIN and checks your identity and face in one session.</Text>
 
               <View style={styles.verifiedNoticeBox}>
                 <ShieldCheck size={18} color="#10B981" />
@@ -1052,11 +1035,10 @@ export default function BnplApplicationScreen({
               onPress={async () => {
                 const msg = validateStep1();
                 if (msg) setError(msg);
-                else if (!lookupVerified || !faceVerified) {
+                else if (!faceVerified) {
                   setError("");
                   setBusy(true);
                   try {
-                    if (!lookupVerified) await MobileApi.submitIdentityForReview({ nin: idNumber, bvn }, token);
                     if (faceVerified) setStep(2);
                     else onRequestKyc?.({ nin: idNumber, bvn });
                   } catch (cause) {

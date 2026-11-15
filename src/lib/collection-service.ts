@@ -66,7 +66,12 @@ export async function runDailySavingsSweep(targetDate: Date = new Date()) {
         } else {
           // --- Path 2: Mono Direct Debit Mandate or Paystack card ---
           const activeMandateId =
-            (record.loan as any)?.monoMandateId || (record.user as any)?.monoMandateId;
+            (!(record.loan as any)?.monoMandateStatus || (record.loan as any)?.monoMandateStatus === 'active'
+              ? (record.loan as any)?.monoMandateId
+              : null) ||
+            (!(record.user as any)?.monoMandateStatus || (record.user as any)?.monoMandateStatus === 'active'
+              ? (record.user as any)?.monoMandateId
+              : null);
 
           let debitedSuccessfully = false;
 
@@ -292,7 +297,9 @@ export async function collectRepaymentById(repayment: any) {
     }
 
     // --- Path 2: Mono Direct Debit Mandate Auto-Deduction (Loan Term Mandate Order) ---
-    const monoMandateId = loan?.monoMandateId || user?.monoMandateId;
+    const monoMandateId =
+      (!loan?.monoMandateStatus || loan?.monoMandateStatus === 'active' ? loan?.monoMandateId : null) ||
+      (!user?.monoMandateStatus || user?.monoMandateStatus === 'active' ? user?.monoMandateId : null);
     if (monoMandateId) {
       const monoRef = `RPY-${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
       try {

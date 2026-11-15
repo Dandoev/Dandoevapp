@@ -319,7 +319,7 @@ export default function ProductDetailScreen({
           <Text
             style={{
               color: "#26FEDC",
-              fontSize: 12,
+              fontSize: 14,
               fontFamily: "PlusJakartaSans_700Bold",
             }}
           >
@@ -396,7 +396,7 @@ export default function ProductDetailScreen({
                 <Text
                   style={[
                     styles.bnplTagPrice,
-                    { color: "#0A154F", fontSize: 13 },
+                    { color: "#0A154F", fontSize: 15 },
                   ]}
                 >
                   Outright Only
@@ -735,7 +735,7 @@ export default function ProductDetailScreen({
               >
                 <Text
                   style={{
-                    fontSize: 12,
+                    fontSize: 14,
                     fontFamily: "PlusJakartaSans_700Bold",
                     color: "#FFFFFF",
                   }}
@@ -1443,7 +1443,7 @@ const styles = StyleSheet.create({
   },
   categoryBadgeText: {
     color: "#4A50AE",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "PlusJakartaSans_700Bold",
   },
   stockBadge: {
@@ -1459,7 +1459,7 @@ const styles = StyleSheet.create({
   },
   stockBadgeText: {
     color: "#2E3192",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "PlusJakartaSans_700Bold",
   },
   headerSection: {
@@ -1471,15 +1471,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   productName: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: "900",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
   },
   brandModel: {
-    fontSize: 14,
+    fontSize: 17,
     color: "#66728A",
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
     marginTop: 2,
     marginBottom: 14,
   },
@@ -1494,21 +1494,21 @@ const styles = StyleSheet.create({
     borderColor: "#DBE2F0",
   },
   cashLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#66728A",
     fontFamily: "Inter_500Medium",
   },
   cashPrice: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "900",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
     marginTop: 1,
   },
   cashSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   bnplTagBox: {
@@ -1521,7 +1521,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   bnplTagHeader: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#065F46",
   },
@@ -1532,7 +1532,7 @@ const styles = StyleSheet.create({
     color: "#047857",
   },
   bnplTagSub: {
-    fontSize: 9,
+    fontSize: 11,
     color: "#087F75",
     fontFamily: "Inter_600SemiBold",
   },
@@ -1545,7 +1545,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionHeader: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
@@ -1565,22 +1565,22 @@ const styles = StyleSheet.create({
     borderColor: "#DBE2F0",
   },
   specTileLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#66728A",
     fontFamily: "Inter_500Medium",
     marginTop: 6,
   },
   specTileVal: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#0A154F",
     marginTop: 1,
   },
   descriptionText: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#475569",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     lineHeight: 20,
   },
   featureRow: {
@@ -1598,7 +1598,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   featureText: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#334155",
     fontFamily: "Inter_500Medium",
     flex: 1,
@@ -1629,7 +1629,7 @@ const styles = StyleSheet.create({
     color: "#92400E",
   },
   calcRateBadge: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#B45309",
     backgroundColor: "#FEF3C7",
@@ -1638,9 +1638,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   calcSubtitle: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#B45309",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginBottom: 12,
   },
   tenureChipRow: {
@@ -1664,7 +1664,7 @@ const styles = StyleSheet.create({
     borderColor: "#1E1B4B",
   },
   tenureChipNum: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#78350F",
@@ -1689,7 +1689,7 @@ const styles = StyleSheet.create({
     borderColor: "#FDE68A",
   },
   calcResultLabel: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#78350F",
     fontFamily: "Inter_600SemiBold",
   },
@@ -1701,9 +1701,9 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   calcResultSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#92400E",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
   },
   bottomBar: {
     position: "absolute",
@@ -1739,14 +1739,14 @@ const styles = StyleSheet.create({
   },
   applyBtnText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     lineHeight: 16,
   },
   applyBtnSub: {
     color: "#E0E7FF",
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "PlusJakartaSans_700Bold",
     lineHeight: 14,
   },
@@ -1767,14 +1767,14 @@ const styles = StyleSheet.create({
   },
   outrightSecondaryBtnText: {
     color: "#0F172A",
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     lineHeight: 16,
   },
   outrightSecondaryBtnSub: {
     color: "#475569",
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "PlusJakartaSans_700Bold",
     lineHeight: 14,
   },
@@ -1795,7 +1795,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   breakdownHeaderTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
@@ -1807,7 +1807,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   breakdownTypeBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#4A50AE",
   },
@@ -1823,18 +1823,18 @@ const styles = StyleSheet.create({
     borderBottomColor: "#EDF2FA",
   },
   breakdownItemLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#334155",
     fontFamily: "Inter_600SemiBold",
   },
   breakdownItemHint: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   breakdownItemVal: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#0A154F",
@@ -1850,7 +1850,7 @@ const styles = StyleSheet.create({
     borderColor: "#DBE2F0",
   },
   breakdownTotalLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
@@ -1880,14 +1880,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   bnplDetailLabel: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#92400E",
     fontFamily: "Inter_500Medium",
     flex: 1,
     flexShrink: 1,
   },
   bnplDetailVal: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#78350F",
@@ -1921,9 +1921,9 @@ const styles = StyleSheet.create({
     color: "#0A154F",
   },
   modalSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   modalCloseBtn: {
@@ -1945,12 +1945,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   orderLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#66728A",
     fontFamily: "Inter_500Medium",
   },
   orderVal: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#1E293B",
@@ -1962,7 +1962,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   orderTotalLabel: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
@@ -1974,7 +1974,7 @@ const styles = StyleSheet.create({
     color: "#2E3192",
   },
   paymentMethodNotice: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#475569",
     fontFamily: "Inter_500Medium",
     lineHeight: 16,
@@ -1987,7 +1987,7 @@ const styles = StyleSheet.create({
   checkoutLabel: {
     color: "#102152",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
+    fontSize: 15,
     marginBottom: 7,
     marginTop: 10,
   },
@@ -1998,7 +1998,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: "#102152",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     backgroundColor: "#FAFCFD",
   },
   deliveryChoices: { flexDirection: "row", gap: 7, marginBottom: 4 },
@@ -2017,14 +2017,14 @@ const styles = StyleSheet.create({
   deliveryChoiceText: {
     color: "#607384",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
+    fontSize: 13,
   },
   deliveryChoiceTextSelected: { color: "#102152" },
   paymentNotice: {
     backgroundColor: "#E3F9F1",
     color: "#102152",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
     lineHeight: 20,
     padding: 12,
     borderRadius: 12,
@@ -2034,7 +2034,7 @@ const styles = StyleSheet.create({
   checkStatusText: {
     color: "#117F78",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontSize: 16,
   },
   confirmBuyBtn: {
     backgroundColor: "#2E3192",
@@ -2049,7 +2049,7 @@ const styles = StyleSheet.create({
   },
   confirmBuyBtnText: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
   },
@@ -2076,7 +2076,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   successMsg: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#475569",
     textAlign: "center",
     lineHeight: 18,
@@ -2091,7 +2091,7 @@ const styles = StyleSheet.create({
   },
   doneBtnText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
   },
@@ -2116,15 +2116,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   deliverySectionTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
   },
   deliverySectionSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginBottom: 12,
   },
   deliveryOptionsList: {
@@ -2170,21 +2170,21 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   deliveryOptionName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
   },
   deliveryOptionPrice: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "900",
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#2E3192",
   },
   deliveryOptionDesc: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     lineHeight: 14,
   },
   zonesBox: {
@@ -2196,7 +2196,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   zonesHeader: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#0A154F",
     marginBottom: 8,
@@ -2211,15 +2211,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   zoneGroupText: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
     color: "#475569",
     lineHeight: 15,
   },
   bnplDetailHint: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#66728A",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
     marginTop: 1,
   },
   receiptHero: {
@@ -2239,7 +2239,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   receiptEyebrow: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#10B981",
     letterSpacing: 1.2,
@@ -2258,7 +2258,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   receiptSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#64748B",
     textAlign: "center",
     lineHeight: 18,
@@ -2295,7 +2295,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   receiptCardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "PlusJakartaSans_800ExtraBold",
     color: "#0A154F",
     marginBottom: 10,
@@ -2308,12 +2308,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#EDF2FA",
   },
   receiptDetailLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#64748B",
-    fontFamily: "Inter_400Regular",
+    fontFamily: 'Inter_500Medium',
   },
   receiptDetailVal: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#0A154F",
     fontFamily: "Inter_600SemiBold",
     maxWidth: "65%",
@@ -2339,14 +2339,14 @@ const styles = StyleSheet.create({
   },
   trackerDotDone: { backgroundColor: "#10B981" },
   trackerDotActive: { backgroundColor: "#2E3192" },
-  trackerDotNum: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
+  trackerDotNum: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
   trackerContent: { flex: 1, marginTop: -2 },
   trackerTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "PlusJakartaSans_700Bold",
     color: "#0A154F",
   },
-  trackerDesc: { fontSize: 11, color: "#64748B", lineHeight: 15, marginTop: 1 },
+  trackerDesc: { fontSize: 13, color: "#64748B", lineHeight: 15, marginTop: 1 },
   loadingBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -2359,7 +2359,7 @@ const styles = StyleSheet.create({
     borderColor: "#BFDBFE",
   },
   loadingBannerText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#1E40AF",
     fontFamily: "Inter_500Medium",
     flex: 1,
@@ -2384,7 +2384,7 @@ const styles = StyleSheet.create({
     color: "#991B1B",
   },
   failureCardMsg: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#B91C1C",
     lineHeight: 17,
     marginBottom: 10,
@@ -2401,7 +2401,7 @@ const styles = StyleSheet.create({
   },
   retryBtnText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "PlusJakartaSans_700Bold",
   },
   resetBtn: {
@@ -2414,7 +2414,7 @@ const styles = StyleSheet.create({
   },
   resetBtnText: {
     color: "#B91C1C",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
   noticeCard: {
@@ -2430,7 +2430,7 @@ const styles = StyleSheet.create({
   },
   noticeCardText: {
     color: "#92400E",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
     flex: 1,
   },

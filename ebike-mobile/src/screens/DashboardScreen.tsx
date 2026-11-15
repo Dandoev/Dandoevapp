@@ -594,9 +594,9 @@ const styles = StyleSheet.create({
   hiddenCard: { display: 'none' },
   emptyStateCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#DBE2F0', marginBottom: 16 },
   emptyStateTitle: { fontSize: 18, fontWeight: '800', fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#0A154F' },
-  emptyStateText: { fontSize: 13, lineHeight: 20, color: '#66728A', fontFamily: 'Inter_400Regular', marginTop: 6 },
+  emptyStateText: { fontSize: 15, lineHeight: 20, color: '#66728A', fontFamily: 'Inter_500Medium', marginTop: 6 },
   emptyStateButton: { alignSelf: 'flex-start', backgroundColor: '#2E3192', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginTop: 14 },
-  emptyStateButtonText: { color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' },
+  emptyStateButtonText: { color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' },
   topHeader: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   brandTagline: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     color: '#0A154F',
     opacity: 0.9,
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   notifBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '900',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -683,9 +683,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F7FC',
   },
   greetingText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
   },
   userNameText: {
     fontSize: 20,
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   },
   kycTierText: {
     color: '#2E3192',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   toast: {
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     flex: 1,
   },
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
   },
   assignedBadgeText: {
     color: '#2E3192', // Logo brand color
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
     fontWeight: '700',
   },
@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
   },
   statusActiveText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1E40AF',
   },
@@ -870,9 +870,9 @@ const styles = StyleSheet.create({
     color: '#2E3192',
   },
   assignedBikeFootnote: {
-    fontSize: 11,
+    fontSize: 13,
     lineHeight: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   paymentMethodLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#66728A',
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   switchPillText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: '#66728A',
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
   },
   atmCardBrand: {
     color: '#F6F7FC',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: 0.5,
@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
   },
   platinumText: {
     color: '#DBE2F0',
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     letterSpacing: 0.5,
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
   },
   contactlessText: {
     color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 1,
@@ -1032,7 +1032,7 @@ const styles = StyleSheet.create({
   },
   atmBalanceLabel: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 0.8,
   },
@@ -1067,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   atmFooterVal: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
   },
   primaryFundBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   secondaryNubanBtnText: {
     color: '#2E3192',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
   },
@@ -1161,7 +1161,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   deductionFreqBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#2E3192',
   },
@@ -1181,7 +1181,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   viewLoanText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#2E3192',
@@ -1197,7 +1197,7 @@ const styles = StyleSheet.create({
     borderColor: '#FDE68A',
   },
   loanDueLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#B45309',
     fontFamily: 'Inter_600SemiBold',
   },
@@ -1209,7 +1209,7 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   loanDueDate: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#B45309',
     fontFamily: 'Inter_500Medium',
   },
@@ -1221,7 +1221,7 @@ const styles = StyleSheet.create({
   },
   payNowText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
@@ -1245,15 +1245,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   kycBannerTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
   },
   kycBannerSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#475569',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
     lineHeight: 15,
   },
@@ -1282,7 +1282,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   savingsTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
@@ -1297,7 +1297,7 @@ const styles = StyleSheet.create({
   },
   lockedBadgeText: {
     color: '#2E3192',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   vaultAmount: {
@@ -1307,9 +1307,9 @@ const styles = StyleSheet.create({
     color: '#2E3192',
   },
   vaultSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#66728A',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
     marginBottom: 14,
   },
@@ -1326,13 +1326,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   streakTitle: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#334155',
   },
   streakCount: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#2E3192',
@@ -1349,7 +1349,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   streakHint: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#66728A',
     fontFamily: 'Inter_500Medium',
     marginTop: 6,
@@ -1378,7 +1378,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   actionText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#334155',
@@ -1398,7 +1398,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   seeAllText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1E1B4B',
@@ -1465,7 +1465,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   featuredDaily: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#475569',
     fontFamily: 'Inter_500Medium',
   },

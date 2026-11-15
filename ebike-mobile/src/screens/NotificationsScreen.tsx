@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E3192',
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     color: '#66728A',
   },
@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   emptySub: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#94A3B8',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     marginTop: 2,
   },
   notifCard: {
@@ -277,22 +277,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notifTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
     flex: 1,
   },
   notifTime: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#94A3B8',
     fontFamily: 'Inter_500Medium',
     marginLeft: 6,
   },
   notifMessage: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#475569',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     lineHeight: 17,
   },
   amountTag: {
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   amountTagText: {
     color: '#2E3192',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },

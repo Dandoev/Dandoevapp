@@ -262,24 +262,26 @@ export async function resolveMonoNipCode(params: {
   const inputCode = (params.bankCode || "").trim();
 
   if (isMonoProductConfigured("lookup")) {
-    const response = await monoFetch<{ data?: any[] }>(
+    const response = await monoFetch<{ data?: any; banks?: any[] }>(
       "/lookup/banks",
       { method: "GET" },
       "v3",
       "lookup",
     );
-    const banks = Array.isArray(response?.data) ? response.data : [];
-    const match = banks.find((bank: any) => {
-      const name = String(bank?.name || bank?.institution_name || "").toLowerCase();
-      const bankCode = String(bank?.bank_code || bank?.code || "");
-      const nipCode = String(bank?.nip_code || "");
+    const rawBanks = Array.isArray(response?.data)
+      ? response.data
+      : response?.data?.banks || response?.data?.institutions || response?.banks || [];
+    const match = rawBanks.find((bank: any) => {
+      const name = String(bank?.name || bank?.institution_name || bank?.institutionName || "").toLowerCase();
+      const bankCode = String(bank?.bank_code || bank?.bankCode || bank?.code || "");
+      const nipCode = String(bank?.nip_code || bank?.nipCode || "");
       return Boolean(
         nipCode &&
           ((inputName && (name === inputName || name.includes(inputName) || inputName.includes(name))) ||
             (inputCode && (bankCode === inputCode || nipCode === inputCode))),
       );
     });
-    if (match?.nip_code) return String(match.nip_code);
+    if (match?.nip_code || match?.nipCode) return String(match.nip_code || match.nipCode);
 
     // The directory may return a provider-specific name. Match the known
     // GTBank example as a safe compatibility fallback.
@@ -298,17 +300,20 @@ export async function listMonoNipBanks(): Promise<Array<{ name: string; bankCode
     if (isDemoAllowed()) return [];
     throw new Error("Mono account lookup is unavailable");
   }
-  const response = await monoFetch<{ data?: any[] }>(
+  const response = await monoFetch<{ data?: any; banks?: any[] }>(
     "/lookup/banks",
     { method: "GET" },
     "v3",
     "lookup",
   );
-  return (Array.isArray(response?.data) ? response.data : [])
+  const rawBanks = Array.isArray(response?.data)
+    ? response.data
+    : response?.data?.banks || response?.data?.institutions || response?.banks || [];
+  return rawBanks
     .map((bank: any) => ({
-      name: String(bank?.name || bank?.institution_name || "").trim(),
-      bankCode: String(bank?.bank_code || bank?.code || "").trim(),
-      nipCode: String(bank?.nip_code || "").trim(),
+      name: String(bank?.name || bank?.institution_name || bank?.institutionName || "").trim(),
+      bankCode: String(bank?.bank_code || bank?.bankCode || bank?.code || "").trim(),
+      nipCode: String(bank?.nip_code || bank?.nipCode || "").trim(),
     }))
     .filter((bank) => bank.name && bank.nipCode);
 }

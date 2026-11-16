@@ -315,7 +315,7 @@ export async function listMonoNipBanks(): Promise<Array<{ name: string; bankCode
       bankCode: String(bank?.bank_code || bank?.bankCode || bank?.code || "").trim(),
       nipCode: String(bank?.nip_code || bank?.nipCode || "").trim(),
     }))
-    .filter((bank) => bank.name && bank.nipCode);
+    .filter((bank: { name: string; bankCode: string; nipCode: string }) => bank.name && bank.nipCode);
 }
 
 // ---- Shared fetch helper ----

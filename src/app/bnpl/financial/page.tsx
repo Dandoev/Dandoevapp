@@ -66,8 +66,26 @@ export default function FinancialInfoPage() {
   const [accountVerified, setAccountVerified] = useState(false);
   const [resolvingAccount, setResolvingAccount] = useState(false);
   const [bvnMasked, setBvnMasked] = useState('');
+  const [supportedBanks, setSupportedBanks] = useState<string[]>(NIGERIAN_BANKS);
 
   const [incomeVerified, setIncomeVerified] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/kyc/mono', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'list_banks' }),
+    })
+      .then((res) => res.ok ? res.json() : null)
+      .then((payload) => {
+        const names = (payload?.data || []).map((bank: { name?: string }) => bank.name).filter(Boolean);
+        if (active && names.length) setSupportedBanks(names);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const [statementUrl, setStatementUrl] = useState('');
   const [monoAccountId, setMonoAccountId] = useState('');
   const [monoMandate, setMonoMandate] = useState<any>(null);
@@ -348,7 +366,7 @@ export default function FinancialInfoPage() {
                 value={form.bankName}
                 onChange={(e) => u('bankName', e.target.value)}
               >
-                {NIGERIAN_BANKS.map((b) => (
+                {supportedBanks.map((b) => (
                   <option key={b} value={b}>
                     {b}
                   </option>

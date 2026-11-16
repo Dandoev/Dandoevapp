@@ -147,6 +147,7 @@ export default function BnplApplicationScreen({
   onRequestKyc,
   onBack,
   onComplete,
+  designPreviewStep,
 }: {
   token: string;
   product: DemoProduct;
@@ -155,9 +156,10 @@ export default function BnplApplicationScreen({
   onRequestKyc?: (identity: { nin: string; bvn: string }) => void;
   onBack: () => void;
   onComplete: () => void;
+  designPreviewStep?: number;
 }) {
   // Pure in-app step state: 0 = Profile & Work, 1 = Identity & NIN, 2 = Bank & Repayment, 3 = Guarantors, 4 = Review & Agreement
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(__DEV__ && token === 'design-preview' ? designPreviewStep ?? 0 : 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [submittedLoan, setSubmittedLoan] = useState<SubmittedLoanInfo | null>(null);
@@ -196,6 +198,7 @@ export default function BnplApplicationScreen({
 
   // Step 2: In-App Bank & Repayment Mandate
   const [bankName, setBankName] = useState("");
+  const [supportedBanks, setSupportedBanks] = useState<string[]>(NIGERIAN_BANKS);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [frequency, setFrequency] = useState("weekly");
@@ -254,6 +257,19 @@ export default function BnplApplicationScreen({
       });
     return () => { active = false; };
   }, [token, resumeStep]);
+
+  useEffect(() => {
+    let active = true;
+    MobileApi.getMonoSupportedBanks(token)
+      .then((result) => {
+        const names = (result.data || []).map((bank) => bank.name).filter(Boolean);
+        if (active && names.length) setSupportedBanks(names);
+      })
+      .catch(() => {
+        // Keep the cached compatibility list if the directory is temporarily unavailable.
+      });
+    return () => { active = false; };
+  }, [token]);
 
   // Restore Draft
   useEffect(() => {
@@ -1486,7 +1502,7 @@ export default function BnplApplicationScreen({
               </TouchableOpacity>
             </View>
             <ScrollView style={{ marginTop: 10 }}>
-              {NIGERIAN_BANKS.map((b) => (
+              {supportedBanks.map((b) => (
                 <TouchableOpacity
                   key={b}
                   style={[styles.sheetItem, bankName === b && styles.sheetItemActive]}

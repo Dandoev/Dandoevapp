@@ -249,6 +249,70 @@ export function resolveBankCode(bankNameOrCode?: string): string {
   return "058";
 }
 
+/**
+ * Resolve Mono's NIP identifier. This must not use the CBN bank code: Mono's
+ * account-number endpoint expects the NIBSS/NIP code (for example GTBank is
+ * 000013, while its CBN code is 058).
+ */
+export async function resolveMonoNipCode(params: {
+  bankName?: string;
+  bankCode?: string;
+}): Promise<string> {
+  const inputName = (params.bankName || "").trim().toLowerCase();
+  const inputCode = (params.bankCode || "").trim();
+
+  if (isMonoProductConfigured("lookup")) {
+    const response = await monoFetch<{ data?: any[] }>(
+      "/lookup/banks",
+      { method: "GET" },
+      "v3",
+      "lookup",
+    );
+    const banks = Array.isArray(response?.data) ? response.data : [];
+    const match = banks.find((bank: any) => {
+      const name = String(bank?.name || bank?.institution_name || "").toLowerCase();
+      const bankCode = String(bank?.bank_code || bank?.code || "");
+      const nipCode = String(bank?.nip_code || "");
+      return Boolean(
+        nipCode &&
+          ((inputName && (name === inputName || name.includes(inputName) || inputName.includes(name))) ||
+            (inputCode && (bankCode === inputCode || nipCode === inputCode))),
+      );
+    });
+    if (match?.nip_code) return String(match.nip_code);
+
+    // The directory may return a provider-specific name. Match the known
+    // GTBank example as a safe compatibility fallback.
+    if (inputName.includes("gtbank") || inputName.includes("guaranty trust")) {
+      return "000013";
+    }
+    throw new Error("Mono does not support NIP lookup for the selected bank");
+  }
+
+  if (isDemoAllowed()) return "000013";
+  throw new Error("Mono account lookup is unavailable");
+}
+
+export async function listMonoNipBanks(): Promise<Array<{ name: string; bankCode: string; nipCode: string }>> {
+  if (!isMonoProductConfigured("lookup")) {
+    if (isDemoAllowed()) return [];
+    throw new Error("Mono account lookup is unavailable");
+  }
+  const response = await monoFetch<{ data?: any[] }>(
+    "/lookup/banks",
+    { method: "GET" },
+    "v3",
+    "lookup",
+  );
+  return (Array.isArray(response?.data) ? response.data : [])
+    .map((bank: any) => ({
+      name: String(bank?.name || bank?.institution_name || "").trim(),
+      bankCode: String(bank?.bank_code || bank?.code || "").trim(),
+      nipCode: String(bank?.nip_code || "").trim(),
+    }))
+    .filter((bank) => bank.name && bank.nipCode);
+}
+
 // ---- Shared fetch helper ----
 async function monoFetch<T>(
   endpoint: string,
@@ -801,13 +865,17 @@ export async function verifyMonoBankAccount(params: {
 
   if (isMonoProductConfigured("lookup")) {
     try {
+      const nipCode = await resolveMonoNipCode({
+        bankName,
+        bankCode: params.bankCode,
+      });
       const res = await monoFetch<{ data: any }>(
         "/lookup/account-number",
         {
           method: "POST",
           body: JSON.stringify({
             account_number: cleanAcct,
-            nip_code: bankCode,
+            nip_code: nipCode,
           }),
         },
         "v3",
@@ -836,7 +904,7 @@ export async function verifyMonoBankAccount(params: {
     } catch (err: any) {
       if (isMonoProductConfigured("lookup")) throw err;
       logger.warn(
-        { err: err.message, cleanAcct, bankCode },
+        { err: err.message, cleanAcct, bankCode, bankName },
         "Mono NIP account lookup fallback",
       );
     }

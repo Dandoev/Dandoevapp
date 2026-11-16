@@ -17,6 +17,7 @@ import {
   getMonoCreditHistory,
   analyzeFinancialHealth,
   verifyMonoBankAccount,
+  listMonoNipBanks,
   setupMonoRecurringMandate,
   isLiveMonoConfigured,
   MonoFeatureUnavailableError,
@@ -77,6 +78,11 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         { error: "Invalid or expired session" },
         { status: 401 },
       );
+    }
+
+    if (action === "list_banks") {
+      const banks = await listMonoNipBanks();
+      return NextResponse.json({ success: true, data: banks });
     }
 
     // ---------------------------------------------------------

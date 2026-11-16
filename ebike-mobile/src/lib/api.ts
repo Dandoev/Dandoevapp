@@ -221,6 +221,11 @@ export const MobileApi = {
       token,
     });
   },
+  async getMonoSupportedBanks(token: string) {
+    return apiRequest<{ success: boolean; data: Array<{ name: string; bankCode: string; nipCode: string }> }>("/kyc/mono", {
+      method: "POST", body: { action: "list_banks" }, token,
+    });
+  },
   async uploadDocument(file: { uri: string; name: string; mimeType?: string }, token: string) {
     const form = new FormData();
     form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/octet-stream" } as any);

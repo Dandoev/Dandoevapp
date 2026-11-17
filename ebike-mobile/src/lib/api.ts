@@ -237,7 +237,16 @@ export const MobileApi = {
   },
   async uploadProofOfAddress(file: { uri: string; name: string; mimeType?: string }, token: string) {
     const form = new FormData();
-    form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/octet-stream" } as any);
+    const lowerName = file.name.toLowerCase();
+    const inferredType = lowerName.endsWith(".pdf")
+      ? "application/pdf"
+      : lowerName.endsWith(".png")
+        ? "image/png"
+        : lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")
+          ? "image/jpeg"
+          : undefined;
+    const normalizedType = file.mimeType?.toLowerCase().split(";")[0] === "image/jpg" ? "image/jpeg" : file.mimeType?.toLowerCase().split(";")[0];
+    form.append("file", { uri: file.uri, name: file.name, type: normalizedType || inferredType || "application/octet-stream" } as any);
     const response = await fetch(`${APP_CONFIG.apiEndpoint}/kyc/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Proof of address upload failed");

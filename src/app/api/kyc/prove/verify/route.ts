@@ -48,7 +48,7 @@ async function handleVerification(req: NextRequest, ctx: ApiContext) {
         const identity = verifiedIdentities(proveResult);
         await prisma.user.update({
           where: { id: user.id },
-          data: { kycStatus: 'verified', ...(identity.bvn ? { bvn: encryptField(identity.bvn) } : {}), ...(identity.nin ? { ninNumber: encryptField(identity.nin) } : {}) },
+          data: { kycStatus: 'pending', ...(identity.bvn ? { bvn: encryptField(identity.bvn) } : {}), ...(identity.nin ? { ninNumber: encryptField(identity.nin) } : {}) },
         });
 
         await prisma.auditLog.create({
@@ -114,7 +114,7 @@ async function handleVerification(req: NextRequest, ctx: ApiContext) {
     if (body?.forceDemo || isDemoAllowed()) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { kycStatus: 'verified' },
+        data: { kycStatus: 'pending' },
       });
 
       await prisma.auditLog.create({

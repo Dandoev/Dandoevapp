@@ -125,7 +125,12 @@ export default function RealKycScreen({
       const file = result.assets[0];
       setUploadingAddress(true);
       setMessage(null);
-      const uploaded = await MobileApi.uploadProofOfAddress({ uri: file.uri, name: file.name, mimeType: file.mimeType }, token);
+      const inferredMimeType = file.name.toLowerCase().endsWith(".pdf")
+        ? "application/pdf"
+        : file.name.toLowerCase().endsWith(".png")
+          ? "image/png"
+          : "image/jpeg";
+      const uploaded = await MobileApi.uploadProofOfAddress({ uri: file.uri, name: file.name, mimeType: file.mimeType || inferredMimeType }, token);
       setAddressDocument(uploaded.data);
       setMessage("Proof of address uploaded and sent for review.");
     } catch (error) {

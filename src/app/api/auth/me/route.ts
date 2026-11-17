@@ -126,7 +126,13 @@ export async function GET(req: NextRequest) {
       : kycStage === 'completed' && proofOfAddress?.verificationStatus !== 'verified'
       ? 'upload_proof_of_address'
       : 'none';
-    return NextResponse.json({ user: { ...user, faceVerified, identityLookupVerified: Boolean(identityLookup), kycStage, kycNextAction, proofOfAddressStatus: proofOfAddress?.verificationStatus || 'not_started' } });
+    const proofComplete = proofOfAddress?.verificationStatus === 'verified';
+    const effectiveKycStatus = user.kycStatus === 'failed'
+      ? 'failed'
+      : proofComplete && faceVerified
+        ? 'verified'
+        : 'pending';
+    return NextResponse.json({ user: { ...user, kycStatus: effectiveKycStatus, faceVerified, identityLookupVerified: Boolean(identityLookup), kycStage, kycNextAction, proofOfAddressStatus: proofOfAddress?.verificationStatus || 'not_started' } });
   } catch (error: any) {
     return NextResponse.json({ error: 'Authentication internal error' }, { status: 500 });
   }

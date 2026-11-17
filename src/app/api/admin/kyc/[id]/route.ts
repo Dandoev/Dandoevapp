@@ -67,8 +67,11 @@ export const PATCH = withRoles(
           d.verificationStatus === 'verified' && 
           d.type === 'selfie'
         );
+        const verifiedProofOfAddress = allDocs.some(d =>
+          d.verificationStatus === 'verified' && d.type === 'utility_bill'
+        );
 
-        if (verifiedIds.length > 0 && verifiedSelfie.length > 0) {
+        if (verifiedIds.length > 0 && verifiedSelfie.length > 0 && verifiedProofOfAddress) {
           // All mandatory documents verified
           await prisma.user.update({
             where: { id: document.userId },

@@ -9,7 +9,18 @@ export const POST = withAuth(async (req: NextRequest, ctx) => {
     const file = formData.get("file") as File | null;
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "File size too large (max 5 MB)" }, { status: 413 });
-    if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+    const fileName = file.name.toLowerCase();
+    const extensionType = fileName.endsWith(".pdf")
+      ? "application/pdf"
+      : fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")
+        ? "image/jpeg"
+        : fileName.endsWith(".png")
+          ? "image/png"
+          : null;
+    const suppliedType = String(file.type || "").toLowerCase().split(";")[0];
+    const mimeType = suppliedType === "image/jpg" ? "image/jpeg" : suppliedType;
+    const effectiveType = mimeType || extensionType;
+    if (!effectiveType || !["application/pdf", "image/jpeg", "image/png"].includes(effectiveType) || (extensionType && effectiveType !== extensionType)) {
       return NextResponse.json({ error: "Only PDF, JPEG, and PNG files are accepted" }, { status: 415 });
     }
     const result = await uploadFile(Buffer.from(await file.arrayBuffer()), "kyc-documents", `${ctx.user.sub}-proof-of-address-${Date.now()}-${file.name}`);

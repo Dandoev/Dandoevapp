@@ -86,7 +86,6 @@ export default function RealWalletScreen({ token }: { token: string; onBack: () 
         <View style={styles.rule} />
         <Text style={styles.mandate}>Mono Sweep mandate: {mandateReady ? 'Ready' : source?.monoMandateStatus || 'Not set up'}</Text>
         <Text style={styles.note}>Your wallet covers scheduled repayments first. An active Mono Sweep mandate is used if the wallet cannot cover an installment.</Text>
-        <View style={styles.cardNotice}><Building2 size={17} color="#52627D" /><Text style={styles.cardNoticeText}>Mono debits your authorized bank accounts. Card details are not needed.</Text></View>
       </View>
     </ScrollView>
   );

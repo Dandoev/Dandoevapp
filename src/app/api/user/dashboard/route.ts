@@ -17,7 +17,7 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   }
 
   try {
-    const [user, activeLoan, notifications] = await Promise.all([
+    const [user, proofOfAddress, faceVerification, activeLoan, notifications] = await Promise.all([
       // 1. User profile and wallet
       prisma.user.findUnique({
         where: { id: userId },
@@ -30,6 +30,10 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
           wallet: true,
         },
       }),
+
+      prisma.kycDocument.findFirst({ where: { userId, type: 'utility_bill' }, orderBy: { uploadedAt: 'desc' }, select: { verificationStatus: true } }),
+
+      prisma.auditLog.findFirst({ where: { userId, action: 'MONO_PROVE_FACE_VERIFIED' }, select: { id: true } }),
 
       // 2. Active Loan (if any)
       prisma.loan.findFirst({
@@ -78,7 +82,7 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
       success: true,
       profile: {
         name: `${user.firstName} ${user.lastName}`,
-        kycStatus: user.kycStatus,
+        kycStatus: user.kycStatus === 'failed' ? 'failed' : proofOfAddress?.verificationStatus === 'verified' && Boolean(faceVerification) ? 'verified' : 'pending',
         customerStatus: user.customerStatus,
         wallet: user.wallet,
       },

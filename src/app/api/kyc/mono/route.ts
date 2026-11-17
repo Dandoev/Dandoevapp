@@ -263,7 +263,8 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     const verifiedUser = await prisma.user.findUnique({
       where: { id: userId },
     });
-    if (!verifiedUser || verifiedUser.kycStatus !== "verified") {
+    const faceVerified = await prisma.auditLog.findFirst({ where: { userId, action: "MONO_PROVE_FACE_VERIFIED" }, select: { id: true } });
+    if (!verifiedUser || !faceVerified) {
       return NextResponse.json(
         {
           error:
@@ -395,7 +396,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
-          kycStatus: "verified",
+          kycStatus: "pending",
           monoAccountId: accountId,
           monoStatus: "statement_fetched",
           monoBankCode: accountDetails.bankCode,

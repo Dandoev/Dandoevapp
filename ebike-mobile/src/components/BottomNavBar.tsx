@@ -13,9 +13,9 @@ interface BottomNavBarProps {
 export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: BottomNavBarProps) {
   const tabs: { key: TabType; label: string; icon: any }[] = [
     { key: 'bikes', label: 'Shop', icon: ShoppingBag },
+    { key: 'wallet', label: 'Wallet', icon: WalletCards },
     { key: 'home', label: 'Overview', icon: LayoutDashboard },
     { key: 'loans', label: 'Loans', icon: CreditCard },
-    { key: 'wallet', label: 'Wallet', icon: WalletCards },
     { key: 'profile', label: 'Profile', icon: User },
   ];
 

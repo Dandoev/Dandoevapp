@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
             : "failed";
 
           if (successful || user.kycStatus !== "verified") {
-            const updateData: Record<string, any> = { kycStatus: newStatus };
+            const updateData: Record<string, any> = { kycStatus: successful ? "pending" : newStatus };
             if (successful && /^\d{11}$/.test(String(data.customer?.bvn || '')) && !user.bvn) {
               updateData.bvn = encryptField(String(data.customer.bvn));
             }

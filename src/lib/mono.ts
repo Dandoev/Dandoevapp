@@ -13,8 +13,16 @@ const MONO_PAYMENTS_V2 = "https://api.withmono.com/v2/payments";
 type MonoProduct = "connect" | "lookup" | "prove" | "payments";
 
 function isMonoSandboxEnvironment(): boolean {
-  const environment = (process.env.MONO_ENVIRONMENT || "live").toLowerCase();
+  const environment = (process.env.MONO_ENVIRONMENT || "live").trim().toLowerCase();
   return environment === "sandbox" || environment === "test";
+}
+
+function firstConfiguredEnv(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return "";
 }
 
 export class MonoFeatureUnavailableError extends Error {
@@ -41,31 +49,18 @@ export function getMonoProductKey(product: MonoProduct): string {
   // credentials. This supports existing deployments while keeping the key
   // prefix validation below as the final environment guard.
   const sandboxKey =
-    process.env[sandboxKeyNames[product]] ||
-    process.env[productKeyNames[product]] ||
-    process.env.MONO_SANDBOX_SECRET_KEY ||
-    "";
+    firstConfiguredEnv(sandboxKeyNames[product], productKeyNames[product], `MONO_${product.toUpperCase()}_SECRET`, "MONO_SANDBOX_SECRET_KEY");
   if (isMonoSandboxEnvironment()) return sandboxKey;
 
   switch (product) {
     case "connect":
-      return (
-        process.env.MONO_CONNECT_SECRET_KEY || process.env.MONO_SECRET_KEY || ""
-      );
+      return firstConfiguredEnv("MONO_CONNECT_SECRET_KEY", "MONO_CONNECT_SECRET", "MONO_SECRET_KEY");
     case "lookup":
-      return (
-        process.env.MONO_LOOKUP_SECRET_KEY || process.env.MONO_SECRET_KEY || ""
-      );
+      return firstConfiguredEnv("MONO_LOOKUP_SECRET_KEY", "MONO_LOOKUP_SECRET", "MONO_LOOKUP_API_SECRET", "MONO_SECRET_KEY");
     case "prove":
-      return (
-        process.env.MONO_PROVE_SECRET_KEY || process.env.MONO_SECRET_KEY || ""
-      );
+      return firstConfiguredEnv("MONO_PROVE_SECRET_KEY", "MONO_PROVE_SECRET", "MONO_SECRET_KEY");
     case "payments":
-      return (
-        process.env.MONO_PAYMENTS_SECRET_KEY ||
-        process.env.MONO_SECRET_KEY ||
-        ""
-      );
+      return firstConfiguredEnv("MONO_PAYMENTS_SECRET_KEY", "MONO_PAYMENTS_SECRET", "MONO_SECRET_KEY");
   }
 }
 

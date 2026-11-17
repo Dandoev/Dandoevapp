@@ -27,17 +27,35 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'File size too large (Max 5MB)' }, { status: 413 });
       }
 
-      const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
-      if (file.type && !allowed.includes(file.type)) {
-        return NextResponse.json({ error: 'Only PDF, JPEG, and PNG files are accepted' }, { status: 415 });
-      }
-
       // Read file to buffer
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
+      const originalName = String(file.name || 'document');
+      const lowerName = originalName.toLowerCase();
+      const extensionType = lowerName.endsWith('.pdf')
+        ? 'application/pdf'
+        : lowerName.endsWith('.png')
+          ? 'image/png'
+          : lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')
+            ? 'image/jpeg'
+            : null;
+      const header = buffer.toString('hex', 0, 8).toUpperCase();
+      const contentType = header.startsWith('25504446')
+        ? 'application/pdf'
+        : header.startsWith('89504E47')
+          ? 'image/png'
+          : header.startsWith('FFD8FF')
+            ? 'image/jpeg'
+            : null;
+      const suppliedType = String(file.type || '').toLowerCase().split(';')[0];
+      const normalizedType = suppliedType === 'image/jpg' || suppliedType === 'image/pjpeg' ? 'image/jpeg' : suppliedType;
+      const effectiveType = contentType || (normalizedType === 'application/octet-stream' ? extensionType : normalizedType) || extensionType;
+      if (!effectiveType || !['application/pdf', 'image/jpeg', 'image/png'].includes(effectiveType)) {
+        return NextResponse.json({ error: 'Only PDF, JPEG, and PNG files are accepted' }, { status: 415 });
+      }
 
       // Upload to Cloudinary (or mock)
-      const result = await uploadFile(buffer, folder, file.name);
+      const result = await uploadFile(buffer, folder, originalName);
 
       log.info({ userId: ctx.user.sub, fileName: file.name, url: result.url }, 'File uploaded successfully');
 
@@ -45,7 +63,7 @@ export const POST = withAuth(
         success: true,
         data: {
           url: result.url,
-          fileName: file.name,
+        fileName: originalName,
           publicId: result.publicId
         }
       });

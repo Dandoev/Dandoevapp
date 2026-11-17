@@ -20,11 +20,14 @@ export const POST = withAuth(async (req: NextRequest, ctx) => {
           : null;
     const suppliedType = String(file.type || "").toLowerCase().split(";")[0];
     const mimeType = suppliedType === "image/jpg" ? "image/jpeg" : suppliedType;
-    const effectiveType = !mimeType || mimeType === "application/octet-stream" ? extensionType : mimeType;
-    if (!effectiveType || !["application/pdf", "image/jpeg", "image/png"].includes(effectiveType) || (extensionType && effectiveType !== extensionType)) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const header = buffer.toString("hex", 0, 8).toUpperCase();
+    const contentType = header.startsWith("25504446") ? "application/pdf" : header.startsWith("89504E47") ? "image/png" : header.startsWith("FFD8FF") ? "image/jpeg" : null;
+    const effectiveType = contentType || (!mimeType || mimeType === "application/octet-stream" ? extensionType : mimeType) || extensionType;
+    if (!effectiveType || !["application/pdf", "image/jpeg", "image/png"].includes(effectiveType)) {
       return NextResponse.json({ error: "Only PDF, JPEG, and PNG files are accepted" }, { status: 415 });
     }
-    const result = await uploadFile(Buffer.from(await file.arrayBuffer()), "kyc-documents", `${ctx.user.sub}-proof-of-address-${Date.now()}-${originalName}`);
+    const result = await uploadFile(buffer, "kyc-documents", `${ctx.user.sub}-proof-of-address-${Date.now()}-${originalName}`);
     const document = await prisma.kycDocument.create({
       data: {
         userId: ctx.user.sub,

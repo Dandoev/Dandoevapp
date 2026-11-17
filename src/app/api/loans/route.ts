@@ -182,6 +182,18 @@ export const POST = withAuth(
               { status: 400 },
             );
           }
+          const assessment = await prisma.monoFinancialAssessment.findUnique({
+            where: { userId: user.id },
+            select: { monoAccountId: true },
+          });
+          if (!assessment?.monoAccountId || assessment.monoAccountId !== user.monoAccountId ||
+              decryptField(user.bankAccountNumber || "") !== data.bankAccountNumber ||
+              user.bankName !== data.bankName || user.bankAccountName !== data.bankAccountName) {
+            return NextResponse.json(
+              { error: "Connect this repayment bank account with Mono and complete the financial assessment before applying." },
+              { status: 409 },
+            );
+          }
 
           const deliveryType = "pickup";
           const deliveryFee = 0;

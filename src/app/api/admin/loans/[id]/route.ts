@@ -9,6 +9,7 @@ import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
 import { notifyBikeAssigned, notifyLoanStatusChanged } from "@/lib/notifications";
 import { decryptField } from "@/lib/encryption";
+import { getMonoMandateStatus } from "@/lib/mono";
 
 const roles = ["super_admin", "credit_underwriter", "finance_admin"];
 const loanIdFrom = (req: NextRequest) => req.nextUrl.pathname.split("/").pop()!;
@@ -35,13 +36,10 @@ export const GET = withRoles(
     const sensitive = ["bankAccountNumber", "bvn", "ninNumber"] as const;
     for (const field of sensitive) {
       const value = user[field];
+      const plain = value ? decryptField(value) : null;
       user[field] = reveal
-        ? value
-          ? decryptField(value)
-          : null
-        : value
-          ? `••••${String(value).slice(-4)}`
-          : null;
+        ? plain
+        : plain ? `••••${plain.slice(-4)}` : null;
     }
     if (reveal) {
       await prisma.auditLog.create({
@@ -123,6 +121,23 @@ export const PATCH = withRoles(
           });
         }
 
+        if (!loan.monoMandateId || loan.monoMandateId.startsWith("MND-PENDING"))
+          return NextResponse.json({ error: "A Mono Sweep mandate must be authorised before approval" }, { status: 409 });
+        let mandate;
+        try {
+          mandate = await getMonoMandateStatus(loan.monoMandateId);
+        } catch (error) {
+          logger.warn({ error, loanId: id }, "Could not verify Mono mandate for approval");
+          return NextResponse.json({ error: "Could not confirm Mono Sweep mandate readiness. Retry after Mono is available." }, { status: 503 });
+        }
+        if (!mandate.readyToDebit || mandate.status !== "active") {
+          await prisma.loan.update({ where: { id }, data: { monoMandateStatus: mandate.status } });
+          return NextResponse.json({ error: "Mono Sweep mandate is not ready to debit", mandateStatus: mandate.status }, { status: 409 });
+        }
+        if (loan.monoMandateStatus !== "active") {
+          await prisma.loan.update({ where: { id }, data: { monoMandateStatus: "active" } });
+          loan.monoMandateStatus = "active";
+        }
         const blockers = getApprovalBlockers(loan);
         const financialBlockers = blockers.filter((blocker) => blocker.includes('financial assessment') || blocker.includes('affordability'));
         if (Number(loan.downPayment) > 0) {

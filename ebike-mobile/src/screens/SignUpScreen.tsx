@@ -28,6 +28,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -40,6 +41,7 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
     setEmail('chinedu.okafor@example.com');
     setPhone('+234 812 345 6789');
     setPassword('Pass@Dando2026!');
+    setConfirmPassword('Pass@Dando2026!');
     setAcceptedTerms(true);
     setErrorMessage(null);
   };
@@ -71,6 +73,10 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
     }
     if (!/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
       setErrorMessage('Password needs an uppercase letter, a number and a special character.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match. Please re-enter the same password.');
       return;
     }
     if (!acceptedTerms) {
@@ -265,6 +271,23 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
                   setPassword(t);
                   setErrorMessage(null);
                 }}
+              />
+              <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
+                {showPassword ? <EyeOff size={20} color="#64748B" /> : <Eye size={20} color="#64748B" />}
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.label}>Confirm Password</Text>
+            <View style={styles.inputContainer}>
+              <Lock size={16} color="#9CA3AF" />
+              <TextInput
+                style={styles.input}
+                placeholder="Re-enter your password"
+                placeholderTextColor="#9CA3AF"
+                secureTextEntry={!showPassword}
+                value={confirmPassword}
+                onChangeText={(t) => { setConfirmPassword(t); setErrorMessage(null); }}
+                autoComplete="password"
               />
               <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
                 {showPassword ? <EyeOff size={20} color="#64748B" /> : <Eye size={20} color="#64748B" />}

@@ -15,6 +15,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import * as WebBrowser from "expo-web-browser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ArrowLeft,
@@ -43,6 +44,7 @@ import {
 } from "lucide-react-native";
 import { DemoProduct } from "../lib/demo-data";
 import { MobileApi } from "../lib/api";
+import { APP_CONFIG } from "../lib/config";
 
 type Guarantor = {
   fullName: string;
@@ -60,6 +62,8 @@ type SubmittedLoanInfo = {
   monthly: number;
   guarantors: Guarantor[];
   deliveryType: string;
+  mandateStatus?: string;
+  mandateUrl?: string;
 };
 
 const EMPLOYMENT_STATUS_OPTIONS = [
@@ -229,8 +233,68 @@ export default function BnplApplicationScreen({
     onSelect: (value: string) => void;
   } | null>(null);
   const [dashboardFile, setDashboardFile] = useState<{ name: string; uri: string; size?: string } | null>(null);
+  const [proofOfAddress, setProofOfAddress] = useState<{ name: string; url?: string } | null>(null);
+  const [uploadingAddress, setUploadingAddress] = useState(false);
   const [accountChecking, setAccountChecking] = useState(false);
   const [accountVerified, setAccountVerified] = useState(false);
+  const [connectBusy, setConnectBusy] = useState(false);
+  const [connectMessage, setConnectMessage] = useState("");
+  const [connectedAssessment, setConnectedAssessment] = useState<Awaited<ReturnType<typeof MobileApi.getMonoFinancial>>["data"] | null>(null);
+
+  const refreshConnectStatus = async () => {
+    let result = await MobileApi.getMonoFinancial(token);
+    if (result.data?.pendingReference && accountNumber.length === 10 && bankName) {
+      const completion = await MobileApi.completeMonoLinkedAccount(result.data.pendingReference, token, {
+        accountNumber, bankName, tenureMonths: tenure, deductionFrequency: "weekly", proposedMonthlyRepayment: monthly,
+      });
+      if (completion.pending) setConnectMessage(completion.message || "Mono is preparing your bank statement. Refresh shortly.");
+      else { setConnectMessage(""); result = await MobileApi.getMonoFinancial(token); }
+    }
+    setConnectedAssessment(result.data || null);
+    if (result.data?.connectedAccountLast4 && result.data.connectedAccountLast4 === accountNumber.slice(-4) && result.data.accountName) {
+      setAccountName(result.data.accountName);
+      setAccountVerified(true);
+      if (result.data.bankName) setBankName(result.data.bankName);
+    }
+    return result.data;
+  };
+  useEffect(() => {
+    if (step !== 2 || !token || token === "design-preview") return;
+    void refreshConnectStatus().catch(() => setConnectedAssessment(null));
+  // Refresh persisted Mono assessment when returning to bank details.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, token]);
+
+  const connectBankWithMono = async () => {
+    if (accountNumber.length !== 10 || !bankName) {
+      setError("Select your repayment bank and enter its 10-digit account number before connecting with Mono.");
+      return;
+    }
+    setConnectBusy(true);
+    setError("");
+    try {
+      const redirectUrl = `${APP_CONFIG.apiBaseUrl}/mono-connect/mobile-return`;
+      const session = await MobileApi.initiateMonoConnect(redirectUrl, token);
+      const url = session.data?.url || session.data?.mono_url;
+      if (!url || !/^https:\/\//i.test(url)) throw new Error("Mono did not return a valid bank connection link. Please retry.");
+      const browser = await WebBrowser.openAuthSessionAsync(url, "dandoev://mono-connect-callback");
+      if (browser.type !== "success" || !browser.url?.startsWith("dandoev://mono-connect-callback")) {
+        setError("Bank connection was closed. Tap Connect bank with Mono to try again.");
+        return;
+      }
+      const returnStatus = new URL(browser.url).searchParams.get("status")?.toLowerCase();
+      if (returnStatus === "failed" || returnStatus === "error" || returnStatus === "cancelled") {
+        setError("Mono could not connect your bank. Check your bank login and try again.");
+        return;
+      }
+      const assessment = await refreshConnectStatus();
+      if (!assessment?.monoAccountId) setConnectMessage("Mono is confirming your bank and preparing its statement. Tap Refresh connection status shortly.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Bank connection failed. Please try again.");
+    } finally {
+      setConnectBusy(false);
+    }
+  };
 
   const draftKey = `@dandoev_bnpl_draft_${product.id}`;
 
@@ -302,7 +366,7 @@ export default function BnplApplicationScreen({
           if (draft.accountNumber) setAccountNumber(draft.accountNumber);
           if (draft.accountName) setAccountName(draft.accountName);
           if (draft.tenure) setTenure(draft.tenure);
-          if (draft.frequency) setFrequency(draft.frequency);
+          setFrequency("weekly");
         } catch {
           /* ignore corrupt draft */
         }
@@ -394,6 +458,26 @@ export default function BnplApplicationScreen({
     }
   };
 
+  const handlePickProofOfAddress = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png", "application/pdf"], copyToCacheDirectory: true });
+      if (result.canceled || !result.assets[0]) return;
+      const file = result.assets[0];
+      setUploadingAddress(true);
+      setError("");
+      const uploaded = await MobileApi.uploadProofOfAddress({
+        uri: file.uri,
+        name: file.name,
+        mimeType: file.mimeType || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
+      }, token);
+      setProofOfAddress({ name: file.name, url: uploaded.data.url });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Proof of address upload failed. Please try again.");
+    } finally {
+      setUploadingAddress(false);
+    }
+  };
+
   const verifyBankAccount = async () => {
     if (!bankName || accountNumber.length !== 10) {
       setError("Select your bank and enter the 10-digit account number first.");
@@ -447,7 +531,11 @@ export default function BnplApplicationScreen({
     if (!bankName.trim() || !accountNumber.trim() || accountNumber.length !== 10) {
       return "Please select your bank and enter a valid 10-digit NUBAN account number.";
     }
-    if (!accountVerified) return "Verify your bank account with Mono before continuing.";
+    if (!connectedAssessment?.monoAccountId || connectedAssessment.connectedAccountLast4 !== accountNumber.slice(-4))
+      return "Connect this repayment account with Mono so we can assess your bank statement.";
+    if (connectedAssessment.bankName && connectedAssessment.bankName !== bankName)
+      return "Reconnect your selected repayment bank with Mono before continuing.";
+    if (!accountName) return "Refresh your Mono connection to confirm the account holder's name.";
     return null;
   };
 
@@ -470,6 +558,8 @@ export default function BnplApplicationScreen({
 
   // Final In-App Submission
   const handleSubmit = async () => {
+    const bankError = validateStep2();
+    if (bankError) { setStep(2); setError(bankError); return; }
     setBusy(true);
     setError("");
     try {
@@ -525,6 +615,7 @@ export default function BnplApplicationScreen({
       );
 
       await AsyncStorage.removeItem(draftKey);
+      const mandateUrl = res.data?.mandate?.authorizationUrl;
       setSubmittedLoan({
         loanId: res.loanId || `APP-${Date.now().toString(36).toUpperCase()}`,
         bikeName: product.name,
@@ -534,7 +625,18 @@ export default function BnplApplicationScreen({
         monthly,
         guarantors,
         deliveryType,
+        mandateStatus: res.data?.mandate?.status || "pending",
+        mandateUrl,
       });
+      if (mandateUrl?.startsWith("https://")) {
+        try {
+          await WebBrowser.openAuthSessionAsync(mandateUrl, "dandoev://payment-callback");
+          const latest = await MobileApi.getMonoMandate(res.loanId, token);
+          setSubmittedLoan((current) => current ? { ...current, mandateStatus: latest.data.readyToDebit ? "active" : latest.data.status } : current);
+        } catch {
+          // The application remains submitted; authorization can be retried below.
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to submit your application. Please check your network and try again.");
     } finally {
@@ -566,6 +668,26 @@ export default function BnplApplicationScreen({
               <Text style={styles.refPillLabel}>APPLICATION ID:</Text>
               <Text style={styles.refPillVal}>{shortRef}</Text>
             </View>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Mono Sweep authorization</Text>
+            <Text style={styles.helperText}>Status: {submittedLoan.mandateStatus === "active" ? "Ready for repayment" : submittedLoan.mandateStatus || "Pending"}. Mono confirms readiness after you authorize your bank accounts.</Text>
+            {submittedLoan.mandateUrl?.startsWith("https://") && submittedLoan.mandateStatus !== "active" && (
+              <TouchableOpacity style={styles.primaryBtn} onPress={async () => {
+                try {
+                  await WebBrowser.openAuthSessionAsync(submittedLoan.mandateUrl!, "dandoev://payment-callback");
+                  const latest = await MobileApi.getMonoMandate(submittedLoan.loanId, token);
+                  setSubmittedLoan((current) => current ? { ...current, mandateStatus: latest.data.readyToDebit ? "active" : latest.data.status } : current);
+                } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to check Mono mandate. Please retry."); }
+              }}><Text style={styles.primaryBtnText}>Authorize with Mono</Text></TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={async () => {
+              try {
+                const latest = await MobileApi.getMonoMandate(submittedLoan.loanId, token);
+                setSubmittedLoan((current) => current ? { ...current, mandateStatus: latest.data.readyToDebit ? "active" : latest.data.status } : current);
+              } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to refresh mandate status."); }
+            }}><Text style={styles.helperText}>Refresh mandate status</Text></TouchableOpacity>
           </View>
 
           {/* Guarantors Dispatched */}
@@ -742,7 +864,7 @@ export default function BnplApplicationScreen({
           ))}
         </View>
         <View style={styles.progressLabels}>
-          {["Details", "Identity", "Bank", "People", "Review"].map((label, index) => (
+          {["Details", "Identity", "Bank", "Guarantor", "Review"].map((label, index) => (
             <Text key={label} style={[styles.progressLabel, index === step && styles.progressLabelActive]}>{label}</Text>
           ))}
         </View>
@@ -1043,6 +1165,18 @@ export default function BnplApplicationScreen({
                   </Text>
                 </View>
               </View>
+
+              {faceVerified && (
+                <View style={styles.dashboardUploadCard}>
+                  <Text style={styles.inputLabel}>Proof of address</Text>
+                  <Text style={styles.helperText}>Upload a recent utility bill, bank statement, tenancy document, or official correspondence showing your residential address.</Text>
+                  <TouchableOpacity style={styles.uploadButton} onPress={() => void handlePickProofOfAddress()} disabled={uploadingAddress}>
+                    {uploadingAddress ? <ActivityIndicator color="#0A154F" /> : <Upload size={18} color="#0A154F" />}
+                    <Text style={styles.uploadButtonText}>{proofOfAddress ? `Uploaded: ${proofOfAddress.name}` : "Upload proof of address"}</Text>
+                  </TouchableOpacity>
+                  {proofOfAddress && <Text style={styles.uploadSuccess}>✓ Uploaded securely and pending review</Text>}
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
@@ -1063,13 +1197,17 @@ export default function BnplApplicationScreen({
                     setBusy(false);
                   }
                 } else {
+                  if (!proofOfAddress) {
+                    setError("Upload your proof of address before continuing to bank details.");
+                    return;
+                  }
                   setError("");
                   setStep(2);
                 }
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.primaryBtnText}>{busy ? "Checking identity…" : faceVerified ? "Continue to bank details" : "Verify identity and face"}</Text>
+              <Text style={styles.primaryBtnText}>{busy ? "Checking identity…" : faceVerified ? (proofOfAddress ? "Continue to bank details" : "Upload proof of address") : "Verify identity and face"}</Text>
               <ChevronRight size={18} color="#0A154F" />
             </TouchableOpacity>
           </>
@@ -1092,7 +1230,7 @@ export default function BnplApplicationScreen({
               </View>
 
               <Text style={styles.bodyText}>
-                Select your primary bank account where your courier earnings are received. Repayments are automatically debited weekly.
+                Select the bank account where your courier earnings are received. Mono Connect checks its statement for affordability. Repayment debit authorization happens separately after application submission.
               </Text>
 
               <Text style={styles.inputLabel}>Bank Name</Text>
@@ -1129,8 +1267,34 @@ export default function BnplApplicationScreen({
                 placeholder="Account name"
                 placeholderTextColor="#94A3B8"
                 value={accountName}
-                onChangeText={setAccountName}
+                editable={false}
               />
+              <Text style={styles.helperText}>If account lookup is unavailable, connecting the account with Mono below will confirm its name.</Text>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.iconCircle}><BarChart3 size={18} color="#2E3192" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>Bank statement with Mono Connect</Text>
+                  <Text style={styles.cardSub}>Secure financial assessment for your BNPL application</Text>
+                </View>
+              </View>
+              <Text style={styles.bodyText}>Connect the repayment account above. Mono shares its transaction history with DandoEv so we can assess affordability. This step does not authorize repayment debits.</Text>
+              {connectedAssessment?.monoAccountId && connectedAssessment.connectedAccountLast4 === accountNumber.slice(-4) ? (
+                <View style={styles.repaymentSummaryBox}>
+                  <Text style={styles.verifyAccountText}>Bank connected · Account ending {connectedAssessment.connectedAccountLast4}</Text>
+                  <Text style={styles.helperText}>{connectedAssessment.statementMonthsAnalysed} months assessed · {connectedAssessment.underwritingDecision === "MANUAL_REVIEW" ? "Staff credit review required" : connectedAssessment.underwritingDecision?.replace(/_/g, " ") || "Assessment pending"}</Text>
+                </View>
+              ) : <Text style={styles.helperText}>Bank statement not connected yet.</Text>}
+              {!!connectMessage && <Text style={styles.helperText}>{connectMessage}</Text>}
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => void connectBankWithMono()} disabled={connectBusy || accountNumber.length !== 10 || !bankName} activeOpacity={0.85}>
+                {connectBusy ? <ActivityIndicator color="#0A154F" /> : <Building size={18} color="#0A154F" />}
+                <Text style={styles.primaryBtnText}>{connectBusy ? "Connecting bank…" : connectedAssessment?.monoAccountId ? "Reconnect bank with Mono" : "Connect bank with Mono"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => void refreshConnectStatus().catch((cause) => setError(cause instanceof Error ? cause.message : "Could not refresh bank status."))}>
+                <Text style={styles.helperText}>Refresh connection status</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.card}>
@@ -1160,18 +1324,8 @@ export default function BnplApplicationScreen({
               </View>
 
               <Text style={[styles.inputLabel, { marginTop: 14 }]}>Deduction Cadence</Text>
-              <View style={styles.choiceRow}>
-                {["weekly", "monthly"].map((f) => (
-                  <TouchableOpacity
-                    key={f}
-                    style={[styles.choiceBtn, frequency === f && styles.choiceBtnActive]}
-                    onPress={() => setFrequency(f)}
-                  >
-                    <Text style={[styles.choiceBtnText, frequency === f && styles.choiceBtnTextActive]}>
-                      {f.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={[styles.choiceBtn, styles.choiceBtnActive, { alignSelf: "flex-start" }] }>
+                <Text style={[styles.choiceBtnText, styles.choiceBtnTextActive]}>WEEKLY</Text>
               </View>
 
               <View style={styles.repaymentSummaryBox}>

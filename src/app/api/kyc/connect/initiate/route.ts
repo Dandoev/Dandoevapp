@@ -10,11 +10,17 @@ export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
   const reference = `CONNECT-${crypto.randomUUID().replace(/-/g, "").slice(0, 18)}`;
-  const redirectUrl =
-    typeof body.redirectUrl === "string" &&
-    body.redirectUrl.startsWith("dandoev://")
-      ? body.redirectUrl
-      : "dandoev://mono-connect-callback";
+  const requestedRedirect = typeof body.redirectUrl === "string" ? body.redirectUrl : "";
+  let redirectUrl: string;
+  try {
+    const parsed = new URL(requestedRedirect);
+    const allowedHosts = new Set([req.nextUrl.host, "dandoevapp.onrender.com", "dashboard.dandoev.com"]);
+    if (!allowedHosts.has(parsed.host) || parsed.pathname !== "/mono-connect/mobile-return" ||
+        !(parsed.protocol === "https:" || (parsed.protocol === "http:" && parsed.hostname === "localhost"))) throw new Error("Invalid redirect");
+    redirectUrl = parsed.toString();
+  } catch {
+    return NextResponse.json({ error: "Valid DandoEv Mono return URL required" }, { status: 400 });
+  }
   try {
     const session = await initiateMonoConnect({
       name: `${user.firstName} ${user.lastName}`,

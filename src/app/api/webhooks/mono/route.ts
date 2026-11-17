@@ -220,9 +220,23 @@ export async function POST(req: NextRequest) {
       case "mono.events.account_connected":
       case "mono.events.account_updated": {
         const accountId = data.account?._id || data.account?.id || data.id;
-        log.info({ accountId }, "Mono account connected/updated");
+        const connectionReference = data.meta?.ref;
+        log.info({ accountId, connectionReference }, "Mono account connected/updated");
 
         if (accountId) {
+          if (typeof connectionReference === "string" && connectionReference.startsWith("CONNECT-")) {
+            const started = await prisma.auditLog.findFirst({
+              where: { action: "MONO_CONNECT_STARTED", resourceId: connectionReference },
+              orderBy: { createdAt: "desc" },
+              select: { userId: true },
+            });
+            if (started) {
+              await prisma.user.update({
+                where: { id: started.userId },
+                data: { monoAccountId: accountId, monoStatus: "linked" },
+              });
+            }
+          }
           await prisma.user
             .updateMany({
               where: { monoAccountId: accountId },

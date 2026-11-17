@@ -382,6 +382,8 @@ export interface MonoBankAccountDetails {
   balance: number; // NGN
   bvnMasked: string;
   dataStatus: "AVAILABLE" | "PROCESSING" | "FAILED";
+  connectionReference?: string;
+  retrievedData?: string[];
   verified: boolean;
 }
 
@@ -982,7 +984,9 @@ export async function getMonoAccountDetails(
           bvnRaw.length === 11
             ? `${bvnRaw.slice(0, 3)}*****${bvnRaw.slice(-3)}`
             : "",
-        dataStatus: meta.data_status || "AVAILABLE",
+        dataStatus: meta.data_status || "PROCESSING",
+        connectionReference: meta.ref,
+        retrievedData: Array.isArray(meta.retrieved_data) ? meta.retrieved_data : [],
         verified: true,
       };
     } catch (err) {

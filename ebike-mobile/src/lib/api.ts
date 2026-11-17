@@ -275,18 +275,31 @@ export const MobileApi = {
       tenureMonths: number;
       deductionFrequency: string;
       proposedMonthlyRepayment: number;
+      accountNumber: string;
+      bankName: string;
     },
   ) {
     return apiRequest<{ success: boolean; data: any }>("/kyc/mono", {
       method: "POST",
-      body: { code, setupMandate: true, ...options },
+      body: { code, setupMandate: false, ...options },
       token,
+      timeout: 60000,
     });
+  },
+  async getMonoFinancial(token: string) {
+    return apiRequest<{ success: boolean; data: { monoAccountId?: string | null; source?: string; underwritingDecision?: string; statementMonthsAnalysed?: number; verifiedMonthlyInflow?: number; updatedAt?: string; decisionReasons?: string[]; connectedAccountLast4?: string | null; bankName?: string | null; accountName?: string | null; pendingReference?: string | null } }>(
+      "/kyc/mono", { token },
+    );
+  },
+  async completeMonoLinkedAccount(reference: string, token: string, options: { accountNumber: string; bankName: string; tenureMonths: number; deductionFrequency: string; proposedMonthlyRepayment: number }) {
+    return apiRequest<{ success: boolean; pending?: boolean; message?: string; data?: { accountDetails?: { accountName: string; bankName: string } } }>(
+      "/kyc/mono", { method: "POST", body: { action: "complete_linked", reference, setupMandate: false, ...options }, token, timeout: 60000 },
+    );
   },
 
   // 4. BNPL Loans & Repayments
   async applyForLoan(loanData: any, token: string, idempotencyKey?: string) {
-    return apiRequest<{ success: boolean; loanId: string; message: string }>(
+    return apiRequest<{ success: boolean; loanId: string; message: string; data?: { mandate?: { authorizationUrl?: string; status?: string } } }>(
       "/loans",
       {
         method: "POST",
@@ -296,6 +309,13 @@ export const MobileApi = {
           ? { "Idempotency-Key": idempotencyKey }
           : undefined,
       },
+    );
+  },
+
+  async getMonoMandate(loanId: string, token: string) {
+    return apiRequest<{ success: boolean; data: { status: string; readyToDebit: boolean } }>(
+      `/payments/mono/mandate?loanId=${encodeURIComponent(loanId)}`,
+      { token },
     );
   },
 

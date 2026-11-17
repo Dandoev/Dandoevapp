@@ -192,7 +192,7 @@ export default function FinancialInfoPage() {
           nin: saved.kyc?.nin,
           setupMandate: true,
           tenureMonths: saved.tenure || 12,
-          deductionFrequency: saved.deductionFrequency || 'bidaily',
+          deductionFrequency: 'weekly',
         }),
       });
 
@@ -562,7 +562,7 @@ export default function FinancialInfoPage() {
           <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-start gap-3">
             <Info className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
             <div className="text-xs text-slate-700 leading-relaxed">
-              <strong>Automated Loan-Term Deduction Policy:</strong> By authorizing a Mono Direct Debit Mandate, your chosen installment cadence (Daily, Bi-Daily, Weekly, or Monthly) plus your ₦1,000/day compulsory returnable savings escrow will be automatically deducted over your loan term and automatically terminated upon your final installment.
+              <strong>Automated Loan-Term Deduction Policy:</strong> By authorizing a Mono Direct Debit Mandate, weekly installments plus your ₦1,000/day compulsory returnable savings escrow will be automatically deducted over your loan term and automatically terminated upon your final installment.
             </div>
           </div>
 

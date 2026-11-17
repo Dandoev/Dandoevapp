@@ -36,6 +36,7 @@ function SignUpForm() {
     otp: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendNotice, setResendNotice] = useState('');
@@ -412,14 +413,24 @@ function SignUpForm() {
                   <label className="text-xs font-bold text-slate-700 block mb-1">
                     Confirm Password *
                   </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Re-enter password"
-                    value={form.confirmPassword}
-                    onChange={(e) => updateForm('confirmPassword', e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-primary focus:outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Re-enter password"
+                      value={form.confirmPassword}
+                      onChange={(e) => updateForm('confirmPassword', e.target.value)}
+                      className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-primary focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 <button

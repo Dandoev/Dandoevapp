@@ -49,6 +49,31 @@ export default function ApplicationDetailDrawer({
   const [loadingSensitive, setLoadingSensitive] = useState(false);
   const [confirmingIdentity, setConfirmingIdentity] = useState(false);
   const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const [detail, setDetail] = useState<any | null>(null);
+  const [detailError, setDetailError] = useState("");
+  const [detailLoading, setDetailLoading] = useState(false);
+  const refreshDetail = async () => {
+    if (!loan?.id) return;
+    setDetailLoading(true);
+    setDetailError("");
+    try {
+      const response = await fetch(`/api/admin/loans/${encodeURIComponent(loan.id)}`, { cache: "no-store" });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || "Could not load application details");
+      setDetail(json.data);
+    } catch (error) {
+      setDetailError(error instanceof Error ? error.message : "Could not load application details");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (!isOpen || !loan?.id) return;
+    setDetail(null);
+    void refreshDetail();
+  // Refresh when the selected application changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, loan?.id]);
   useEffect(() => {
     if (!loan?.userId && !loan?.user?.id) return;
     const userId = loan.userId || loan.user.id;
@@ -124,7 +149,10 @@ export default function ApplicationDetailDrawer({
     : monthlyInflow > 0
       ? Math.round((loanMonthly / monthlyInflow) * 100)
       : null;
-  const approvalBlockers = getApprovalBlockers({ ...loan, monoAssessment: assessment });
+  const currentLoan = detail || loan;
+  const approvalBlockers = getApprovalBlockers({ ...currentLoan, monoAssessment: assessment || currentLoan.monoAssessment });
+  const mandateStatus = currentLoan.monoMandateStatus || "pending";
+  const recentTransactions = (currentLoan.transactions || []).filter((item: any) => item.repaymentId);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-fade-in">
@@ -145,9 +173,8 @@ export default function ApplicationDetailDrawer({
             </h2>
             <div className="mt-3 text-xs text-neutral-500">
               Account:{" "}
-              {sensitiveData?.bankAccountNumber || loan.user?.bankAccountNumber
-                ? sensitiveData?.bankAccountNumber ||
-                  `••••${String(loan.user.bankAccountNumber).slice(-4)}`
+              {sensitiveData?.bankAccountNumber || detail?.user?.bankAccountNumber
+                ? sensitiveData?.bankAccountNumber || detail.user.bankAccountNumber
                 : "Unavailable"}
               {" · "}BVN: {sensitiveData?.bvn || "••••"} {" · "}NIN:{" "}
               {sensitiveData?.ninNumber || "••••"}
@@ -181,6 +208,39 @@ export default function ApplicationDetailDrawer({
             <h3 className="font-bold">Approval readiness</h3>
             {approvalBlockers.length ? <ul className="mt-2 list-disc pl-5 space-y-1">{approvalBlockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul> : <p className="mt-2">Core checks are ready. Confirm payment and asset details before approval.</p>}
           </div>
+          <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-neutral-900 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-bold">Mono Sweep collection readiness</h3>
+              <button type="button" onClick={refreshDetail} disabled={detailLoading} className="text-xs font-semibold text-blue-700 disabled:opacity-50">
+                {detailLoading ? "Refreshing…" : "Refresh status"}
+              </button>
+            </div>
+            {detailError && <p className="text-xs text-red-700" role="alert">{detailError}</p>}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div><span className="text-neutral-500">Mandate status</span><p className="font-bold capitalize">{mandateStatus.replace(/_/g, " ")}</p></div>
+              <div><span className="text-neutral-500">Repayment bank</span><p className="font-bold">{currentLoan.user?.bankName || "Not supplied"}</p></div>
+              <div><span className="text-neutral-500">Account</span><p className="font-bold">{detail?.user?.bankAccountNumber || "Not supplied"}</p></div>
+              <div><span className="text-neutral-500">Schedule</span><p className="font-bold capitalize">{currentLoan.deductionFrequency || "Weekly"}</p></div>
+            </div>
+            <p className="text-xs font-medium text-blue-900">
+              {mandateStatus === "active" ? "Mandate recorded active. Approval also checks Mono live readiness before scheduling collections." :
+                mandateStatus === "approved" ? "Customer authorised the mandate. Wait for Mono to confirm it is ready to debit." :
+                mandateStatus === "paused" || mandateStatus === "cancelled" ? "Collection is unavailable. Ask the customer to set up a new mandate." :
+                "Customer needs to complete Mono mandate authorisation in the app."}
+            </p>
+            <div className="border-t border-blue-200 pt-3">
+              <h4 className="text-xs font-bold">Repayment history</h4>
+              {(currentLoan.repayments || []).length ? (
+                <div className="mt-2 max-h-36 overflow-y-auto space-y-1">
+                  {currentLoan.repayments.map((repayment: any) => <div key={repayment.id} className="flex justify-between gap-2 text-xs">
+                    <span>#{repayment.installmentNumber} · {formatDate(repayment.dueDate)} · {formatNaira(Number(repayment.amount))}</span>
+                    <span className="font-semibold capitalize">{repayment.status}{repayment.paymentReference && repayment.status !== "paid" ? " · collection processing" : ""}</span>
+                  </div>)}
+                </div>
+              ) : <p className="mt-1 text-xs text-neutral-500">Repayments appear after approval.</p>}
+              {recentTransactions.length > 0 && <p className="mt-2 text-xs text-neutral-600">Collection attempts: {recentTransactions.length} · Latest: {recentTransactions[0].status}{recentTransactions[0].status === "failed" ? " — review payment records and ask the customer to fund their wallet or restore the mandate." : ""}</p>}
+            </div>
+          </section>
           {/* 1. Financed Vehicle Summary */}
           <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
             <div>
@@ -376,8 +436,8 @@ export default function ApplicationDetailDrawer({
                 <span className="text-neutral-500">NUBAN Account:</span>
                 <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">
                   {sensitiveData?.bankAccountNumber ||
-                    (loan.user?.bankAccountNumber
-                      ? `••••${String(loan.user.bankAccountNumber).slice(-4)}`
+                    (detail?.user?.bankAccountNumber
+                      ? detail.user.bankAccountNumber
                       : "••••••••••")}
                 </span>
               </div>

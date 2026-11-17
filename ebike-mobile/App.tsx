@@ -229,6 +229,14 @@ function App() {
         );
       case "loans":
         return <LoansScreen token={token} />;
+      case "wallet":
+        return (
+          <FundWalletScreen
+            token={token}
+            onBack={() => setCurrentTab("home")}
+            onSuccess={() => setCurrentTab("home")}
+          />
+        );
       case "profile":
         return (
           <ProfileScreen

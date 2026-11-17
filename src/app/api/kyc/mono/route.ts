@@ -7,7 +7,7 @@
 //      6-month bank statement underwriting, and optional Mandate Order setup
 // ============================================================
 import { NextRequest, NextResponse } from "next/server";
-import { withSecurityHeaders } from "@/lib/api-handler";
+import { withSecurityHeaders, withAuth, type ApiContext } from "@/lib/api-handler";
 import { verifySupabaseToken } from "@/lib/auth";
 import {
   exchangeMonoToken,
@@ -21,12 +21,30 @@ import {
   setupMonoRecurringMandate,
   isLiveMonoConfigured,
   MonoFeatureUnavailableError,
+  isMonoProductConfigured,
   type DeductionInterval,
 } from "@/lib/mono";
-import { encryptField } from "@/lib/encryption";
+import { encryptField, decryptField } from "@/lib/encryption";
 import { notifyKycStatusChanged } from "@/lib/notifications";
 import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
+
+export const GET = withAuth(async (_req: NextRequest, ctx: ApiContext) => {
+  const [assessment, user, latestConnection] = await Promise.all([
+    prisma.monoFinancialAssessment.findUnique({
+      where: { userId: ctx.user.sub },
+      select: { monoAccountId: true, source: true, underwritingDecision: true, statementMonthsAnalysed: true, verifiedMonthlyInflow: true, updatedAt: true, decisionReasons: true },
+    }),
+    prisma.user.findUnique({ where: { id: ctx.user.sub }, select: { bankAccountNumber: true, bankAccountName: true, bankName: true, monoAccountId: true } }),
+    prisma.auditLog.findFirst({ where: { userId: ctx.user.sub, action: "MONO_CONNECT_STARTED" }, orderBy: { createdAt: "desc" }, select: { resourceId: true, createdAt: true } }),
+  ]);
+  const storedAccountNumber = user?.bankAccountNumber;
+  const connectedAccountLast4 = storedAccountNumber && assessment?.monoAccountId === user?.monoAccountId
+    ? decryptField(storedAccountNumber)?.slice(-4) || null : null;
+  const pendingReference = latestConnection && Date.now() - latestConnection.createdAt.getTime() < 24 * 60 * 60 * 1000
+    ? latestConnection.resourceId : null;
+  return NextResponse.json({ success: true, data: assessment ? { ...assessment, connectedAccountLast4, bankName: user?.bankName, accountName: user?.bankAccountName, pendingReference: connectedAccountLast4 ? null : pendingReference } : { pendingReference } });
+});
 
 async function resolveOptionalUser(req: NextRequest) {
   try {
@@ -57,6 +75,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     const {
       action,
       code,
+      reference,
       accountNumber,
       bankName,
       bankCode,
@@ -175,12 +194,11 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     // ---------------------------------------------------------
     // MODE 3: Full Mono Connect Exchange + Identity + 6-Month Statement
     // ---------------------------------------------------------
-    if (!code)
+    if (!code && action !== "complete_linked")
       return NextResponse.json(
-        { error: "Mono authorization code is required" },
+        { error: "Mono authorization code or linked account reference is required" },
         { status: 400 },
       );
-    const authCode = code;
 
     const { isDemoAllowed } = await import("@/lib/env");
     const userId = userCtx.sub || (isDemoAllowed() ? "cust-01" : null);
@@ -192,25 +210,54 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     }
 
     // Step 1: Exchange code for Mono Account ID
-    log.info({ userId }, "Exchanging Mono auth code");
-    const { id: accountId } = await exchangeMonoToken(authCode);
+    let accountId: string;
+    if (action === "complete_linked") {
+      if (typeof reference !== "string" || !reference.startsWith("CONNECT-"))
+        return NextResponse.json({ error: "Valid Mono connection reference required" }, { status: 400 });
+      const started = await prisma.auditLog.findFirst({ where: { userId, action: "MONO_CONNECT_STARTED", resourceId: reference }, select: { createdAt: true } });
+      if (!started) return NextResponse.json({ error: "Bank connection session not found" }, { status: 404 });
+      if (Date.now() - started.createdAt.getTime() > 24 * 60 * 60 * 1000)
+        return NextResponse.json({ error: "Bank connection session expired. Connect your bank again." }, { status: 410 });
+      const linked = await prisma.user.findUnique({ where: { id: userId }, select: { monoAccountId: true } });
+      if (!linked?.monoAccountId) return NextResponse.json({ success: true, pending: true, message: "Waiting for Mono to confirm the bank connection" }, { status: 202 });
+      accountId = linked.monoAccountId;
+    } else {
+      log.info({ userId }, "Exchanging Mono auth code");
+      ({ id: accountId } = await exchangeMonoToken(code));
+    }
 
     // Step 2: Fetch Linked Bank Account Details & Identity in parallel
-    const [accountDetails, identity] = await Promise.all([
-      getMonoAccountDetails(accountId, {
+    let accountDetails;
+    try {
+      accountDetails = await getMonoAccountDetails(accountId, {
         bankName,
         accountNumber,
         accountName:
           firstName && lastName ? `${firstName} ${lastName}` : undefined,
-      }),
-      getMonoIdentity(accountId, {
+      });
+    } catch (error) {
+      if (action === "complete_linked" && error instanceof Error && error.message === "Mono returned incomplete bank account details")
+        return NextResponse.json({ success: true, pending: true, message: "Mono is still preparing your bank account details" }, { status: 202 });
+      throw error;
+    }
+    const identity = await getMonoIdentity(accountId, {
         firstName,
         lastName,
         email: email || userCtx?.email,
         phone,
         bvn,
-      }),
-    ]);
+      }).catch((error) => {
+        log.warn({ error }, "Mono Connect identity details unavailable; facial verification remains authoritative");
+        return null;
+      });
+    if (action === "complete_linked" && accountDetails.connectionReference !== reference)
+      return NextResponse.json({ success: true, pending: true, message: "Waiting for Mono to confirm this bank connection" }, { status: 202 });
+    if (!(["AVAILABLE", "PARTIAL"].includes(String(accountDetails.dataStatus).toUpperCase())) ||
+        (action === "complete_linked" && !accountDetails.retrievedData?.includes("transactions")))
+      return NextResponse.json({ success: true, pending: true, message: "Mono is still preparing your bank statement. Refresh in a moment." }, { status: 202 });
+    if (accountNumber && accountDetails.accountNumber !== String(accountNumber).replace(/\D/g, "")) {
+      return NextResponse.json({ error: "The connected bank account does not match the account number entered. Connect the selected repayment account." }, { status: 409 });
+    }
 
     // Step 3: Cross-validate KYC Identity (BVN, NIN, Legal Name match)
     const verifiedUser = await prisma.user.findUnique({
@@ -225,24 +272,31 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         { status: 409 },
       );
     }
-    const creditBvn = identity.bvn;
-    if (!creditBvn || !/^\d{11}$/.test(creditBvn)) {
-      return NextResponse.json(
-        {
-          error: "A verified 11-digit BVN is needed for credit history lookup",
-        },
-        { status: 409 },
-      );
-    }
+    const creditBvn = identity?.bvn;
 
     // Step 4: Fetch 6-month Bank Statement & CBN Credit Bureau report
     log.info(
       { accountId },
       "Analyzing 6-month bank statement turnover & credit history",
     );
+    let creditReportAvailable = isMonoProductConfigured("lookup") && /^\d{11}$/.test(creditBvn || "");
+    const unavailableCreditReport = {
+      creditScore: 0,
+      rating: "POOR" as const,
+      activeLoansCount: 0,
+      totalActiveDebt: 0,
+      totalOverdueAmount: 0,
+      delinquentAccountsCount: 0,
+      dishonoredDirectDebitsCount: 0,
+      summary: "Credit bureau report unavailable; staff credit review required.",
+    };
     const [statement, creditReport] = await Promise.all([
       getMonoStatement(accountId, 6),
-      getMonoCreditHistory(creditBvn),
+      creditReportAvailable ? getMonoCreditHistory(creditBvn!).catch((error) => {
+        if (!(error instanceof MonoFeatureUnavailableError)) throw error;
+        creditReportAvailable = false;
+        return unavailableCreditReport;
+      }) : Promise.resolve(unavailableCreditReport),
     ]);
 
     // Step 5: Run Financial Health & Affordability Underwriting Engine
@@ -253,6 +307,10 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         ? Number(proposedMonthlyRepayment)
         : undefined,
     });
+    if (!creditReportAvailable) {
+      underwriting.underwritingDecision = "MANUAL_REVIEW";
+      underwriting.decisionReasons.push("Mono Lookup credit history unavailable; staff credit review required before approval.");
+    }
 
     // Persist the complete provider-backed assessment for credit operations.
     await prisma.monoFinancialAssessment.upsert({
@@ -319,7 +377,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         firstName: verifiedUser?.firstName || firstName || "Customer",
         lastName: verifiedUser?.lastName || lastName || "Rider",
         address: verifiedUser?.address || undefined,
-        bvn: creditBvn,
+          bvn: creditBvn || undefined,
         amount: proposedMonthlyRepayment
           ? Number(proposedMonthlyRepayment)
           : 6555,
@@ -348,8 +406,8 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
             ? encryptField(accountDetails.accountNumber)
             : undefined,
           bankAccountName: accountDetails.accountName,
-          bvn: identity.bvn ? encryptField(identity.bvn) : undefined,
-          address: identity.addressLine1 || undefined,
+          bvn: identity?.bvn ? encryptField(identity.bvn) : undefined,
+          address: identity?.addressLine1 || undefined,
           monthlyIncome: underwriting.verifiedMonthlyInflow,
         },
       });
@@ -375,7 +433,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
             provider: "mono",
             accountId,
             bankName: accountDetails.bankName,
-            bvnVerified: true,
+            bvnVerified: false,
             verifiedMonthlyInflow: underwriting.verifiedMonthlyInflow,
             dtiRatioPercent: underwriting.dtiRatioPercent,
             creditScore: underwriting.creditScore,
@@ -393,7 +451,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
           firstName: updatedUser.firstName,
         },
         "verified",
-        "Your identity, 6-month bank statement, and account details have been verified via Mono Open Banking.",
+        "Your bank account and 6-month statement were connected via Mono Open Banking. Your application remains subject to credit review.",
       ).catch(() => null);
     } catch (error) {
       log.error({ error }, "Failed to persist verified Mono KYC");
@@ -403,8 +461,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     return NextResponse.json({
       success: true,
       accountId,
-      message:
-        "Identity, bank account, and 6-month financial statement verified via Mono",
+      message: "Bank account connected and financial statement assessed via Mono",
       data: {
         accountId,
         verifiedName: accountDetails.accountName,

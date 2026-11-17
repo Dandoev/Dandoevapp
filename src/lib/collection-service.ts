@@ -2,7 +2,6 @@ import crypto from 'crypto';
 import prisma from './prisma';
 import logger from './logger';
 import { lockSavings, debitWalletForRepayment } from './wallet';
-import { chargePaystackAuthorization } from './paystack';
 import { chargeMonoMandate } from './mono';
 import { enqueueNotification } from './queue';
 import dbService from './db-service';
@@ -10,7 +9,7 @@ import { isDemoAllowed } from './env';
 
 /**
  * Sweeps all pending DailySaving records for a given date (default today).
- * Attempts to auto-debit the user's main wallet, Mono Direct Debit Mandate, or Paystack card.
+ * Attempts to auto-debit the user's main wallet or Mono Direct Debit Mandate.
  */
 export async function runDailySavingsSweep(targetDate: Date = new Date()) {
   const log = logger.child({
@@ -64,7 +63,7 @@ export async function runDailySavingsSweep(targetDate: Date = new Date()) {
           });
           collectedCount++;
         } else {
-          // --- Path 2: Mono Direct Debit Mandate or Paystack card ---
+          // --- Path 2: Mono Direct Debit Mandate ---
           const activeMandateId =
             (!(record.loan as any)?.monoMandateStatus || (record.loan as any)?.monoMandateStatus === 'active'
               ? (record.loan as any)?.monoMandateId
@@ -114,43 +113,6 @@ export async function runDailySavingsSweep(targetDate: Date = new Date()) {
             }
           }
 
-          // Option B: Paystack Card Direct Debit Fallback
-          if (!debitedSuccessfully && record.user.paystackAuthCode) {
-            try {
-              const charge = await chargePaystackAuthorization({
-                authorization_code: record.user.paystackAuthCode,
-                email: record.user.email,
-                amount: amount * 100, // Paystack uses kobo
-                reference: `SAV-PSK-${record.id}`,
-                metadata: { saving_record_id: record.id, type: 'daily_savings' },
-              });
-
-              if (charge.status === 'success') {
-                await prisma.$transaction(async (tx) => {
-                  await lockSavings(
-                    tx,
-                    record.userId,
-                    amount,
-                    charge.reference,
-                    `Daily Savings (Paystack): ${record.date.toISOString().split('T')[0]}`
-                  );
-                  await tx.dailySaving.update({
-                    where: { id: record.id },
-                    data: { status: 'collected', paymentRef: charge.reference },
-                  });
-                });
-                collectedCount++;
-                debitedSuccessfully = true;
-                log.info(
-                  { userId: record.userId, reference: charge.reference },
-                  'Daily saving collected via Paystack direct debit'
-                );
-              }
-            } catch (chargeErr: any) {
-              log.warn({ userId: record.userId, error: chargeErr.message }, 'Paystack direct debit failed');
-            }
-          }
-
           if (!debitedSuccessfully) {
             await prisma.dailySaving.update({
               where: { id: record.id },
@@ -159,7 +121,7 @@ export async function runDailySavingsSweep(targetDate: Date = new Date()) {
             missedCount++;
             log.warn(
               { userId: record.userId },
-              'No active direct debit mandate or card charge succeeded — saving missed'
+              'No active Mono mandate charge succeeded — saving missed'
             );
           }
         }
@@ -185,7 +147,7 @@ export async function retryMissedSavings(userId: string) {
 
 /**
  * Sweeps due BNPL Repayments based on each loan's term schedule and attempts
- * auto-collection via Wallet -> Mono Direct Debit Mandate -> Paystack Card.
+ * auto-collection via Wallet -> Mono Direct Debit Mandate.
  */
 export async function runRepaymentCollectionSweep(targetDate: Date = new Date()) {
   const log = logger.child({
@@ -252,7 +214,6 @@ export async function runRepaymentCollectionSweep(targetDate: Date = new Date())
  * Attempts to collect a single scheduled loan installment using:
  *   1. Rider Wallet Balance
  *   2. Mono Direct Debit Mandate Order (`chargeMonoMandate`) tied to the loan term
- *   3. Paystack Card Authorization fallback
  */
 export async function collectRepaymentById(repayment: any) {
   const loan = repayment.loanRelation;
@@ -265,7 +226,12 @@ export async function collectRepaymentById(repayment: any) {
     // --- Path 1: Try Wallet Debit ---
     const walletBalance = user?.wallet ? Number(user.wallet.mainBalance) : 0;
     if (walletBalance >= amount) {
-      await prisma.$transaction(async (tx) => {
+      const walletPaid = await prisma.$transaction(async (tx) => {
+        const claim = await tx.repayment.updateMany({
+          where: { id: repayment.id, paymentReference: null, status: { in: ['upcoming', 'failed', 'overdue'] } },
+          data: { paymentReference: `WALLET-RPY-${repayment.id}` },
+        });
+        if (claim.count !== 1) return false;
         await debitWalletForRepayment(
           tx,
           user.id,
@@ -282,7 +248,9 @@ export async function collectRepaymentById(repayment: any) {
             paymentReference: `WALLET-RPY-${repayment.id}`,
           },
         });
+        return true;
       });
+      if (!walletPaid) return { success: false, status: 'already_processing' };
 
       await checkAndCompleteLoanTerm(repayment.loanId);
 
@@ -298,8 +266,8 @@ export async function collectRepaymentById(repayment: any) {
 
     // --- Path 2: Mono Direct Debit Mandate Auto-Deduction (Loan Term Mandate Order) ---
     const monoMandateId =
-      (!loan?.monoMandateStatus || loan?.monoMandateStatus === 'active' ? loan?.monoMandateId : null) ||
-      (!user?.monoMandateStatus || user?.monoMandateStatus === 'active' ? user?.monoMandateId : null);
+      (loan?.monoMandateStatus === 'active' ? loan?.monoMandateId : null) ||
+      (user?.monoMandateStatus === 'active' ? user?.monoMandateId : null);
     if (monoMandateId) {
       const monoRef = `RPY-${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
       try {
@@ -357,48 +325,8 @@ export async function collectRepaymentById(repayment: any) {
         });
         logger.warn(
           { userId: user?.id, mandateId: monoMandateId, error: monoErr.message },
-          'Mono Mandate auto-charge failed, attempting Paystack fallback'
+          'Mono Mandate auto-charge failed'
         );
-      }
-    }
-
-    // --- Path 3: Try Paystack Card Authorization Fallback ---
-    if (user?.paystackAuthCode) {
-      try {
-        const charge = await chargePaystackAuthorization({
-          authorization_code: user.paystackAuthCode,
-          email: user.email,
-          amount: amount * 100,
-          reference: `RPY-${repayment.id}-${Date.now()}`,
-          metadata: { repayment_id: repayment.id, type: 'loan_repayment' },
-        });
-
-        if (charge.status === 'success') {
-          await prisma.$transaction(async (tx) => {
-            await tx.repayment.update({
-              where: { id: repayment.id },
-              data: {
-                status: 'paid',
-                paidDate: new Date(),
-                amountPaid: amount,
-                paymentReference: charge.reference,
-              },
-            });
-          });
-
-          await checkAndCompleteLoanTerm(repayment.loanId);
-
-          await enqueueNotification({
-            userId: user.id,
-            type: 'payment_success',
-            title: 'Loan Repayment Successful',
-            message: `Your installment #${repayment.installmentNumber} of ₦${amount.toLocaleString()} was charged to your card.`,
-            channels: ['email', 'whatsapp'],
-          });
-          return { success: true, method: 'card' };
-        }
-      } catch (chargeErr: any) {
-        logger.warn({ userId: user.id, error: chargeErr.message }, 'Paystack auto-charge failed');
       }
     }
 

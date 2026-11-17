@@ -22,7 +22,7 @@ describe('Mono repayment collection claim', () => {
     id: 'repayment-1', loanId: 'loan-1', installmentNumber: 1,
     amount: 2000, lateFee: 0, status: 'upcoming', paymentReference: null,
     loanRelation: {
-      tenure: 12, monoMandateId: 'mandate-1',
+      tenure: 12, monoMandateId: 'mandate-1', monoMandateStatus: 'active',
       user: { id: 'user-1', email: 'user@example.com', wallet: { mainBalance: 0 } },
     },
   };

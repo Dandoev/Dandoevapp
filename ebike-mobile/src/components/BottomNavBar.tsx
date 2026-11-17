@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { LayoutDashboard, ShoppingBag, CreditCard, User } from 'lucide-react-native';
+import { LayoutDashboard, ShoppingBag, CreditCard, User, WalletCards } from 'lucide-react-native';
 
-export type TabType = 'home' | 'bikes' | 'loans' | 'profile';
+export type TabType = 'home' | 'bikes' | 'loans' | 'wallet' | 'profile';
 
 interface BottomNavBarProps {
   currentTab: TabType;
@@ -15,6 +15,7 @@ export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: Bo
     { key: 'bikes', label: 'Shop', icon: ShoppingBag },
     { key: 'home', label: 'Overview', icon: LayoutDashboard },
     { key: 'loans', label: 'Loans', icon: CreditCard },
+    { key: 'wallet', label: 'Wallet', icon: WalletCards },
     { key: 'profile', label: 'Profile', icon: User },
   ];
 

@@ -56,7 +56,7 @@ function BnplCheckoutContent() {
   // Financing Configuration
   const [tenureMonths, setTenureMonths] = useState<number>(BNPL_CONFIG.defaultTenure || 12);
   const [downPaymentPercent, setDownPaymentPercent] = useState<number>(0);
-  const [repaymentCadence, setRepaymentCadence] = useState<'daily' | 'bidaily' | 'monthly'>('bidaily');
+  const [repaymentCadence] = useState<'weekly'>('weekly');
   const [includeInsurance, setIncludeInsurance] = useState<boolean>(true);
 
   // Customer Form
@@ -171,19 +171,9 @@ function BnplCheckoutContent() {
   const dailyRepayment = Math.round(installmentAmount / 2);
   const monthlyRepayment = Math.round(installmentAmount * 15);
 
-  const activeRepaymentAmount =
-    repaymentCadence === 'daily'
-      ? dailyRepayment
-      : repaymentCadence === 'bidaily'
-      ? biDailyRepayment
-      : monthlyRepayment;
+  const activeRepaymentAmount = biDailyRepayment;
 
-  const activeRepaymentSuffix =
-    repaymentCadence === 'daily'
-      ? '/ day'
-      : repaymentCadence === 'bidaily'
-      ? '/ every 2 days'
-      : '/ month';
+  const activeRepaymentSuffix = '/ week';
 
   const handleStep1Continue = () => {
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.phone.trim() || !formData.deliveryAddress.trim()) {
@@ -735,7 +725,7 @@ function BnplCheckoutContent() {
                     Customize Your Tenure & Repayment Cadence
                   </h2>
                   <p className="text-slate-500 text-xs mt-1">
-                    Tailor your installment schedule to match your daily or monthly earnings.
+                    Repayments are collected weekly throughout your approved loan term.
                   </p>
                 </div>
 
@@ -745,15 +735,10 @@ function BnplCheckoutContent() {
                     Preferred Auto-Debit Frequency
                   </label>
                   <div className="grid grid-cols-3 gap-3 mt-2">
-                    {[
-                      { id: 'daily', label: 'Daily', amount: dailyRepayment },
-                      { id: 'bidaily', label: 'Every 2 Days', amount: biDailyRepayment },
-                      { id: 'monthly', label: 'Monthly', amount: monthlyRepayment },
-                    ].map((c) => (
+                    {[{ id: 'weekly', label: 'Weekly', amount: biDailyRepayment }].map((c) => (
                       <button
                         key={c.id}
                         type="button"
-                        onClick={() => setRepaymentCadence(c.id as any)}
                         className={`p-3.5 rounded-2xl border text-left transition-all ${
                           repaymentCadence === c.id
                             ? 'bg-primary text-white border-primary shadow-sm'
@@ -1055,15 +1040,10 @@ function BnplCheckoutContent() {
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5 pt-1">
-                  {[
-                    { id: 'daily', label: 'Daily' },
-                    { id: 'bidaily', label: '2-Days' },
-                    { id: 'monthly', label: 'Monthly' },
-                  ].map((c) => (
+                  {[{ id: 'weekly', label: 'Weekly' }].map((c) => (
                     <button
                       key={c.id}
                       type="button"
-                      onClick={() => setRepaymentCadence(c.id as any)}
                       className={`py-1.5 text-[10px] font-bold rounded-lg transition-all ${
                         repaymentCadence === c.id
                           ? 'bg-accent text-primary-dark'

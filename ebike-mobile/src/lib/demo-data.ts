@@ -246,7 +246,7 @@ export const ALL_PRODUCTS: DemoProduct[] = [
   {
     id: 'bike-g90',
     type: 'bike',
-    name: 'DandoEv G90 Flagship Commuter',
+    name: 'DandoEv G90',
     brand: 'DandoEv',
     model: 'G90',
     category: 'Commuter',
@@ -667,7 +667,7 @@ function generateWeeklyRepayments(): DemoRepayment[] {
 
 export const INITIAL_DEMO_LOAN: DemoLoan = {
   id: 'loan-dando-902',
-  bikeName: 'DandoEv G90 Flagship Commuter',
+  bikeName: 'DandoEv G90',
   bikeModel: 'G90',
   bikeImage: 'bike-g90',
   totalAmount: 1700000,

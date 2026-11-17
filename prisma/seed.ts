@@ -59,7 +59,7 @@ async function main() {
   // ---- 2. Seed Bikes ----
   const bikes = [
     {
-      name: 'DandoEv G90 Flagship',
+      name: 'DandoEv G90',
       brand: 'DandoEv',
       model: 'G90',
       description: 'Our flagship commercial urban commuter e-bike in Nigeria. Single 48V 20Ah swappable battery, 750W high-efficiency motor, rugged metal frame, 20x4 pneumatic tubeless puncture-resistant fat tyres, digital dashboard with NFC card unlock, anti-theft motion alerts, and Google Maps.',

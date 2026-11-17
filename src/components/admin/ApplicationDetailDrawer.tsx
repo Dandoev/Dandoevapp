@@ -52,6 +52,7 @@ export default function ApplicationDetailDrawer({
   const [detail, setDetail] = useState<any | null>(null);
   const [detailError, setDetailError] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
+  const [complianceChecks, setComplianceChecks] = useState<any[]>([]);
   const refreshDetail = async () => {
     if (!loan?.id) return;
     setDetailLoading(true);
@@ -81,6 +82,14 @@ export default function ApplicationDetailDrawer({
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => setAssessment(json?.data?.[0] || null))
       .catch(() => setAssessment(null));
+  }, [loan?.id, loan?.userId, loan?.user?.id]);
+  useEffect(() => {
+    const userId = loan?.userId || loan?.user?.id;
+    if (!userId) return;
+    fetch(`/api/admin/compliance-screening?userId=${encodeURIComponent(userId)}`, { cache: "no-store" })
+      .then((res) => res.ok ? res.json() : null)
+      .then((json) => setComplianceChecks(json?.data || []))
+      .catch(() => setComplianceChecks([]));
   }, [loan?.id, loan?.userId, loan?.user?.id]);
   const revealSensitiveData = async () => {
     if (!loan?.id || loadingSensitive) return;
@@ -208,6 +217,12 @@ export default function ApplicationDetailDrawer({
             <h3 className="font-bold">Approval readiness</h3>
             {approvalBlockers.length ? <ul className="mt-2 list-disc pl-5 space-y-1">{approvalBlockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul> : <p className="mt-2">Core checks are ready. Confirm payment and asset details before approval.</p>}
           </div>
+          <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-neutral-900 space-y-3">
+            <div className="flex items-center justify-between"><h3 className="font-bold">Credit & blacklist checks</h3><span className="text-xs text-neutral-500">Mono Lookup</span></div>
+            {assessment ? <div className="grid grid-cols-2 gap-3 text-xs"><div><span className="text-neutral-500">Credit decision</span><p className="font-bold capitalize">{String(assessment.underwritingDecision || "pending").replace(/_/g, " ")}</p></div><div><span className="text-neutral-500">Credit score</span><p className="font-bold">{assessment.creditScore || "Not supplied"}</p></div><div><span className="text-neutral-500">Active debt</span><p className="font-bold">{formatNaira(Number(assessment.existingMonthlyDebt || 0))}</p></div><div><span className="text-neutral-500">Risk tier</span><p className="font-bold">{assessment.riskTier || "Pending"}</p></div></div> : <p className="text-xs text-neutral-500">Financial assessment not completed.</p>}
+            <div className="border-t border-slate-200 pt-3 text-xs"><span className="text-neutral-500">Blacklist / sanctions screening</span>{complianceChecks.length ? complianceChecks.slice(0, 3).map((check: any) => <div key={check.id} className="mt-1 flex justify-between gap-2"><span className="capitalize">{String(check.action).replace(/^MONO_/, "").replace(/_/g, " ").toLowerCase()}</span><span className="font-semibold">{check.resourceId || "Recorded"}</span></div>) : <p className="mt-1 text-neutral-500">No Mono watchlist result recorded yet.</p>}</div>
+            <p className="text-[11px] text-neutral-500">A match requires compliance review and must not be auto-approved. A PEP match is not automatically a blacklist; apply enhanced due diligence.</p>
+          </section>
           <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-neutral-900 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-bold">Mono Sweep collection readiness</h3>

@@ -59,10 +59,14 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
     if (selectedCategory === 'E-Bikes') return p.type === 'bike';
     return true;
   }).filter((p) => {
+    const productName = String(p.name || '');
+    const productBrand = String(p.brand || '');
+    const productCategory = String(p.category || '');
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase());
+      productName.toLowerCase().includes(query) ||
+      productBrand.toLowerCase().includes(query) ||
+      productCategory.toLowerCase().includes(query);
 
     return matchesSearch;
   });

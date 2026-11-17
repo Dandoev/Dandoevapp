@@ -87,6 +87,16 @@ export async function POST(req: NextRequest) {
       `mono:${crypto.createHash("sha256").update(rawBody).digest("hex")}`;
     log.info({ event: payload.event, eventId }, "Mono webhook received");
 
+    if (payload.event.startsWith("mono.events.watchlist.")) {
+      const screening = payload.data as any;
+      const screeningId = screening.id || screening.screening_id;
+      const userLog = screening.user_id || screening.metadata?.userId;
+      if (userLog) {
+        const action = payload.event.includes("match_found") ? "MONO_WATCHLIST_MATCH_FOUND" : payload.event.includes("failed") ? "MONO_WATCHLIST_FAILED" : "MONO_WATCHLIST_COMPLETED";
+        await prisma.auditLog.create({ data: { userId: userLog, action, resource: "mono_lookup", resourceId: screeningId, details: JSON.stringify(screening) } }).catch(() => {});
+      }
+    }
+
     // Deduplicate event
     const isDuplicate = await deduplicateWebhookEvent(
       "mono",

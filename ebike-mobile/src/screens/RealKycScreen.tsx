@@ -123,14 +123,16 @@ export default function RealKycScreen({
       const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png", "application/pdf"], copyToCacheDirectory: true });
       if (result.canceled || !result.assets[0]) return;
       const file = result.assets[0];
+      const fileName = file.name || file.uri.split(/[\\/]/).pop() || "proof-of-address";
       setUploadingAddress(true);
       setMessage(null);
-      const inferredMimeType = file.name.toLowerCase().endsWith(".pdf")
+      const lowerName = fileName.toLowerCase();
+      const inferredMimeType = lowerName.endsWith(".pdf")
         ? "application/pdf"
-        : file.name.toLowerCase().endsWith(".png")
+        : lowerName.endsWith(".png")
           ? "image/png"
           : "image/jpeg";
-      const uploaded = await MobileApi.uploadProofOfAddress({ uri: file.uri, name: file.name, mimeType: file.mimeType || inferredMimeType }, token);
+      const uploaded = await MobileApi.uploadProofOfAddress({ uri: file.uri, name: fileName, mimeType: file.mimeType || inferredMimeType }, token);
       setAddressDocument(uploaded.data);
       setMessage("Proof of address uploaded and sent for review.");
     } catch (error) {

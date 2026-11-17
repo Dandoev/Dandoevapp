@@ -766,6 +766,22 @@ export async function lookupMonoNin(nin: string): Promise<{
   };
 }
 
+/** Mono Lookup Mashup validates BVN, NIN, and date of birth in one request. */
+export async function lookupMonoMashup(params: { bvn: string; nin: string; dateOfBirth: string }) {
+  const bvn = (params.bvn || "").replace(/\D/g, "");
+  const nin = (params.nin || "").replace(/\D/g, "");
+  if (bvn.length !== 11) throw new Error("BVN must be exactly 11 digits");
+  if (nin.length !== 11) throw new Error("NIN must be exactly 11 digits");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(params.dateOfBirth || "")) throw new Error("Date of birth must be in YYYY-MM-DD format");
+  const res = await monoFetch<{ data?: any }>(
+    "/lookup/mashup",
+    { method: "POST", body: JSON.stringify({ nin, bvn, date_of_birth: params.dateOfBirth }) },
+    "v3",
+    "lookup",
+  );
+  return res?.data || res;
+}
+
 /**
  * Step 2D: Cross-Validate Applicant KYC (BVN, NIN, Name) against Bank Identity
  */
@@ -1234,6 +1250,28 @@ export async function getMonoCreditHistory(
     summary:
       "Clean credit history across credit bureaus. Zero active defaults detected.",
   };
+}
+
+export async function submitMonoWatchlistScreening(params: {
+  name: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bvn?: string;
+}) {
+  if (!isMonoProductConfigured("lookup")) throw new MonoFeatureUnavailableError("lookup");
+  const response = await monoFetch<{ data?: any }>(
+    "/lookup/watchlist",
+    { method: "POST", body: JSON.stringify({ type: "individual", name: params.name, date_of_birth: params.dateOfBirth, gender: params.gender, bvn: params.bvn, country: "ng" }) },
+    "v3",
+    "lookup",
+  );
+  return response.data || response;
+}
+
+export async function getMonoWatchlistScreening(id: string) {
+  if (!isMonoProductConfigured("lookup")) throw new MonoFeatureUnavailableError("lookup");
+  const response = await monoFetch<{ data?: any }>(`/lookup/watchlist/${encodeURIComponent(id)}`, { method: "GET" }, "v3", "lookup");
+  return response.data || response;
 }
 
 /**

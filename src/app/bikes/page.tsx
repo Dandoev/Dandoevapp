@@ -67,7 +67,7 @@ export default function BikeCatalogPage() {
       const s = filters.search.toLowerCase();
       filtered = filtered.filter(
         (b) =>
-          b.name.toLowerCase().includes(s) ||
+          String(b.name || '').toLowerCase().includes(s) ||
           b.brand?.toLowerCase().includes(s) ||
           b.category?.toLowerCase().includes(s)
       );

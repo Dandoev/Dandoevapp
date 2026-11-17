@@ -22,6 +22,7 @@ import {
   isLiveMonoConfigured,
   MonoFeatureUnavailableError,
   isMonoProductConfigured,
+  submitMonoWatchlistScreening,
   type DeductionInterval,
 } from "@/lib/mono";
 import { encryptField, decryptField } from "@/lib/encryption";
@@ -81,6 +82,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       bankCode,
       bvn,
       nin,
+      dateOfBirth,
       firstName,
       lastName,
       email,
@@ -146,34 +148,23 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
           { status: 400 },
         );
       }
-      let bvnResult = null;
-      let ninResult = null;
-      if (bvn) {
-        const { lookupMonoBvn } = await import("@/lib/mono");
-        bvnResult = await lookupMonoBvn(String(bvn));
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateOfBirth || ""))) {
+        return NextResponse.json({ error: "Date of birth is required in YYYY-MM-DD format" }, { status: 400 });
       }
-      if (nin) {
-        const { lookupMonoNin } = await import("@/lib/mono");
-        ninResult = await lookupMonoNin(String(nin));
-      }
-      if (!bvnResult?.verified || !ninResult?.verified || bvnResult.watchlistListed) {
-        return NextResponse.json(
-          { error: "Identity could not be verified with Mono Lookup" },
-          { status: 422 },
-        );
-      }
+      const { lookupMonoMashup } = await import("@/lib/mono");
+      const result = await lookupMonoMashup({ bvn: String(bvn), nin: String(nin), dateOfBirth: String(dateOfBirth) });
       await prisma.auditLog.create({
         data: {
           userId: userCtx.sub,
           action: "MONO_LOOKUP_IDENTITY_VERIFIED",
           resource: "kyc",
-          details: JSON.stringify({ provider: "mono_lookup", bvnMasked: bvnResult.bvnMasked, ninMasked: ninResult.ninMasked }),
+          details: JSON.stringify({ provider: "mono_lookup_mashup", bvnMasked: `${String(bvn).slice(0, 3)}*****${String(bvn).slice(-3)}`, ninMasked: `${String(nin).slice(0, 3)}*****${String(nin).slice(-3)}` }),
         },
       });
       return NextResponse.json({
         success: true,
         message: "KYC identity verified via Mono Lookup",
-        data: { bvn: bvnResult, nin: ninResult },
+        data: { ...result, bvnMasked: `${String(bvn).slice(0, 3)}*****${String(bvn).slice(-3)}`, ninMasked: `${String(nin).slice(0, 3)}*****${String(nin).slice(-3)}` },
       });
     }
 
@@ -299,6 +290,18 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         return unavailableCreditReport;
       }) : Promise.resolve(unavailableCreditReport),
     ]);
+
+    await prisma.auditLog.create({
+      data: { userId, action: creditReportAvailable ? "MONO_CREDIT_HISTORY_COMPLETED" : "MONO_CREDIT_HISTORY_FAILED", resource: "mono_lookup", details: JSON.stringify(creditReport) },
+    }).catch(() => {});
+    if (identity?.name && creditBvn) {
+      try {
+        const screening = await submitMonoWatchlistScreening({ name: identity.name, dateOfBirth: identity.dob, bvn: creditBvn });
+        await prisma.auditLog.create({ data: { userId, action: "MONO_WATCHLIST_SUBMITTED", resource: "mono_lookup", resourceId: screening.id, details: JSON.stringify(screening) } });
+      } catch (error) {
+        await prisma.auditLog.create({ data: { userId, action: "MONO_WATCHLIST_FAILED", resource: "mono_lookup", details: JSON.stringify({ error: error instanceof Error ? error.message : "Watchlist screening failed" }) } }).catch(() => {});
+      }
+    }
 
     // Step 5: Run Financial Health & Affordability Underwriting Engine
     const underwriting = analyzeFinancialHealth({

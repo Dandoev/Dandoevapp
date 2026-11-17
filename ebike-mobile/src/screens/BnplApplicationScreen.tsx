@@ -451,7 +451,8 @@ export default function BnplApplicationScreen({
       const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png", "application/pdf"], copyToCacheDirectory: true });
       if (!result.canceled && result.assets[0]) {
         const file = result.assets[0];
-        setDashboardFile({ name: file.name, uri: file.uri, size: file.size ? `${Math.round(file.size / 1024)} KB` : undefined });
+        const fileName = file.name || file.uri.split(/[\\/]/).pop() || "earning-dashboard";
+        setDashboardFile({ name: fileName, uri: file.uri, size: file.size ? `${Math.round(file.size / 1024)} KB` : undefined });
       }
     } catch {
       setError("We could not open your files. Please try again.");
@@ -463,14 +464,15 @@ export default function BnplApplicationScreen({
       const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png", "application/pdf"], copyToCacheDirectory: true });
       if (result.canceled || !result.assets[0]) return;
       const file = result.assets[0];
+      const fileName = file.name || file.uri.split(/[\\/]/).pop() || "proof-of-address";
       setUploadingAddress(true);
       setError("");
       const uploaded = await MobileApi.uploadProofOfAddress({
         uri: file.uri,
-        name: file.name,
-        mimeType: file.mimeType || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
+        name: fileName,
+        mimeType: file.mimeType || (fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg"),
       }, token);
-      setProofOfAddress({ name: file.name, url: uploaded.data.url });
+      setProofOfAddress({ name: fileName, url: uploaded.data.url });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Proof of address upload failed. Please try again.");
     } finally {
@@ -566,7 +568,10 @@ export default function BnplApplicationScreen({
       const finalEmployer = employerName === "Other Corporate Logistics" && customEmployerName ? customEmployerName : employerName;
       let uploadedDocuments;
       if (dashboardFile) {
-        const uploaded = await MobileApi.uploadDocument({ uri: dashboardFile.uri, name: dashboardFile.name, mimeType: dashboardFile.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg" }, token);
+        const dashboardName = dashboardFile.name || dashboardFile.uri.split(/[\\/]/).pop() || "earning-dashboard";
+        const dashboardLowerName = dashboardName.toLowerCase();
+        const dashboardMimeType = dashboardLowerName.endsWith(".pdf") ? "application/pdf" : dashboardLowerName.endsWith(".png") ? "image/png" : "image/jpeg";
+        const uploaded = await MobileApi.uploadDocument({ uri: dashboardFile.uri, name: dashboardName, mimeType: dashboardMimeType }, token);
         uploadedDocuments = [{ type: "earning_dashboard", fileName: dashboardFile.name, fileUrl: uploaded.data.url }];
       }
       const res = await MobileApi.applyForLoan(

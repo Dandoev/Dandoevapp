@@ -194,7 +194,7 @@ export const MobileApi = {
 
   // 3. Mono Open Banking & KYC
   async verifyMonoKyc(
-    data: string | { bvn: string; nin: string },
+    data: string | { bvn: string; nin: string; dateOfBirth?: string },
     token: string,
   ) {
     return apiRequest<{ success: boolean; message: string; data: any }>(
@@ -228,7 +228,8 @@ export const MobileApi = {
   },
   async uploadDocument(file: { uri: string; name: string; mimeType?: string }, token: string) {
     const form = new FormData();
-    form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/octet-stream" } as any);
+    const safeName = file.name || file.uri.split(/[\\/]/).pop() || "document";
+    form.append("file", { uri: file.uri, name: safeName, type: file.mimeType || "application/octet-stream" } as any);
     form.append("folder", "bnpl-earning-dashboards");
     const response = await fetch(`${APP_CONFIG.apiEndpoint}/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const payload = await response.json().catch(() => ({}));
@@ -237,7 +238,8 @@ export const MobileApi = {
   },
   async uploadProofOfAddress(file: { uri: string; name: string; mimeType?: string }, token: string) {
     const form = new FormData();
-    const lowerName = file.name.toLowerCase();
+    const safeName = file.name || file.uri.split(/[\\/]/).pop() || "proof-of-address";
+    const lowerName = safeName.toLowerCase();
     const inferredType = lowerName.endsWith(".pdf")
       ? "application/pdf"
       : lowerName.endsWith(".png")
@@ -245,12 +247,14 @@ export const MobileApi = {
         : lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")
           ? "image/jpeg"
           : undefined;
-    const normalizedType = file.mimeType?.toLowerCase().split(";")[0] === "image/jpg" ? "image/jpeg" : file.mimeType?.toLowerCase().split(";")[0];
-    form.append("file", { uri: file.uri, name: file.name, type: normalizedType || inferredType || "application/octet-stream" } as any);
+    const rawType = file.mimeType?.toLowerCase().split(";")[0];
+    const normalizedType = rawType === "image/jpg" ? "image/jpeg" : rawType === "application/octet-stream" ? inferredType : rawType;
+    form.append("file", { uri: file.uri, name: safeName, type: normalizedType || inferredType || "application/octet-stream" } as any);
     const response = await fetch(`${APP_CONFIG.apiEndpoint}/kyc/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Proof of address upload failed");
-    return payload as { success: boolean; data: any };
+    if (!payload?.data?.url && !payload?.data?.fileUrl) throw new Error("Proof of address was not saved. Please try again.");
+    return { ...payload, data: { ...payload.data, url: payload.data.url || payload.data.fileUrl } } as { success: boolean; data: any };
   },
   async initiateMonoProve(redirectUrl: string, token: string) {
     return apiRequest<{

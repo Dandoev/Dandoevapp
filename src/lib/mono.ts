@@ -361,12 +361,23 @@ export async function listMonoNipBanks(): Promise<Array<{ name: string; bankCode
     if (isDemoAllowed()) return [];
     throw new Error("Mono account lookup is unavailable");
   }
-  const response = await monoFetch<{ data?: any; banks?: any[] }>(
-    "/lookup/banks",
-    { method: "GET" },
-    "v3",
-    "lookup",
-  );
+  let response: { data?: any; banks?: any[] };
+  try {
+    response = await monoFetch<{ data?: any; banks?: any[] }>(
+      "/lookup/banks",
+      { method: "GET" },
+      "v3",
+      "lookup",
+    );
+  } catch (error) {
+    // Account Number Lookup can be enabled before Mono's bank-directory
+    // endpoint is provisioned. Keep the selector usable with the verified
+    // GTBank NIP mapping while the directory entitlement is being fixed.
+    if (error instanceof MonoFeatureUnavailableError && error.reason === "not_enabled") {
+      return [{ name: "GTBank", bankCode: "058", nipCode: "000013" }];
+    }
+    throw error;
+  }
   const rawBanks = Array.isArray(response?.data)
     ? response.data
     : response?.data?.banks || response?.data?.institutions || response?.banks || [];

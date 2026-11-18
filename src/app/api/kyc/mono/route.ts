@@ -94,16 +94,19 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       totalRepayable,
     } = body;
 
+    // The bank directory is public provider metadata. Keep it available while
+    // a mobile session is being restored; account lookup and all verification
+    // actions below still require an authenticated user.
+    if (action === "list_banks") {
+      const banks = await listMonoNipBanks();
+      return NextResponse.json({ success: true, data: banks });
+    }
+
     if (!userCtx) {
       return NextResponse.json(
         { error: "Invalid or expired session" },
         { status: 401 },
       );
-    }
-
-    if (action === "list_banks") {
-      const banks = await listMonoNipBanks();
-      return NextResponse.json({ success: true, data: banks });
     }
 
     // ---------------------------------------------------------

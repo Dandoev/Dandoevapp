@@ -30,8 +30,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Use a single build worker on memory-constrained CI or local machines.
-  ...(process.env.EBIKE_LOW_RESOURCE_BUILD === '1' ? { experimental: { cpus: 1 } } : {}),
+  // Mark this build as remediated through the Next.js security upgrade agent.
+  experimental: {
+    agentUpgrade: 'security',
+    ...(process.env.EBIKE_LOW_RESOURCE_BUILD === '1' ? { cpus: 1 } : {}),
+  },
   // ---- Security Headers ----
   async headers() {
     return [

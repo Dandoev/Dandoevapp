@@ -292,6 +292,35 @@ export const NIGERIAN_BANK_CODES: Record<string, string> = {
   "Zenith Bank PLC": "057",
 };
 
+const MONO_NIP_FALLBACK_BANKS: Array<{ name: string; bankCode: string; nipCode: string }> = [
+  { name: "Sterling Bank", bankCode: "232", nipCode: "000001" },
+  { name: "Keystone Bank", bankCode: "082", nipCode: "000002" },
+  { name: "FCMB", bankCode: "214", nipCode: "000003" },
+  { name: "United Bank for Africa (UBA)", bankCode: "033", nipCode: "000004" },
+  { name: "Access Bank", bankCode: "044", nipCode: "000014" },
+  { name: "Jaiz Bank", bankCode: "301", nipCode: "000006" },
+  { name: "Fidelity Bank", bankCode: "070", nipCode: "000007" },
+  { name: "Polaris Bank", bankCode: "076", nipCode: "000008" },
+  { name: "Citibank Nigeria", bankCode: "023", nipCode: "000009" },
+  { name: "Ecobank Nigeria", bankCode: "050", nipCode: "000010" },
+  { name: "Unity Bank", bankCode: "215", nipCode: "000011" },
+  { name: "Stanbic IBTC Bank", bankCode: "221", nipCode: "000012" },
+  { name: "GTBank", bankCode: "058", nipCode: "000013" },
+  { name: "Zenith Bank", bankCode: "057", nipCode: "000015" },
+  { name: "First Bank of Nigeria", bankCode: "011", nipCode: "000016" },
+  { name: "Wema Bank", bankCode: "035", nipCode: "000017" },
+  { name: "Union Bank of Nigeria", bankCode: "032", nipCode: "000018" },
+  { name: "Heritage Bank", bankCode: "030", nipCode: "000020" },
+  { name: "Standard Chartered Bank", bankCode: "068", nipCode: "000021" },
+  { name: "SunTrust Bank", bankCode: "100", nipCode: "000022" },
+  { name: "Providus Bank", bankCode: "101", nipCode: "000023" },
+  { name: "Globus Bank", bankCode: "00103", nipCode: "000027" },
+  { name: "Moniepoint MFB", bankCode: "50515", nipCode: "090405" },
+  { name: "Kuda Bank", bankCode: "50211", nipCode: "090267" },
+  { name: "OPay", bankCode: "999992", nipCode: "100004" },
+  { name: "PalmPay", bankCode: "999991", nipCode: "100033" },
+];
+
 export function resolveBankCode(bankNameOrCode?: string): string {
   if (!bankNameOrCode) return "058";
   const trimmed = bankNameOrCode.trim();
@@ -374,7 +403,7 @@ export async function listMonoNipBanks(): Promise<Array<{ name: string; bankCode
     // endpoint is provisioned. Keep the selector usable with the verified
     // GTBank NIP mapping while the directory entitlement is being fixed.
     if (error instanceof MonoFeatureUnavailableError && error.reason === "not_enabled") {
-      return [{ name: "GTBank", bankCode: "058", nipCode: "000013" }];
+      return MONO_NIP_FALLBACK_BANKS;
     }
     throw error;
   }

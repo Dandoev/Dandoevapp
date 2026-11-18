@@ -494,9 +494,20 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     });
   } catch (error: any) {
     if (error instanceof MonoFeatureUnavailableError) {
-      log.error({ product: error.product }, "Mono product access is not enabled");
+      log.error(
+        { product: error.product, reason: error.reason, providerMessage: error.providerMessage },
+        error.message,
+      );
+      const notEnabled = error.reason === "not_enabled";
       return NextResponse.json(
-        { error: `Identity verification is unavailable because Mono ${error.product === "lookup" ? "Lookup" : "verification"} is not enabled for DandoEv yet. Please contact DandoEv support; your identity has not been verified.`, code: "MONO_FEATURE_NOT_ENABLED", product: error.product },
+        {
+          error: notEnabled
+            ? `Identity verification is unavailable because Mono ${error.product === "lookup" ? "Lookup" : "verification"} is not enabled for DandoEv yet. Please contact DandoEv support; your identity has not been verified.`
+            : `Identity verification is temporarily unavailable due to a verification provider configuration issue. Please try again later or contact DandoEv support; your identity has not been verified.`,
+          code: notEnabled ? "MONO_FEATURE_NOT_ENABLED" : "MONO_CREDENTIALS_INVALID",
+          product: error.product,
+          reason: error.reason,
+        },
         { status: 503 },
       );
     }

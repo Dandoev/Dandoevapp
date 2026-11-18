@@ -13,6 +13,11 @@ const MONO_PAYMENTS_V2 = "https://api.withmono.com/v2/payments";
 type MonoProduct = "connect" | "lookup" | "prove" | "payments";
 
 function isMonoSandboxEnvironment(): boolean {
+  // Sandbox is disabled for every Mono product (Connect, Lookup, Prove,
+  // Payments) in production AND development. Only the automated test runner
+  // (NODE_ENV=test) may opt in with MONO_ENVIRONMENT=sandbox, so test_sk_
+  // credentials can never be selected by a real deployment.
+  if (process.env.NODE_ENV !== "test") return false;
   const environment = (process.env.MONO_ENVIRONMENT || "live").trim().toLowerCase();
   return environment === "sandbox" || environment === "test";
 }
@@ -25,11 +30,41 @@ function firstConfiguredEnv(...names: string[]): string {
   return "";
 }
 
+export type MonoUnavailableReason =
+  | "not_enabled" // Mono: "This feature is not enabled for your business"
+  | "invalid_key" // Mono: "The provided secret key is invalid" (rotated/revoked key)
+  | "wrong_app" // Mono: "Please use a Lookup app..." (key belongs to another product's app)
+  | "not_configured"; // No usable key in this deployment's environment
+
 export class MonoFeatureUnavailableError extends Error {
-  constructor(public readonly product: MonoProduct) {
-    super(`Mono ${product} is not enabled for this business`);
+  constructor(
+    public readonly product: MonoProduct,
+    public readonly reason: MonoUnavailableReason = "not_enabled",
+    public readonly providerMessage?: string,
+  ) {
+    super(
+      reason === "invalid_key"
+        ? `Mono ${product} secret key was rejected as invalid (rotated or revoked) — update MONO_${product.toUpperCase()}_SECRET_KEY`
+        : reason === "wrong_app"
+          ? `Mono ${product} request used a key from an app without the ${product} product`
+          : reason === "not_configured"
+            ? `Mono ${product} secret key is not configured in this environment`
+            : `Mono ${product} is not enabled for this business`,
+    );
     this.name = "MonoFeatureUnavailableError";
   }
+}
+
+/** Maps Mono's 401 bodies to a precise reason so logs show the real cause. */
+export function classifyMonoAuthError(
+  status: number,
+  body: string,
+): MonoUnavailableReason | null {
+  if (status !== 401) return null;
+  if (/feature is not enabled for your business/i.test(body)) return "not_enabled";
+  if (/secret key is invalid/i.test(body)) return "invalid_key";
+  if (/please use a \w+ app/i.test(body)) return "wrong_app";
+  return null;
 }
 
 export function getMonoProductKey(product: MonoProduct): string {
@@ -52,16 +87,46 @@ export function getMonoProductKey(product: MonoProduct): string {
     firstConfiguredEnv(sandboxKeyNames[product], productKeyNames[product], `MONO_${product.toUpperCase()}_SECRET`, "MONO_SANDBOX_SECRET_KEY");
   if (isMonoSandboxEnvironment()) return sandboxKey;
 
-  switch (product) {
-    case "connect":
-      return firstConfiguredEnv("MONO_CONNECT_SECRET_KEY", "MONO_CONNECT_SECRET", "MONO_SECRET_KEY");
-    case "lookup":
-      return firstConfiguredEnv("MONO_LOOKUP_SECRET_KEY", "MONO_LOOKUP_SECRET", "MONO_LOOKUP_API_SECRET", "MONO_SECRET_KEY");
-    case "prove":
-      return firstConfiguredEnv("MONO_PROVE_SECRET_KEY", "MONO_PROVE_SECRET", "MONO_SECRET_KEY");
-    case "payments":
-      return firstConfiguredEnv("MONO_PAYMENTS_SECRET_KEY", "MONO_PAYMENTS_SECRET", "MONO_SECRET_KEY");
+  // Live mode: only live_sk_ credentials are eligible. A leftover test_sk_
+  // value (e.g. legacy MONO_SECRET_KEY) is skipped instead of being selected.
+  const liveCandidates: Record<MonoProduct, string[]> = {
+    connect: ["MONO_CONNECT_SECRET_KEY", "MONO_CONNECT_SECRET", "MONO_SECRET_KEY"],
+    lookup: ["MONO_LOOKUP_SECRET_KEY", "MONO_LOOKUP_SECRET", "MONO_LOOKUP_API_SECRET"],
+    prove: ["MONO_PROVE_SECRET_KEY", "MONO_PROVE_SECRET", "MONO_SECRET_KEY"],
+    payments: ["MONO_PAYMENTS_SECRET_KEY", "MONO_PAYMENTS_SECRET", "MONO_SECRET_KEY"],
+  };
+  for (const name of liveCandidates[product]) {
+    const value = process.env[name]?.trim();
+    if (value && /^live_sk_/.test(value)) return value;
   }
+  return firstConfiguredEnv(...liveCandidates[product]);
+}
+
+/**
+ * Production readiness report for every Mono product. Returns a list of
+ * problems (empty = ready). Logged once at startup in production.
+ */
+export function getMonoProductionIssues(): string[] {
+  const issues: string[] = [];
+  for (const product of ["connect", "lookup", "prove", "payments"] as MonoProduct[]) {
+    const key = getMonoProductKey(product);
+    if (!key) issues.push(`MONO_${product.toUpperCase()}_SECRET_KEY is missing`);
+    else if (!/^live_sk_/.test(key))
+      issues.push(`MONO_${product.toUpperCase()}_SECRET_KEY is not a live_sk_ key (sandbox keys are disabled)`);
+  }
+  const publicKey = process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY?.trim() || "";
+  if (!/^live_pk_/.test(publicKey))
+    issues.push("NEXT_PUBLIC_MONO_PUBLIC_KEY must be a live_pk_ key for Mono Connect");
+  for (const name of ["MONO_ENVIRONMENT", "NEXT_PUBLIC_MONO_ENVIRONMENT"]) {
+    const value = (process.env[name] || "").trim().toLowerCase();
+    if (value && value !== "live") issues.push(`${name}=${value} is ignored; set it to "live" or remove it`);
+  }
+  return issues;
+}
+
+if (process.env.NODE_ENV === "production") {
+  const issues = getMonoProductionIssues();
+  if (issues.length) logger.error({ issues }, "Mono production configuration issues detected");
 }
 
 export function isMonoProductConfigured(product: MonoProduct): boolean {
@@ -77,7 +142,7 @@ function requireMonoKey(product: MonoProduct): string {
 const MONO_PROVE_URL = "https://api.withmono.com/v1/prove";
 
 // Compatibility export for older routes. This is product-specific (Connect)
-// and supports both test and live keys according to MONO_ENVIRONMENT.
+// and only reports true for live_sk_ keys outside the automated test runner.
 export const isLiveMonoConfigured = isMonoProductConfigured("connect");
 
 export async function initiateMonoProve(params: {
@@ -110,8 +175,9 @@ export async function initiateMonoProve(params: {
       body: JSON.stringify(payload),
     });
     const body = await res.json();
-    if (res.status === 401 && /feature is not enabled for your business/i.test(String(body?.message || ""))) {
-      throw new MonoFeatureUnavailableError("prove");
+    const proveAuthReason = classifyMonoAuthError(res.status, String(body?.message || ""));
+    if (proveAuthReason) {
+      throw new MonoFeatureUnavailableError("prove", proveAuthReason, body?.message);
     }
     if (!res.ok || !body?.data?.mono_url)
       throw new Error(
@@ -339,8 +405,12 @@ async function monoFetch<T>(
 
   if (!res.ok) {
     const body = await res.text();
-    if (res.status === 401 && /feature is not enabled for your business/i.test(body)) {
-      throw new MonoFeatureUnavailableError(product);
+    if (/subscription plan has expired/i.test(body)) {
+      throw new Error(`Mono ${product} subscription has expired. Renew the ${product} plan in the Mono dashboard before retrying.`);
+    }
+    const authReason = classifyMonoAuthError(res.status, body);
+    if (authReason) {
+      throw new MonoFeatureUnavailableError(product, authReason, body.slice(0, 300));
     }
     throw new Error(`Mono API error [${res.status}]: ${body}`);
   }
@@ -1253,7 +1323,7 @@ export async function submitMonoWatchlistScreening(params: {
   gender?: string;
   bvn?: string;
 }) {
-  if (!isMonoProductConfigured("lookup")) throw new MonoFeatureUnavailableError("lookup");
+  if (!isMonoProductConfigured("lookup")) throw new MonoFeatureUnavailableError("lookup", "not_configured");
   const response = await monoFetch<{ data?: any }>(
     "/lookup/watchlist",
     { method: "POST", body: JSON.stringify({ type: "individual", name: params.name, date_of_birth: params.dateOfBirth, gender: params.gender, bvn: params.bvn, country: "ng" }) },
@@ -1264,7 +1334,7 @@ export async function submitMonoWatchlistScreening(params: {
 }
 
 export async function getMonoWatchlistScreening(id: string) {
-  if (!isMonoProductConfigured("lookup")) throw new MonoFeatureUnavailableError("lookup");
+  if (!isMonoProductConfigured("lookup")) throw new MonoFeatureUnavailableError("lookup", "not_configured");
   const response = await monoFetch<{ data?: any }>(`/lookup/watchlist/${encodeURIComponent(id)}`, { method: "GET" }, "v3", "lookup");
   return response.data || response;
 }

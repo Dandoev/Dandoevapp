@@ -351,6 +351,10 @@ export async function resolveMonoNipCode(params: {
   const inputName = (params.bankName || "").trim().toLowerCase();
   const inputCode = (params.bankCode || "").trim();
 
+  // The selector supplies a NIP code. Do not call the separately gated bank
+  // directory again before account-number lookup.
+  if (/^\d{6}$/.test(inputCode)) return inputCode;
+
   if (isMonoProductConfigured("lookup")) {
     const response = await monoFetch<{ data?: any; banks?: any[] }>(
       "/lookup/banks",

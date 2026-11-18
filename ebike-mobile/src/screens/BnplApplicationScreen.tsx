@@ -202,7 +202,8 @@ export default function BnplApplicationScreen({
 
   // Step 2: In-App Bank & Repayment Mandate
   const [bankName, setBankName] = useState("");
-  const [supportedBanks, setSupportedBanks] = useState<string[]>(NIGERIAN_BANKS);
+  const [supportedBanks, setSupportedBanks] = useState<string[]>([]);
+  const [monoBanks, setMonoBanks] = useState<Array<{ name: string; bankCode: string; nipCode: string }>>([]);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [frequency, setFrequency] = useState("weekly");
@@ -326,11 +327,15 @@ export default function BnplApplicationScreen({
     let active = true;
     MobileApi.getMonoSupportedBanks(token)
       .then((result) => {
-        const names = (result.data || []).map((bank) => bank.name).filter(Boolean);
-        if (active && names.length) setSupportedBanks(names);
+        const banks = (result.data || []).filter((bank) => bank.name && /^\d{6}$/.test(bank.nipCode));
+        if (active) {
+          setMonoBanks(banks);
+          setSupportedBanks(banks.map((bank) => bank.name));
+          if (!banks.length) setError("The bank directory is unavailable. Please reopen this application to retry.");
+        }
       })
       .catch(() => {
-        // Keep the cached compatibility list if the directory is temporarily unavailable.
+        if (active) setError("Unable to load supported banks. Check your connection and reopen this application to retry.");
       });
     return () => { active = false; };
   }, [token]);
@@ -488,7 +493,9 @@ export default function BnplApplicationScreen({
     setAccountChecking(true);
     setError("");
     try {
-      const result = await MobileApi.verifyMonoBankAccount({ accountNumber, bankName, firstName, lastName }, token);
+      const selectedBank = monoBanks.find((bank) => bank.name === bankName);
+      if (!selectedBank) throw new Error("Please select your bank from the current bank directory.");
+      const result = await MobileApi.verifyMonoBankAccount({ accountNumber, bankName, bankCode: selectedBank.nipCode, firstName, lastName }, token);
       const details = result.data || {};
       setAccountName(details.accountName || details.account_name || "");
       setAccountVerified(Boolean(details.verified ?? details.accountName ?? details.account_name));

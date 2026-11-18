@@ -206,6 +206,7 @@ export const MobileApi = {
             ? { code: data }
             : { action: "verify_kyc", ...data },
         token,
+        timeout: 60000,
       },
     );
   },
@@ -214,16 +215,17 @@ export const MobileApi = {
       method: "POST", body: { action: "submit_identity_for_review", ...data }, token,
     });
   },
-  async verifyMonoBankAccount(data: { accountNumber: string; bankName: string; firstName?: string; lastName?: string }, token: string) {
+  async verifyMonoBankAccount(data: { accountNumber: string; bankName: string; bankCode?: string; firstName?: string; lastName?: string }, token: string) {
     return apiRequest<{ success: boolean; message: string; data: any }>("/kyc/mono", {
       method: "POST",
       body: { action: "lookup_account", ...data },
       token,
+      timeout: 60000,
     });
   },
   async getMonoSupportedBanks(token: string) {
     return apiRequest<{ success: boolean; data: Array<{ name: string; bankCode: string; nipCode: string }> }>("/kyc/mono", {
-      method: "POST", body: { action: "list_banks" }, token,
+      method: "POST", body: { action: "list_banks" }, token, timeout: 60000,
     });
   },
   async uploadDocument(file: { uri: string; name: string; mimeType?: string }, token: string) {
@@ -249,7 +251,15 @@ export const MobileApi = {
           : undefined;
     const rawType = file.mimeType?.toLowerCase().split(";")[0];
     const normalizedType = rawType === "image/jpg" ? "image/jpeg" : rawType === "application/octet-stream" ? inferredType : rawType;
-    form.append("file", { uri: file.uri, name: safeName, type: normalizedType || inferredType || "application/octet-stream" } as any);
+    const uploadType = normalizedType || inferredType || "application/octet-stream";
+    if (typeof window !== "undefined" && file.uri) {
+      const blobResponse = await fetch(file.uri);
+      if (!blobResponse.ok) throw new Error("Could not read the selected proof-of-address file");
+      const blob = await blobResponse.blob();
+      form.append("file", new File([blob], safeName, { type: uploadType }));
+    } else {
+      form.append("file", { uri: file.uri, name: safeName, type: uploadType } as any);
+    }
     const response = await fetch(`${APP_CONFIG.apiEndpoint}/kyc/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Proof of address upload failed");

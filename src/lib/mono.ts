@@ -338,15 +338,15 @@ export async function resolveMonoNipCode(params: {
       const nipCode = String(bank?.nip_code || bank?.nipCode || "");
       return Boolean(
         nipCode &&
-          ((inputName && (name === inputName || name.includes(inputName) || inputName.includes(name))) ||
-            (inputCode && (bankCode === inputCode || nipCode === inputCode))),
+          (inputCode ? (bankCode === inputCode || nipCode === inputCode) :
+            Boolean(inputName && name === inputName)),
       );
     });
     if (match?.nip_code || match?.nipCode) return String(match.nip_code || match.nipCode);
 
     // The directory may return a provider-specific name. Match the known
     // GTBank example as a safe compatibility fallback.
-    if (inputName.includes("gtbank") || inputName.includes("guaranty trust")) {
+    if (!inputCode && (inputName.includes("gtbank") || inputName.includes("guaranty trust"))) {
       return "000013";
     }
     throw new Error("Mono does not support NIP lookup for the selected bank");

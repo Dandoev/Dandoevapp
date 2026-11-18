@@ -6,8 +6,9 @@ import prisma from "@/lib/prisma";
 export const POST = withAuth(async (req: NextRequest, ctx) => {
   try {
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file");
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (!(file instanceof File) || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "The uploaded file could not be read. Please select the file again." }, { status: 400 });
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "File size too large (max 5 MB)" }, { status: 413 });
     const originalName = String(file.name || "proof-of-address");
     const fileName = originalName.toLowerCase();

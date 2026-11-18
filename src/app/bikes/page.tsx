@@ -22,7 +22,7 @@ import {
 import type { BikeFilters } from '@/lib/types';
 
 export default function BikeCatalogPage() {
-  const [filters, setFilters] = useState<BikeFilters>({});
+  const [filters, setFilters] = useState<BikeFilters>({ sortBy: 'price_asc' });
   const cadenceView = 'weekly';
   const [bikes, setBikes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function BikeCatalogPage() {
     }
     if (filters.priceMin) filtered = filtered.filter((b) => Number(b.price) >= filters.priceMin!);
     if (filters.priceMax) filtered = filtered.filter((b) => Number(b.price) <= filters.priceMax!);
-    if (filters.sortBy === 'price_asc') filtered.sort((a, b) => Number(b.price) - Number(b.price));
+    if (filters.sortBy === 'price_asc') filtered.sort((a, b) => Number(a.price) - Number(b.price));
     else if (filters.sortBy === 'price_desc')
       filtered.sort((a, b) => Number(b.price) - Number(a.price));
     else if (filters.sortBy === 'rating')

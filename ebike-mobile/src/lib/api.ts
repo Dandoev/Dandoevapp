@@ -165,6 +165,14 @@ export const MobileApi = {
     return apiRequest<{ success: boolean; data: any }>("/auth/me", { token });
   },
 
+  async sendPhoneOtp(phone: string, purpose: 'signup' | 'login' = 'signup') {
+    return apiRequest<{ success: boolean; message?: string }>('/auth/phone/send', { method: 'POST', body: { phone, purpose }, timeout: 30000 });
+  },
+
+  async verifyPhoneOtp(phone: string, pin: string, purpose: 'signup' | 'login' = 'signup') {
+    return apiRequest<{ success: boolean; phone: string }>('/auth/phone/verify', { method: 'POST', body: { phone, pin, purpose }, timeout: 30000 });
+  },
+
   async getNotifications(token: string) {
     return apiRequest<{ success: boolean; data: any[] }>("/notifications", {
       token,
@@ -336,10 +344,14 @@ export const MobileApi = {
   },
 
   async getMonoMandate(loanId: string, token: string) {
-    return apiRequest<{ success: boolean; data: { status: string; readyToDebit: boolean } }>(
+    return apiRequest<{ success: boolean; data: { status: string; readyToDebit: boolean; authorizationUrl?: string | null } }>(
       `/payments/mono/mandate?loanId=${encodeURIComponent(loanId)}`,
       { token },
     );
+  },
+
+  async authorizeMonoMandate(loanId: string, token: string) {
+    return apiRequest<{ success: boolean; data: { authorizationUrl?: string; status: string } }>("/payments/mono/mandate", { method: "POST", body: { loanId }, token, timeout: 60000 });
   },
 
   async getMyLoans(token: string) {
@@ -456,6 +468,32 @@ export const MobileApi = {
     }>(`/payments/verify?reference=${encodeURIComponent(reference)}`, {
       token,
     });
+  },
+
+  async getLoanSettlementQuote(loanId: string, token: string) {
+    return apiRequest<{
+      success: boolean;
+      data: {
+        amount: number;
+        currency: string;
+        discount?: number;
+        expiresAt?: string;
+        loanId?: string;
+        walletBalance?: number;
+        mandateAvailable?: boolean;
+        status?: string;
+      };
+    }>(`/loans/${loanId}/settlement`, { token });
+  },
+
+  async settleLoanEarly(loanId: string, token: string) {
+    return apiRequest<{
+      success: boolean;
+      status: 'completed' | 'pending';
+      method: 'wallet' | 'mono_sweep';
+      reference: string;
+      amount: number;
+    }>(`/loans/${loanId}/settlement`, { method: 'POST', token });
   },
 
   async fundWallet(amount: number, token: string) {

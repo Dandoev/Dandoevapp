@@ -52,7 +52,7 @@ describe('BNPL Loan Calculations & Terms', () => {
     expect(BNPL_CONFIG.interestRate).toBe(4);
     expect(BNPL_CONFIG.processingFee).toBe(20000);
     expect(BNPL_CONFIG.healthInsuranceFee).toBe(60000);
-    expect(BNPL_CONFIG.dailySavings).toBe(1000);
+    expect(BNPL_CONFIG.dailySavings).toBe(0);
     expect(BNPL_CONFIG.tenureOptions).toContain(6);
     expect(BNPL_CONFIG.tenureOptions).toContain(12);
   });

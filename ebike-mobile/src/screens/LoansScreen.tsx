@@ -220,22 +220,6 @@ function DemoLoansScreen({ token }: LoansScreenProps) {
           </View>
         </View>
 
-        {/* Compulsory Savings Reward Box */}
-        <View style={styles.savingsCard}>
-          <View style={styles.savingsLeft}>
-            <View style={styles.savingsIcon}>
-              <PiggyBank size={24} color="#2E3192" />
-            </View>
-            <View>
-              <Text style={styles.savingsTitle}>Save-As-You-Ride Vault</Text>
-              <Text style={styles.savingsAmount}>₦{wallet.lockedSaving.toLocaleString()}</Text>
-              <Text style={styles.savingsNote}>
-                Collected daily • Unlocks automatically upon loan payoff!
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {/* Repayment Schedule Table */}
         <View style={styles.scheduleSection}>
           <Text style={styles.sectionHeader}>

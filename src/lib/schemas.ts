@@ -26,6 +26,7 @@ export const signupSchema = z
       z.string().email('Invalid email address').max(255).trim().toLowerCase().optional(),
     ),
     phone: z.preprocess(emptyToUndefined, z.string().max(30).optional()),
+    phoneOtpVerified: z.boolean().optional(),
     password: passwordRules,
   })
   .refine((d) => Boolean(d.email) || Boolean(d.phone), {

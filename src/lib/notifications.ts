@@ -2,7 +2,7 @@
 // DandoEv — Real-Time Notification & Security Alert Dispatcher
 // Dispatches In-App, Termii SMS, and Resend Email alerts
 // ============================================================
-import { sendSms } from './termii';
+import { sendSms, sendWhatsApp } from './termii';
 import { sendEmail } from './resend';
 import prisma from './prisma';
 import logger from './logger';
@@ -651,7 +651,7 @@ export async function notifyLoanSubmitted(loanId: string) {
       include: {
         user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
         bike: { select: { name: true, brand: true, model: true } },
-        guarantors: { select: { fullName: true, phone: true, email: true, status: true } },
+        guarantors: { select: { id: true, fullName: true, phone: true, email: true, status: true, inviteUrl: true } },
       },
     });
 
@@ -758,7 +758,28 @@ export async function notifyLoanSubmitted(loanId: string) {
       );
     }
 
-    // 4. Admin / Underwriter Alert
+    // 4. Guarantor invite delivery: SMS, then WhatsApp, then email fallback.
+    for (const guarantor of loan.guarantors) {
+      if (!guarantor.inviteUrl) continue;
+      const message = `[DandoEv] ${customerName} listed you as a guarantor for ${bikeName}. Complete verification securely: ${guarantor.inviteUrl}`;
+      let channel: string | null = null;
+      try {
+        if (!guarantor.phone) throw new Error('No guarantor phone number');
+        await sendSms(guarantor.phone, message); channel = 'sms';
+      } catch {
+        try {
+          if (!guarantor.phone) throw new Error('No guarantor phone number');
+          await sendWhatsApp(guarantor.phone, message); channel = 'whatsapp';
+        } catch {
+          if (guarantor.email) {
+            await sendEmail(guarantor.email, 'DandoEv guarantor verification required', `<p>${message}</p>`); channel = 'email';
+          }
+        }
+      }
+      await prisma.guarantor.update({ where: { id: guarantor.id }, data: channel ? { inviteDeliveryStatus: 'sent', inviteDeliveryChannel: channel, inviteSentAt: new Date() } : { inviteDeliveryStatus: 'failed', inviteFailedAt: new Date(), inviteFailureReason: 'SMS, WhatsApp and email delivery failed' } });
+    }
+
+    // 5. Admin / Underwriter Alert
     const underwriters = await prisma.user.findMany({
       where: { role: { in: ['super_admin', 'operations_admin', 'compliance_officer'] } },
       select: { id: true, email: true },

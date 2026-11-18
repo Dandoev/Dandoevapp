@@ -8,6 +8,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
+import { getMonoConnectPublicKey } from '@/lib/mono-public';
 import {
   ShieldCheck,
   Building,
@@ -26,16 +27,7 @@ import {
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 
-const SUPPORTED_BANKS = [
-  'Access Bank Nigeria',
-  'GTBank (Guaranty Trust Bank)',
-  'Zenith Bank PLC',
-  'First Bank of Nigeria',
-  'United Bank for Africa (UBA)',
-  'Kuda Microfinance Bank',
-  'Moniepoint MFB',
-  'OPay Digital Services',
-];
+const RELATIONSHIPS = ['Parent / Sibling', 'Spouse', 'Family Member', 'Colleague / Employer', 'Civil Servant Peer', 'Fleet Cooperative Lead'];
 
 export default function GuarantorVerifyPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -48,7 +40,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
   const [phone, setPhone] = useState('');
   const [relationship, setRelationship] = useState('Colleague / Employer');
   const [occupation, setOccupation] = useState('');
-  const [selectedBank, setSelectedBank] = useState(SUPPORTED_BANKS[0]);
+  const [proofOfAddressUrl, setProofOfAddressUrl] = useState('');
+  const [workIdUrl, setWorkIdUrl] = useState('');
+  const [idDocumentUrl, setIdDocumentUrl] = useState('');
+  const [uploading, setUploading] = useState<string | null>(null);
   const [agreedTerms, setAgreedTerms] = useState(false);
 
   // Mono Link State
@@ -63,6 +58,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
   const [monoCode, setMonoCode] = useState('');
   const [error, setError] = useState('');
   const [inviteData, setInviteData] = useState<any>(null);
+  const isFamilyRelationship = /parent|sibling|spouse|family|relative|child/i.test(relationship);
 
   // Buyer & loan summary resolved from invite token
   const loanSummary = inviteData ? {
@@ -115,9 +111,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     setError('');
     setIsLinkingMono(true);
     const MonoConnect = (window as any).MonoConnect;
-    const publicKey = process.env.NEXT_PUBLIC_MONO_ENVIRONMENT === 'sandbox'
-      ? process.env.NEXT_PUBLIC_MONO_SANDBOX_PUBLIC_KEY
-      : process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY;
+    const publicKey = getMonoConnectPublicKey();
     if (!MonoConnect || !publicKey) {
       setError('Mono Connect is unavailable. Please reload and try again.');
       setIsLinkingMono(false);
@@ -128,7 +122,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       onSuccess: ({ code }: { code: string }) => {
         setMonoCode(code);
         setMonoLinked(true);
-        setMonoData({ name: fullName.trim(), bank: selectedBank, bvnMasked: 'Verified', tier: 'Mono Verified' });
+        setMonoData({ name: fullName.trim(), bank: 'Mono-connected bank', bvnMasked: 'Verified', tier: 'Mono Verified' });
         setIsLinkingMono(false);
       },
       onClose: () => setIsLinkingMono(false),
@@ -144,7 +138,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     try {
       const response = await fetch(`/api/guarantors/${encodeURIComponent(token)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: monoCode, fullName, phone, relationship, agreementAccepted: true }),
+        body: JSON.stringify({ code: monoCode, fullName, phone, relationship, occupation, idDocumentUrl, proofOfAddressUrl, workIdUrl: workIdUrl || undefined, agreementAccepted: true }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Verification failed');
@@ -154,6 +148,18 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       setError(reason instanceof Error ? reason.message : 'Verification failed');
       setIsSubmitting(false);
     }
+  };
+
+  const uploadDocument = async (file: File, documentType: 'identity_document' | 'proof_of_address' | 'work_id') => {
+    setUploading(documentType); setError('');
+    try {
+      const body = new FormData(); body.append('file', file); body.append('documentType', documentType);
+      const response = await fetch(`/api/guarantors/${encodeURIComponent(token)}/documents`, { method: 'POST', body });
+      const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Document upload failed');
+      if (documentType === 'identity_document') setIdDocumentUrl(result.data.url);
+      else if (documentType === 'proof_of_address') setProofOfAddressUrl(result.data.url); else setWorkIdUrl(result.data.url);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Document upload failed'); }
+    finally { setUploading(null); }
   };
 
   if (success) {
@@ -399,6 +405,26 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs font-bold text-slate-700 cursor-pointer">
+                Means of identity *
+                <input type="file" required accept=".pdf,.png,.jpg,.jpeg" className="mt-2 block w-full text-xs" onChange={(e) => e.target.files?.[0] && uploadDocument(e.target.files[0], 'identity_document')} />
+                <span className="mt-1 block text-[11px] font-medium text-slate-500">{uploading === 'identity_document' ? 'Uploading…' : idDocumentUrl ? 'Uploaded and saved' : 'NIN slip/card, voter’s card, international passport, driver’s licence or other government-issued ID · max 5 MB'}</span>
+              </label>
+              <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs font-bold text-slate-700 cursor-pointer">
+                Proof of address *
+                <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="mt-2 block w-full text-xs" onChange={(e) => e.target.files?.[0] && uploadDocument(e.target.files[0], 'proof_of_address')} />
+                <span className="mt-1 block text-[11px] font-medium text-slate-500">{uploading === 'proof_of_address' ? 'Uploading…' : proofOfAddressUrl ? 'Uploaded and saved' : 'PDF, PNG or JPEG · max 5 MB'}</span>
+              </label>
+              {!isFamilyRelationship && (
+                <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs font-bold text-slate-700 cursor-pointer">
+                  Work ID *
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="mt-2 block w-full text-xs" onChange={(e) => e.target.files?.[0] && uploadDocument(e.target.files[0], 'work_id')} />
+                  <span className="mt-1 block text-[11px] font-medium text-slate-500">{uploading === 'work_id' ? 'Uploading…' : workIdUrl ? 'Uploaded and saved' : 'Required for non-family guarantors'}</span>
+                </label>
+              )}
+            </div>
+
             {/* Guarantor FAQ Pill */}
             <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl flex items-start gap-3 text-xs text-slate-700">
               <HelpCircle className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
@@ -440,19 +466,9 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
               <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Select Your Primary Bank for Instant BVN Match
+                    Connect your bank securely with Mono for identity verification
                   </label>
-                  <select
-                    value={selectedBank}
-                    onChange={(e) => setSelectedBank(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:border-primary focus:outline-none"
-                  >
-                    {SUPPORTED_BANKS.map((bank) => (
-                      <option key={bank} value={bank}>
-                        {bank}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-sm text-slate-600">Mono will display the supported banks and verify the guarantor’s account identity in its secure window.</p>
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-500">
@@ -467,7 +483,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                   disabled={isLinkingMono}
                   className="w-full py-3.5 bg-secondary hover:opacity-95 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
                 >
-                  {isLinkingMono ? 'Verifying Identity with Mono...' : `Verify with ${selectedBank}`}
+                  {isLinkingMono ? 'Verifying Identity with Mono...' : 'Verify identity with Mono'}
                 </button>
               </div>
             ) : (
@@ -571,7 +587,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
               </button>
               <button
                 onClick={handleAcceptCoSign}
-                disabled={isSubmitting || !agreedTerms}
+                disabled={isSubmitting || !agreedTerms || !monoLinked || !idDocumentUrl || !proofOfAddressUrl || (!isFamilyRelationship && !workIdUrl)}
                 className="w-2/3 py-3.5 bg-secondary hover:opacity-95 disabled:opacity-40 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md"
               >
                 {isSubmitting ? 'Executing Digital Signature...' : 'Accept Guarantee & Co-Sign'}

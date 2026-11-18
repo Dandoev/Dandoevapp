@@ -10,8 +10,9 @@ describe('BNPL approval workflow', () => {
     ],
   };
 
-  it('blocks approval until KYC, applicant agreement, two guarantors, and mandate are ready', () => {
-    expect(getApprovalBlockers({ ...eligible, kycVerified: false, agreementAcceptedAt: null, monoMandateStatus: 'approved', guarantors: eligible.guarantors.slice(0, 1) })).toHaveLength(4);
+  it('blocks credit approval until KYC, applicant agreement, and two guarantors are ready', () => {
+    expect(getApprovalBlockers({ ...eligible, kycVerified: false, agreementAcceptedAt: null, monoMandateStatus: 'approved', guarantors: eligible.guarantors.slice(0, 1) })).toHaveLength(3);
+    expect(getApprovalBlockers({ ...eligible, monoMandateId: null, monoMandateStatus: null })).toEqual([]);
     expect(getApprovalBlockers(eligible)).toEqual([]);
   });
 

@@ -9,6 +9,7 @@ import {
   Linking,
 } from "react-native";
 import { MobileApi } from "../lib/api";
+import * as WebBrowser from "expo-web-browser";
 
 type Repayment = {
   id: string;
@@ -63,11 +64,29 @@ export default function RealLoansScreen({ token }: { token: string }) {
   const [loans, setLoans] = useState<Loan[] | null>(null);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [mandateBusy, setMandateBusy] = useState<string | null>(null);
+  const [mandateError, setMandateError] = useState<string | null>(null);
+  const authorizeMandate = async (loanId: string) => {
+    setMandateBusy(loanId);
+    setMandateError(null);
+    try {
+      const result = await MobileApi.authorizeMonoMandate(loanId, token);
+      const url = result.data.authorizationUrl;
+      if (!url?.startsWith("https://")) throw new Error("Mono did not provide an authorization link. Refresh and try again.");
+      await WebBrowser.openAuthSessionAsync(url, "dandoev://payment-callback");
+      await MobileApi.getMonoMandate(loanId, token);
+      await loadLoans();
+    } catch (cause) {
+      setMandateError(cause instanceof Error ? cause.message : "Unable to authorize repayment. Please retry.");
+    } finally { setMandateBusy(null); }
+  };
   const loadLoans = useCallback(async () => {
     setError(false);
     try {
       const result = await MobileApi.getMyLoans(token);
-      setLoans(result.data ?? []);
+      const pending = (result.data ?? []).filter((loan: Loan) => loan.status === "approved" && !!loan.monoMandateStatus && loan.monoMandateStatus !== "awaiting_authorization");
+      if (pending.length) await Promise.allSettled(pending.map((loan: Loan) => MobileApi.getMonoMandate(loan.id, token)));
+      setLoans(pending.length ? (await MobileApi.getMyLoans(token)).data ?? [] : result.data ?? []);
     } catch {
       setError(true);
       setLoans((current) => current ?? []);
@@ -129,6 +148,17 @@ export default function RealLoansScreen({ token }: { token: string }) {
               {Number(loan.totalRepayable || 0).toLocaleString()}
             </Text>
             <Text style={styles.body}>Term: {loan.tenure || "—"} months</Text>
+            {loan.status === "approved" && (
+              <View style={styles.summary}>
+                <Text style={styles.title}>Credit approved · Activate repayments</Text>
+                <Text style={styles.body}>Authorize Mono Sweep before your bike plan and repayment schedule become active.</Text>
+                <Text style={styles.retry} onPress={() => void authorizeMandate(loan.id)}>
+                  {mandateBusy === loan.id ? "Opening Mono…" : "Authorize Mono Sweep"}
+                </Text>
+                <Text style={styles.retry} onPress={() => void MobileApi.getMonoMandate(loan.id, token).then(loadLoans).catch((cause) => setMandateError(cause instanceof Error ? cause.message : "Unable to refresh mandate status."))}>Refresh authorization status</Text>
+                {!!mandateError && <Text style={styles.body}>{mandateError}</Text>}
+              </View>
+            )}
             <View style={styles.timeline}>
               <Text style={styles.title}>Application timeline</Text>
               {[
@@ -136,7 +166,7 @@ export default function RealLoansScreen({ token }: { token: string }) {
                 "Mono assessment",
                 "Guarantors verified",
                 "Admin decision",
-                "Bike assigned",
+                "Repayment authorized and bike assigned",
               ].map((label, index) => (
                 <View key={label} style={styles.timelineRow}>
                   <View
@@ -145,10 +175,11 @@ export default function RealLoansScreen({ token }: { token: string }) {
                       index === 0 ||
                       (index === 1 && loan.monoAssessment) ||
                       (index === 2 && loan.guarantorsVerified) ||
-                      (index >= 3 &&
+                      (index === 3 &&
                         ["approved", "active", "completed"].includes(
                           loan.status,
-                        ))
+                        )) ||
+                      (index === 4 && ["active", "completed"].includes(loan.status))
                         ? styles.timelineDone
                         : null,
                     ]}

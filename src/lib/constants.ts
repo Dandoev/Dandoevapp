@@ -18,7 +18,7 @@ export const BNPL_CONFIG = {
     interestRate: 4, // Monthly percentage
     processingFee: 20000, // Fixed NGN
     healthInsuranceFee: 60000, // Fixed NGN
-    dailySavings: 1000, // NGN per day
+    dailySavings: 0, // Compulsory save-as-you-go disabled
     tenureOptions: [6, 12, 18], // months
     defaultTenure: 12,
     repaymentFrequencyDays: 2, // Every 2 days

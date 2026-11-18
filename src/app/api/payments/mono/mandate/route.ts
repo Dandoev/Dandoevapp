@@ -6,13 +6,11 @@ import { calculateMandateTermsFromLoan, chargeMonoMandate, getMonoMandateStatus,
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { decryptField } from '@/lib/encryption';
+import { buildRepaymentSchedule } from '@/lib/bnpl-workflow';
+import { notifyBikeAssigned } from '@/lib/notifications';
 
 const adminRoles = new Set(['super_admin', 'finance_admin', 'operations_admin']);
-const createSchema = z.object({
-  loanId: z.string().min(1), accountNumber: z.string().regex(/^\d{10}$/),
-  accountName: z.string().min(2).max(100), bankName: z.string().min(2).max(100),
-  bankCode: z.string().regex(/^\d{3,6}$/), accountId: z.string().min(1).optional(),
-});
+const createSchema = z.object({ loanId: z.string().min(1) });
 const debitSchema = z.object({ action: z.literal('execute_auto_deduction').default('execute_auto_deduction'), repaymentId: z.string().min(1) });
 const canAccess = (user: ApiContext['user'], ownerId: string) => user.sub === ownerId || adminRoles.has(user.role);
 
@@ -22,12 +20,26 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { bike: true, user: true } });
   if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
   if (!canAccess(ctx.user, loan.userId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (!loan.monoMandateId) return NextResponse.json({ error: 'No Mono mandate exists for this loan' }, { status: 404 });
+  if (!loan.monoMandateId) return NextResponse.json({ error: 'Mandate authorization is available after credit approval' }, { status: 409 });
   try {
     const liveStatus = await getMonoMandateStatus(loan.monoMandateId);
+    const authorization = loan.status === 'approved' && !liveStatus.readyToDebit
+      ? await prisma.auditLog.findFirst({ where: { userId: loan.userId, action: 'MONO_MANDATE_AUTHORIZATION_CREATED', resourceId: loan.id }, orderBy: { createdAt: 'desc' }, select: { details: true } })
+      : null;
+    if (loan.status === 'approved' && liveStatus.readyToDebit && liveStatus.status === 'active') {
+      const activated = await prisma.$transaction(async (tx) => {
+        const reserved = await tx.loan.updateMany({ where: { id: loan.id, status: 'approved' }, data: { status: 'active', monoMandateStatus: 'active' } });
+        if (!reserved.count) return false;
+        await tx.repayment.createMany({ data: buildRepaymentSchedule({ loanId: loan.id, userId: loan.userId, totalRepayable: Number(loan.totalRepayable), tenureMonths: loan.tenure, frequency: loan.deductionFrequency as 'daily' | 'bidaily' | 'weekly' | 'monthly' }) });
+        await tx.user.update({ where: { id: loan.userId }, data: { customerStatus: 'active_bnpl', monoMandateStatus: 'active' } });
+        return true;
+      });
+      if (activated) await notifyBikeAssigned(loan.user, { loanId: loan.id, bikeName: loan.bike.name, bikeSerialNumber: loan.bikeSerialNumber, chassisNumber: loan.chassisNumber, totalRepayable: Number(loan.totalRepayable), tenureMonths: loan.tenure, approvedAt: loan.approvedAt || new Date() }).catch((error) => logger.warn({ error, loanId }, 'Bike assignment notification failed'));
+    }
     const terms = calculateMandateTermsFromLoan({ totalRepayable: Number(loan.totalRepayable), tenureMonths: loan.tenure, deductionFrequency: loan.deductionFrequency, startDate: loan.mandateStartDate || loan.createdAt });
     return NextResponse.json({ success: true, data: {
       mandateId: loan.monoMandateId, reference: loan.monoMandateRef, status: liveStatus.status,
+      authorizationUrl: authorization?.details ? JSON.parse(authorization.details).authorizationUrl : null,
       readyToDebit: liveStatus.readyToDebit, loanId: loan.id, bikeName: loan.bike.name,
       bankName: loan.user.bankName,
       accountNumber: loan.user.bankAccountNumber ? `******${loan.user.bankAccountNumber.slice(-4)}` : null,
@@ -45,12 +57,21 @@ export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const loan = await prisma.loan.findUnique({ where: { id: parsed.data.loanId }, include: { user: true } });
   if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
   if (!canAccess(ctx.user, loan.userId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (loan.monoMandateId) return NextResponse.json({ error: 'A Mono mandate already exists for this loan' }, { status: 409 });
+  if (loan.status !== 'approved') return NextResponse.json({ error: 'Credit approval is required before Mono Sweep authorization' }, { status: 409 });
+  if (loan.monoMandateId) {
+    const existing = await prisma.auditLog.findFirst({ where: { userId: loan.userId, action: 'MONO_MANDATE_AUTHORIZATION_CREATED', resourceId: loan.id }, orderBy: { createdAt: 'desc' }, select: { details: true } });
+    return NextResponse.json({ success: true, data: { status: loan.monoMandateStatus, authorizationUrl: existing?.details ? JSON.parse(existing.details).authorizationUrl : null } });
+  }
+  if (ctx.user.sub !== loan.userId) return NextResponse.json({ error: 'The applicant must authorize the mandate' }, { status: 403 });
+  const accountNumber = decryptField(loan.user.bankAccountNumber || '');
+  if (!accountNumber || !loan.user.bankAccountName || !loan.user.bankName || !loan.monoAccountId || loan.monoAccountId !== loan.user.monoAccountId) return NextResponse.json({ error: 'A verified connected repayment account is required' }, { status: 409 });
   const terms = calculateMandateTermsFromLoan({ totalRepayable: Number(loan.totalRepayable), tenureMonths: loan.tenure, deductionFrequency: loan.deductionFrequency, startDate: new Date() });
   const reference = `DND-${loan.id.replace(/-/g, '').slice(0, 20)}`.slice(0, 24);
   try {
     const mandate = await setupMonoRecurringMandate({
-      ...parsed.data, email: loan.user.email, phone: loan.user.phone || undefined,
+      accountNumber, accountName: loan.user.bankAccountName, bankName: loan.user.bankName,
+      bankCode: loan.user.monoBankCode || undefined, accountId: loan.monoAccountId,
+      email: loan.user.email, phone: loan.user.phone || undefined,
       firstName: loan.user.firstName, lastName: loan.user.lastName,
       address: loan.user.address || undefined, bvn: decryptField(loan.user.bvn) || undefined,
       amount: terms.installmentAmount, tenureMonths: loan.tenure,
@@ -62,6 +83,7 @@ export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
       prisma.user.update({ where: { id: loan.userId }, data: { monoAccountId: mandate.accountId || undefined, monoMandateId: mandate.id, monoMandateStatus: mandate.status, monoBankCode: mandate.bankCode, bankName: mandate.bankName, bankAccountName: mandate.accountName } }),
       prisma.loan.update({ where: { id: loan.id }, data: { monoAccountId: mandate.accountId, monoMandateId: mandate.id, monoMandateRef: mandate.reference, monoMandateStatus: mandate.status, mandateStartDate: new Date(mandate.startDate), mandateEndDate: new Date(mandate.endDate) } }),
     ]);
+    await prisma.auditLog.create({ data: { userId: loan.userId, action: 'MONO_MANDATE_AUTHORIZATION_CREATED', resource: 'loan', resourceId: loan.id, details: JSON.stringify({ authorizationUrl: mandate.authorizationUrl }) } });
     return NextResponse.json({ success: true, message: 'Mandate created; customer authorization may still be required', data: mandate }, { status: 201 });
   } catch (error) {
     logger.error({ error, loanId: loan.id }, 'Mono mandate creation failed');

@@ -97,6 +97,17 @@ export default function BikeDetailPage() {
     fetchBike();
   }, [id]);
 
+  useEffect(() => {
+    if (!bike) return;
+    const model = String(bike.model || bike.name || '').toLowerCase();
+    const required = accessoriesList.find((acc) => {
+      const name = String(acc.name || '').toLowerCase();
+      return /x2|x4|x5 lite/.test(model) && name.includes('extra battery') &&
+        ((model.includes('x2') && name.includes('36v')) || (!model.includes('x2') && name.includes('48v 15ah')));
+    });
+    if (required) setSelectedAccessories((prev) => ({ ...prev, [required.id]: true }));
+  }, [bike, accessoriesList]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -135,6 +146,15 @@ export default function BikeDetailPage() {
     }, 0);
 
   const grossAssetPrice = Number(bike.price) + selectedAccessoriesPrice;
+  const bikeModel = String(bike.model || bike.name || '').toLowerCase();
+  const requiresExtraBattery = /x2|x4|x5 lite/.test(bikeModel);
+  const requiredBattery = requiresExtraBattery
+    ? accessoriesList.find((acc) => {
+        const name = String(acc.name || '').toLowerCase();
+        return name.includes('extra battery') && ((bikeModel.includes('x2') && name.includes('36v')) || (!bikeModel.includes('x2') && name.includes('48v 15ah')));
+      })
+    : null;
+
   const downPaymentAmount = Math.round((grossAssetPrice * downPaymentPercent) / 100);
   const financedPrincipal = grossAssetPrice - downPaymentAmount;
 
@@ -159,6 +179,7 @@ export default function BikeDetailPage() {
   };
 
   const handleProceedToBnpl = () => {
+    if (requiresExtraBattery && requiredBattery && !selectedAccessories[requiredBattery.id]) return;
     const existing = JSON.parse(sessionStorage.getItem('bnpl_data') || '{}');
     const selectedAccs = Object.keys(selectedAccessories)
       .filter((accId) => selectedAccessories[accId])
@@ -401,19 +422,19 @@ export default function BikeDetailPage() {
                 </button>
               </div>
 
-              {/* Optional Accessories Bundle */}
+              {/* Required extra battery bundle */}
               {accessoriesList.length > 0 && (
                 <div className="space-y-2.5">
                   <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">
-                    🔋 Bundle Extra 60V Batteries & Chargers
+                    🔋 {requiresExtraBattery ? 'Required extra battery' : 'Available accessories'}
                   </label>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {accessoriesList.map((acc) => {
+                    {accessoriesList.filter((acc) => !requiresExtraBattery || acc.id === requiredBattery?.id).map((acc) => {
                       const isSelected = !!selectedAccessories[acc.id];
                       return (
                         <div
                           key={acc.id}
-                          onClick={() => toggleAccessory(acc.id)}
+                          onClick={() => !requiresExtraBattery && toggleAccessory(acc.id)}
                           className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                             isSelected
                               ? 'border-primary bg-primary/5'
@@ -424,6 +445,7 @@ export default function BikeDetailPage() {
                             type="checkbox"
                             checked={isSelected}
                             readOnly
+                            disabled={requiresExtraBattery}
                             className="w-4 h-4 accent-primary rounded"
                           />
                           <div className="flex-1 min-w-0">
@@ -684,7 +706,11 @@ export default function BikeDetailPage() {
           onClick={
             paymentChoice === 'bnpl'
               ? handleProceedToBnpl
-              : () => router.push(`/checkout?bikeId=${bike.id}`)
+              : () => {
+                  if (requiresExtraBattery && requiredBattery && !selectedAccessories[requiredBattery.id]) return;
+                  const accQuery = Object.keys(selectedAccessories).filter((accId) => selectedAccessories[accId]).join(',');
+                  router.push(`/checkout?bikeId=${bike.id}${accQuery ? `&accessories=${accQuery}` : ''}`);
+                }
           }
           className="px-5 py-3 rounded-xl bg-primary text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md"
         >

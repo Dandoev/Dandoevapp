@@ -370,6 +370,7 @@ export default function BnplApplicationScreen({
           if (draft.bankName) setBankName(draft.bankName);
           if (draft.accountNumber) setAccountNumber(draft.accountNumber);
           if (draft.accountName) setAccountName(draft.accountName);
+          if (draft.proofOfAddress?.url) setProofOfAddress(draft.proofOfAddress);
           if (draft.tenure) setTenure(draft.tenure);
           setFrequency("weekly");
         } catch {
@@ -401,6 +402,7 @@ export default function BnplApplicationScreen({
         bankName,
         accountNumber,
         accountName,
+        proofOfAddress,
         tenure,
         frequency,
       }),
@@ -422,6 +424,7 @@ export default function BnplApplicationScreen({
     bankName,
     accountNumber,
     accountName,
+    proofOfAddress,
     tenure,
     frequency,
     submittedLoan,
@@ -573,13 +576,18 @@ export default function BnplApplicationScreen({
     setError("");
     try {
       const finalEmployer = employerName === "Other Corporate Logistics" && customEmployerName ? customEmployerName : employerName;
-      let uploadedDocuments;
+      let uploadedDocuments: Array<{ type: string; fileName: string; fileUrl: string }> = [];
       if (dashboardFile) {
         const dashboardName = dashboardFile.name || dashboardFile.uri.split(/[\\/]/).pop() || "earning-dashboard";
         const dashboardLowerName = dashboardName.toLowerCase();
         const dashboardMimeType = dashboardLowerName.endsWith(".pdf") ? "application/pdf" : dashboardLowerName.endsWith(".png") ? "image/png" : "image/jpeg";
         const uploaded = await MobileApi.uploadDocument({ uri: dashboardFile.uri, name: dashboardName, mimeType: dashboardMimeType }, token);
-        uploadedDocuments = [{ type: "earning_dashboard", fileName: dashboardFile.name, fileUrl: uploaded.data.url }];
+        uploadedDocuments.push({ type: "earning_dashboard", fileName: dashboardFile.name, fileUrl: uploaded.data.url });
+      }
+      // Proof of address is uploaded immediately when selected. Reuse the saved
+      // storage URL instead of forcing the applicant to upload it again.
+      if (proofOfAddress?.url) {
+        uploadedDocuments.push({ type: "utility_bill", fileName: proofOfAddress.name, fileUrl: proofOfAddress.url });
       }
       const res = await MobileApi.applyForLoan(
         {
@@ -617,7 +625,7 @@ export default function BnplApplicationScreen({
           bankName,
           bankAccountNumber: accountNumber,
           bankAccountName: accountName,
-          documents: uploadedDocuments,
+          documents: uploadedDocuments.length ? uploadedDocuments : undefined,
           agreementAccepted: true,
           agreementVersion: "bnpl-v1",
           guarantors,
@@ -640,15 +648,6 @@ export default function BnplApplicationScreen({
         mandateStatus: res.data?.mandate?.status || "pending",
         mandateUrl,
       });
-      if (mandateUrl?.startsWith("https://")) {
-        try {
-          await WebBrowser.openAuthSessionAsync(mandateUrl, "dandoev://payment-callback");
-          const latest = await MobileApi.getMonoMandate(res.loanId, token);
-          setSubmittedLoan((current) => current ? { ...current, mandateStatus: latest.data.readyToDebit ? "active" : latest.data.status } : current);
-        } catch {
-          // The application remains submitted; authorization can be retried below.
-        }
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to submit your application. Please check your network and try again.");
     } finally {
@@ -683,23 +682,8 @@ export default function BnplApplicationScreen({
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Mono Sweep authorization</Text>
-            <Text style={styles.helperText}>Status: {submittedLoan.mandateStatus === "active" ? "Ready for repayment" : submittedLoan.mandateStatus || "Pending"}. Mono confirms readiness after you authorize your bank accounts.</Text>
-            {submittedLoan.mandateUrl?.startsWith("https://") && submittedLoan.mandateStatus !== "active" && (
-              <TouchableOpacity style={styles.primaryBtn} onPress={async () => {
-                try {
-                  await WebBrowser.openAuthSessionAsync(submittedLoan.mandateUrl!, "dandoev://payment-callback");
-                  const latest = await MobileApi.getMonoMandate(submittedLoan.loanId, token);
-                  setSubmittedLoan((current) => current ? { ...current, mandateStatus: latest.data.readyToDebit ? "active" : latest.data.status } : current);
-                } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to check Mono mandate. Please retry."); }
-              }}><Text style={styles.primaryBtnText}>Authorize with Mono</Text></TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={async () => {
-              try {
-                const latest = await MobileApi.getMonoMandate(submittedLoan.loanId, token);
-                setSubmittedLoan((current) => current ? { ...current, mandateStatus: latest.data.readyToDebit ? "active" : latest.data.status } : current);
-              } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to refresh mandate status."); }
-            }}><Text style={styles.helperText}>Refresh mandate status</Text></TouchableOpacity>
+            <Text style={styles.cardTitle}>Repayment authorization</Text>
+            <Text style={styles.helperText}>Mono Sweep authorization will appear in Your plans after credit approval. No repayment mandate is created while your application is under review.</Text>
           </View>
 
           {/* Guarantors Dispatched */}

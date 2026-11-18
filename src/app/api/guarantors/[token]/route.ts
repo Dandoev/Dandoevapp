@@ -8,6 +8,7 @@ import logger from '@/lib/logger';
 const submissionSchema = z.object({
   code: z.string().min(3), fullName: z.string().min(2).max(200),
   phone: z.string().min(7).max(20), relationship: z.string().min(2).max(100),
+  occupation: z.string().max(200).optional(), idDocumentUrl: z.string().url(), proofOfAddressUrl: z.string().url(), workIdUrl: z.string().url().optional(),
   agreementAccepted: z.literal(true),
 });
 const tokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
   if (!guarantor || !guarantor.inviteExpiresAt || guarantor.inviteExpiresAt < new Date()) {
     return NextResponse.json({ error: 'This invitation is invalid or expired' }, { status: 404 });
   }
+  await prisma.guarantor.update({ where: { id: guarantor.id }, data: { inviteDeliveryStatus: guarantor.inviteDeliveryStatus === 'sent' ? 'opened' : guarantor.inviteDeliveryStatus, inviteOpenedAt: guarantor.inviteOpenedAt || new Date() } });
   return NextResponse.json({ success: true, data: {
     guarantor: { fullName: guarantor.fullName, phone: guarantor.phone, relationship: guarantor.relationship, status: guarantor.status },
     loan: { id: guarantor.loan.id, applicantName: `${guarantor.loan.user.firstName} ${guarantor.loan.user.lastName}`, bikeName: guarantor.loan.bike.name, loanAmount: Number(guarantor.loan.loanAmount), totalRepayable: Number(guarantor.loan.totalRepayable), tenure: guarantor.loan.tenure, deductionFrequency: guarantor.loan.deductionFrequency },
@@ -40,15 +42,20 @@ export async function POST(req: NextRequest) {
     const identity = await getMonoIdentity(account.id);
     const normalizedExpected = guarantor.fullName.replace(/\s+/g, ' ').trim().toLowerCase();
     const normalizedActual = identity.name.replace(/\s+/g, ' ').trim().toLowerCase();
+    const isFamily = /parent|sibling|spouse|family|relative|child/i.test(parsed.data.relationship);
+    if (!parsed.data.idDocumentUrl || !parsed.data.proofOfAddressUrl || (!isFamily && !parsed.data.workIdUrl)) {
+      return NextResponse.json({ error: isFamily ? 'Means of ID and proof of address are required' : 'Means of ID, proof of address and work ID are required' }, { status: 400 });
+    }
     if (!identity.verified || normalizedExpected !== normalizedActual) {
       return NextResponse.json({ error: 'Mono identity does not match the invited guarantor' }, { status: 422 });
     }
 
     await prisma.$transaction(async (tx) => {
       await tx.guarantor.update({ where: { id: guarantor.id }, data: {
-        phone: parsed.data.phone, relationship: parsed.data.relationship, monoAccountId: account.id,
+        phone: parsed.data.phone, relationship: parsed.data.relationship, occupation: parsed.data.occupation || null,
+        idDocumentUrl: parsed.data.idDocumentUrl, proofOfAddressUrl: parsed.data.proofOfAddressUrl, workIdUrl: parsed.data.workIdUrl || null, monoAccountId: account.id,
         verifiedAt: new Date(), agreementAcceptedAt: new Date(), acceptedAt: new Date(),
-        status: 'accepted', signatureUrl: `agreement://guarantor/${guarantor.id}`,
+        status: 'accepted', inviteDeliveryStatus: 'verified', signatureUrl: `agreement://guarantor/${guarantor.id}`,
         inviteTokenHash: null,
       }});
       const accepted = await tx.guarantor.count({ where: { loanId: guarantor.loanId, status: 'accepted', verifiedAt: { not: null }, agreementAcceptedAt: { not: null } } });

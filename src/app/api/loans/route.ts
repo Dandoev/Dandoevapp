@@ -10,7 +10,6 @@ import { createLoanSchema, type CreateLoanInput } from "@/lib/schemas";
 import { calculateInstallment, calculateDownPayment } from "@/lib/utils";
 import {
   calculateMandateTermsFromLoan,
-  setupMonoRecurringMandate,
   type DeductionInterval,
 } from "@/lib/mono";
 import { BNPL_CONFIG } from "@/lib/constants";
@@ -217,43 +216,7 @@ export const POST = withAuth(
           });
           const reference = `DND-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
 
-          let mandate: any = null;
-          try {
-            mandate = await setupMonoRecurringMandate({
-              accountId: user.monoAccountId || undefined,
-              accountNumber: data.bankAccountNumber,
-              accountName: data.bankAccountName,
-              bankName: data.bankName,
-              bankCode: user.monoBankCode || undefined,
-              email: user.email,
-              phone: data.phone || user.phone || undefined,
-              firstName: data.firstName || user.firstName,
-              lastName: data.lastName || user.lastName,
-              address: data.address || user.address || undefined,
-              bvn: decryptField(user.bvn) || undefined,
-              amount: mandateTerms.installmentAmount,
-              tenureMonths: tenure,
-              deductionFrequency: frequency,
-              totalRepayable,
-              interval: mandateTerms.monoInterval,
-              description: `DandoEv BNPL mandate ${tenure} months`,
-              reference,
-              startDate: mandateTerms.startDate,
-              endDate: mandateTerms.endDate,
-            });
-          } catch (mandateErr: any) {
-            logger.warn(
-              { err: mandateErr?.message, userId: user.id },
-              "Mandate setup will be finalized during underwriting activation",
-            );
-            mandate = {
-              id: `MND-PENDING-${reference}`,
-              reference,
-              status: "pending",
-              startDate: mandateTerms.startDate,
-              endDate: mandateTerms.endDate,
-            };
-          }
+          const mandate = { id: null, reference, status: "awaiting_approval", startDate: mandateTerms.startDate, endDate: mandateTerms.endDate };
 
           const rawInvites = data.guarantors.map(() =>
             crypto.randomBytes(32).toString("base64url"),
@@ -328,6 +291,7 @@ export const POST = withAuth(
                   .createHash("sha256")
                   .update(rawInvites[index])
                   .digest("hex"),
+                inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/guarantor-invite/${rawInvites[index]}`,
                 inviteExpiresAt: expiresAt,
               })),
             });

@@ -3,7 +3,7 @@
 // ============================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -127,47 +127,47 @@ enum DailySavingStatus {
 // ---- Models ----
 
 model User {
-  id                String         @id @default(uuid())
-  email             String         @unique
-  phone             String?        @unique
-  firstName         String
-  lastName          String
-  passwordHash      String
-  role              UserRole       @default(customer)
-  customerStatus    CustomerStatus @default(registered)
-  kycStatus         KycStatus      @default(pending)
-  dateOfBirth       DateTime?
-  address           String?
-  city              String?
-  state             String?
-  employmentStatus  String?
-  monthlyIncome     Decimal?       @db.Decimal(15, 2)
-  employerName      String?
-  employerAddress   String?
-  bvn               String?        // encrypted at app level
-  ninNumber         String?        // encrypted at app level
-  bankName          String?
-  bankAccountNumber String?        // encrypted at app level
-  bankAccountName   String?
-  profileImageUrl   String?
-  isEmailVerified   Boolean        @default(false)
-  isPhoneVerified   Boolean        @default(false)
-  twoFactorEnabled  Boolean        @default(false)
-  twoFactorSecret   String?
+  id                   String         @id @default(uuid())
+  email                String         @unique
+  phone                String?        @unique
+  firstName            String
+  lastName             String
+  passwordHash         String
+  role                 UserRole       @default(customer)
+  customerStatus       CustomerStatus @default(registered)
+  kycStatus            KycStatus      @default(pending)
+  dateOfBirth          DateTime?
+  address              String?
+  city                 String?
+  state                String?
+  employmentStatus     String?
+  monthlyIncome        Decimal?       @db.Decimal(15, 2)
+  employerName         String?
+  employerAddress      String?
+  bvn                  String? // encrypted at app level
+  ninNumber            String? // encrypted at app level
+  bankName             String?
+  bankAccountNumber    String? // encrypted at app level
+  bankAccountName      String?
+  profileImageUrl      String?
+  isEmailVerified      Boolean        @default(false)
+  isPhoneVerified      Boolean        @default(false)
+  twoFactorEnabled     Boolean        @default(false)
+  twoFactorSecret      String?
   // ---- Mono Integration ----
-  monoAccountId     String?        // Mono account ID after Connect
-  monoStatus        String?        // 'linked', 'statement_fetched', 'failed'
-  monoMandateId     String?        // Active Mono Recurring Direct Debit Mandate ID
-  monoMandateStatus String?        // 'pending', 'approved', 'active', 'paused', 'cancelled'
-  monoBankCode      String?        // CBN / NIP 3-6 digit bank code
+  monoAccountId        String? // Mono account ID after Connect
+  monoStatus           String? // 'linked', 'statement_fetched', 'failed'
+  monoMandateId        String? // Active Mono Recurring Direct Debit Mandate ID
+  monoMandateStatus    String? // 'pending', 'approved', 'active', 'paused', 'cancelled'
+  monoBankCode         String? // CBN / NIP 3-6 digit bank code
   // ---- Paystack Integration ----
-  paystackCustomerCode String?     // Paystack customer code
-  paystackAuthCode  String?        // Saved authorization_code for recurring charges
-  pushToken         String?        // FCM/Expo push token
-  pushPlatform      String?        // 'expo', 'fcm', 'apns'
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  lastLoginAt       DateTime?
+  paystackCustomerCode String? // Paystack customer code
+  paystackAuthCode     String? // Saved authorization_code for recurring charges
+  pushToken            String? // FCM/Expo push token
+  pushPlatform         String? // 'expo', 'fcm', 'apns'
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  lastLoginAt          DateTime?
 
   // Relations
   loans             Loan[]
@@ -180,9 +180,9 @@ model User {
   transactions      PaymentTransaction[]
   dailySavings      DailySaving[]
   idempotencyKeys   IdempotencyKey[]
-  guarantorsCreated Guarantor[]    @relation("ApplicantGuarantors")
+  guarantorsCreated Guarantor[]               @relation("ApplicantGuarantors")
   wallet            Wallet?
-  guarantorAccount  Guarantor?    @relation("GuarantorUser")
+  guarantorAccount  Guarantor?                @relation("GuarantorUser")
   monoAssessments   MonoFinancialAssessment[]
 
   @@index([email])
@@ -190,6 +190,19 @@ model User {
   @@index([customerStatus])
   @@index([kycStatus])
   @@map("users")
+}
+
+model PhoneOtpChallenge {
+  id        String   @id @default(uuid())
+  phone     String
+  pinId     String   @unique
+  purpose   String
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+  @@map("phone_otp_challenges")
 }
 
 model Bike {
@@ -201,10 +214,10 @@ model Bike {
   price              Decimal          @db.Decimal(15, 2)
   images             String[]
   category           String?
-  motorPower         Int?             // watts
-  batteryCapacity    Int?             // Wh
+  motorPower         Int? // watts
+  batteryCapacity    Int? // Wh
   rangeKm            Int?
-  topSpeed           Int?             // km/h
+  topSpeed           Int? // km/h
   weight             Decimal?         @db.Decimal(5, 1)
   chargingTime       Decimal?         @db.Decimal(3, 1) // hours
   warranty           String?
@@ -220,104 +233,148 @@ model Bike {
   updatedAt          DateTime         @updatedAt
 
   // Relations
-  orders Order[]
-  loans  Loan[]
+  orders        Order[]
+  loans         Loan[]
   vehicleAssets VehicleAsset[]
 
   @@map("bikes")
 }
 
 model VehicleAsset {
-  id String @id @default(uuid())
-  bikeId String
-  bike Bike @relation(fields: [bikeId], references: [id])
-  serialNumber String @unique
-  imei String? @unique
-  bleMac String? @unique
+  id              String              @id @default(uuid())
+  bikeId          String
+  bike            Bike                @relation(fields: [bikeId], references: [id])
+  serialNumber    String              @unique
+  imei            String?             @unique
+  bleMac          String?             @unique
   firmwareVersion String?
-  status String @default("inventory")
-  assignments VehicleAssignment[]
-  positions VehiclePosition[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status          String              @default("inventory")
+  assignments     VehicleAssignment[]
+  positions       VehiclePosition[]
+  telemetry       VehicleTelemetry[]
+  commands        VehicleCommand[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
   @@index([bikeId, status])
   @@map("vehicle_assets")
 }
 
 model VehicleAssignment {
-  id String @id @default(uuid())
-  assetId String
-  asset VehicleAsset @relation(fields: [assetId], references: [id])
-  riderId String
-  loanId String?
-  orderId String?
-  startedAt DateTime @default(now())
-  endedAt DateTime?
+  id        String       @id @default(uuid())
+  assetId   String
+  asset     VehicleAsset @relation(fields: [assetId], references: [id])
+  riderId   String
+  loanId    String?
+  orderId   String?
+  startedAt DateTime     @default(now())
+  endedAt   DateTime?
+
   @@index([assetId, endedAt])
   @@index([riderId, endedAt])
   @@map("vehicle_assignments")
 }
 
 model VehiclePosition {
-  id String @id @default(uuid())
-  assetId String
-  asset VehicleAsset @relation(fields: [assetId], references: [id])
-  latitude Decimal @db.Decimal(10, 7)
-  longitude Decimal @db.Decimal(10, 7)
+  id         String       @id @default(uuid())
+  assetId    String
+  asset      VehicleAsset @relation(fields: [assetId], references: [id])
+  latitude   Decimal      @db.Decimal(10, 7)
+  longitude  Decimal      @db.Decimal(10, 7)
   satellites Int?
-  hdop Decimal? @db.Decimal(6, 2)
-  estimated Boolean @default(false)
+  hdop       Decimal?     @db.Decimal(6, 2)
+  estimated  Boolean      @default(false)
   observedAt DateTime
-  receivedAt DateTime @default(now())
-  source String @default("omni-device")
+  receivedAt DateTime     @default(now())
+  source     String       @default("omni-device")
+
   @@unique([assetId, observedAt])
   @@index([assetId, observedAt(sort: Desc)])
   @@map("vehicle_positions")
 }
 
+model VehicleTelemetry {
+  id             String       @id @default(uuid())
+  assetId        String
+  asset          VehicleAsset @relation(fields: [assetId], references: [id])
+  lockState      String       @default("unknown")
+  batteryPercent Int?
+  iotVoltage     Float?
+  signal         Int?
+  charging       Boolean?
+  observedAt     DateTime
+  receivedAt     DateTime     @default(now())
+
+  @@unique([assetId, observedAt])
+  @@index([assetId, observedAt(sort: Desc)])
+  @@map("vehicle_telemetry")
+}
+
+model VehicleCommand {
+  id            String       @id @default(uuid())
+  assetId       String
+  asset         VehicleAsset @relation(fields: [assetId], references: [id])
+  riderId       String
+  operation     String
+  status        String       @default("requested")
+  sequence      Int
+  actor         Int          @default(1)
+  gatewayId     String?
+  reason        String?
+  resultMessage String?
+  requestedAt   DateTime     @default(now())
+  expiresAt     DateTime
+  updatedAt     DateTime     @updatedAt
+
+  @@index([assetId, status, requestedAt])
+  @@index([riderId, requestedAt(sort: Desc)])
+  @@map("vehicle_commands")
+}
+
 model SwapStation {
-  id String @id @default(uuid())
-  name String
-  address String
-  latitude Decimal @db.Decimal(10, 7)
-  longitude Decimal @db.Decimal(10, 7)
-  hours String
-  batteryTypes String[]
-  availableBatteries Int @default(0)
-  enabled Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  name               String
+  address            String
+  latitude           Decimal  @db.Decimal(10, 7)
+  longitude          Decimal  @db.Decimal(10, 7)
+  hours              String
+  batteryTypes       String[]
+  availableBatteries Int      @default(0)
+  enabled            Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
   @@index([enabled])
   @@map("swap_stations")
 }
 
 model Order {
-  id             String        @id @default(uuid())
-  userId         String
-  bikeId         String?
-  quantity       Int           @default(1)
-  unitPrice      Decimal       @db.Decimal(15, 2)
-  totalAmount    Decimal       @db.Decimal(15, 2)
-  paymentMethod  PaymentMethod
-  status         OrderStatus   @default(pending)
-  deliveryType   String?       @default("pickup")
-  deliveryFee    Decimal?      @default(0) @db.Decimal(15, 2)
-  insuranceFee   Decimal?      @default(0) @db.Decimal(15, 2)
-  serviceFee     Decimal?      @default(0) @db.Decimal(15, 2)
+  id              String        @id @default(uuid())
+  userId          String
+  bikeId          String?
+  quantity        Int           @default(1)
+  unitPrice       Decimal       @db.Decimal(15, 2)
+  totalAmount     Decimal       @db.Decimal(15, 2)
+  paymentMethod   PaymentMethod
+  status          OrderStatus   @default(pending)
+  deliveryType    String?       @default("pickup")
+  deliveryFee     Decimal?      @default(0) @db.Decimal(15, 2)
+  insuranceFee    Decimal?      @default(0) @db.Decimal(15, 2)
+  serviceFee      Decimal?      @default(0) @db.Decimal(15, 2)
   deliveryAddress String?
-  deliveryCity   String?
-  deliveryState  String?
-  deliveryPhone  String?
-  trackingNumber String?
-  loanId         String?
-  notes          String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  deliveryCity    String?
+  deliveryState   String?
+  deliveryPhone   String?
+  trackingNumber  String?
+  loanId          String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Relations
-  user         User               @relation(fields: [userId], references: [id])
-  bike         Bike?              @relation(fields: [bikeId], references: [id])
-  loan         Loan?              @relation(fields: [loanId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id])
+  bike         Bike?                @relation(fields: [bikeId], references: [id])
+  loan         Loan?                @relation(fields: [loanId], references: [id])
   transactions PaymentTransaction[]
   accessories  OrderAccessory[]
 
@@ -327,62 +384,62 @@ model Order {
 }
 
 model Loan {
-  id                 String     @id @default(uuid())
-  userId             String
-  bikeId             String
-  downPayment        Decimal?   @db.Decimal(15, 2)
-  loanAmount         Decimal    @db.Decimal(15, 2)
-  interestRate       Decimal    @db.Decimal(5, 2)
-  serviceFee         Decimal?   @default(20000) @db.Decimal(15, 2)
-  insuranceFee       Decimal?   @default(25000) @db.Decimal(15, 2)
-  deliveryType       String?    @default("pickup")
-  deliveryFee        Decimal?   @default(0) @db.Decimal(15, 2)
-  deductionFrequency String     @default("bidaily")
-  tenure             Int        // months
-  monthlyRepayment   Decimal    @db.Decimal(15, 2)
-  totalRepayable     Decimal    @db.Decimal(15, 2)
-  status             LoanStatus @default(pending)
-  riskScore          Int?
-  kycVerified        Boolean    @default(false)
-  guarantorsVerified Boolean    @default(false)
+  id                  String     @id @default(uuid())
+  userId              String
+  bikeId              String
+  downPayment         Decimal?   @db.Decimal(15, 2)
+  loanAmount          Decimal    @db.Decimal(15, 2)
+  interestRate        Decimal    @db.Decimal(5, 2)
+  serviceFee          Decimal?   @default(20000) @db.Decimal(15, 2)
+  insuranceFee        Decimal?   @default(25000) @db.Decimal(15, 2)
+  deliveryType        String?    @default("pickup")
+  deliveryFee         Decimal?   @default(0) @db.Decimal(15, 2)
+  deductionFrequency  String     @default("bidaily")
+  tenure              Int // months
+  monthlyRepayment    Decimal    @db.Decimal(15, 2)
+  totalRepayable      Decimal    @db.Decimal(15, 2)
+  status              LoanStatus @default(pending)
+  riskScore           Int?
+  kycVerified         Boolean    @default(false)
+  guarantorsVerified  Boolean    @default(false)
   agreementAcceptedAt DateTime?
   agreementVersion    String?
   agreementIpAddress  String?
   agreementUserAgent  String?
   // ---- Mono Mandate & Auto-Deduction ----
-  monoAccountId      String?
-  monoMandateId      String?
-  monoMandateRef     String?
-  monoMandateStatus  String?    @default("pending") // pending, approved, active, paused, completed, cancelled
-  mandateStartDate   DateTime?
-  mandateEndDate     DateTime?
-  adminNotes         String?
-  rejectionReason    String?
-  bikeSerialNumber   String?
-  chassisNumber      String?
-  batteryNumber1     String?
-  batteryNumber2     String?
-  chargerNumber      String?
-  deliveryAddress    String?
-  deliveryCity       String?
-  deliveryState      String?
-  approvedBy         String?
-  approvedAt         DateTime?
-  disbursedAt        DateTime?
-  completedAt        DateTime?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  monoAccountId       String?
+  monoMandateId       String?
+  monoMandateRef      String?
+  monoMandateStatus   String?    @default("pending") // pending, approved, active, paused, completed, cancelled
+  mandateStartDate    DateTime?
+  mandateEndDate      DateTime?
+  adminNotes          String?
+  rejectionReason     String?
+  bikeSerialNumber    String?
+  chassisNumber       String?
+  batteryNumber1      String?
+  batteryNumber2      String?
+  chargerNumber       String?
+  deliveryAddress     String?
+  deliveryCity        String?
+  deliveryState       String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  disbursedAt         DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   // Relations
-  user         User               @relation(fields: [userId], references: [id])
-  bike         Bike               @relation(fields: [bikeId], references: [id])
-  repayments   Repayment[]
-  guarantors   Guarantor[]
-  orders       Order[]
-  transactions PaymentTransaction[]
-  dailySavings DailySaving[]
-  documents    KycDocument[]
-  recoveryCase RecoveryCase?
+  user           User                     @relation(fields: [userId], references: [id])
+  bike           Bike                     @relation(fields: [bikeId], references: [id])
+  repayments     Repayment[]
+  guarantors     Guarantor[]
+  orders         Order[]
+  transactions   PaymentTransaction[]
+  dailySavings   DailySaving[]
+  documents      KycDocument[]
+  recoveryCase   RecoveryCase?
   monoAssessment MonoFinancialAssessment?
 
   @@index([userId])
@@ -391,32 +448,32 @@ model Loan {
 }
 
 model MonoFinancialAssessment {
-  id                         String   @id @default(uuid())
-  userId                     String   @unique
-  loanId                     String?  @unique
-  provider                   String   @default("mono")
-  monoAccountId              String?
-  verifiedMonthlyInflow      Decimal  @db.Decimal(15, 2)
-  verifiedMonthlyOutflow     Decimal  @db.Decimal(15, 2)
-  netMonthlyCashflow         Decimal  @db.Decimal(15, 2)
-  existingMonthlyDebt        Decimal  @db.Decimal(15, 2)
-  maxAffordableInstallment   Decimal  @db.Decimal(15, 2)
-  dtiRatioPercent            Decimal  @db.Decimal(6, 2)
-  creditScore                Int
-  riskTier                   String
-  underwritingDecision       String
-  detectedLenders            Json
-  decisionReasons            Json
-  statementMonthsAnalysed    Int
-  statementPeriodStart       String?
-  statementPeriodEnd         String?
-  totalCredits               Decimal  @db.Decimal(15, 2)
-  totalDebits                Decimal  @db.Decimal(15, 2)
-  source                     String   @default("mono")
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  id                       String   @id @default(uuid())
+  userId                   String   @unique
+  loanId                   String?  @unique
+  provider                 String   @default("mono")
+  monoAccountId            String?
+  verifiedMonthlyInflow    Decimal  @db.Decimal(15, 2)
+  verifiedMonthlyOutflow   Decimal  @db.Decimal(15, 2)
+  netMonthlyCashflow       Decimal  @db.Decimal(15, 2)
+  existingMonthlyDebt      Decimal  @db.Decimal(15, 2)
+  maxAffordableInstallment Decimal  @db.Decimal(15, 2)
+  dtiRatioPercent          Decimal  @db.Decimal(6, 2)
+  creditScore              Int
+  riskTier                 String
+  underwritingDecision     String
+  detectedLenders          Json
+  decisionReasons          Json
+  statementMonthsAnalysed  Int
+  statementPeriodStart     String?
+  statementPeriodEnd       String?
+  totalCredits             Decimal  @db.Decimal(15, 2)
+  totalDebits              Decimal  @db.Decimal(15, 2)
+  source                   String   @default("mono")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
   loan Loan? @relation(fields: [loanId], references: [id])
 
   @@index([underwritingDecision])
@@ -440,8 +497,8 @@ model Repayment {
   createdAt         DateTime        @default(now())
 
   // Relations
-  loan User       @relation(fields: [userId], references: [id])
-  loanRelation     Loan @relation(fields: [loanId], references: [id])
+  loan         User @relation(fields: [userId], references: [id])
+  loanRelation Loan @relation(fields: [loanId], references: [id])
 
   @@index([loanId])
   @@index([userId])
@@ -451,63 +508,74 @@ model Repayment {
 }
 
 model Guarantor {
-  id              String          @id @default(uuid())
-  loanId          String
-  applicantUserId String
-  userId          String?         @unique // Link to their own User account if they have one
-  fullName        String
-  email           String?
-  phone           String?
-  relationship    String?
-  status          GuarantorStatus @default(invited)
-  idDocumentUrl   String?
-  signatureUrl    String?
-  acceptedAt      DateTime?
-  monoAccountId   String?
-  verifiedAt      DateTime?
-  agreementAcceptedAt DateTime?
-  inviteTokenHash String?         @unique
-  inviteExpiresAt DateTime?
-  createdAt       DateTime        @default(now())
+  id                    String          @id @default(uuid())
+  loanId                String
+  applicantUserId       String
+  userId                String?         @unique // Link to their own User account if they have one
+  fullName              String
+  email                 String?
+  phone                 String?
+  relationship          String?
+  status                GuarantorStatus @default(invited)
+  idDocumentUrl         String?
+  proofOfAddressUrl     String?
+  workIdUrl             String?
+  occupation            String?
+  signatureUrl          String?
+  acceptedAt            DateTime?
+  monoAccountId         String?
+  verifiedAt            DateTime?
+  agreementAcceptedAt   DateTime?
+  inviteTokenHash       String?         @unique
+  inviteUrl             String?
+  inviteDeliveryStatus  String?         @default("pending")
+  inviteDeliveryChannel String?
+  inviteSentAt          DateTime?
+  inviteDeliveredAt     DateTime?
+  inviteOpenedAt        DateTime?
+  inviteFailedAt        DateTime?
+  inviteFailureReason   String?
+  inviteExpiresAt       DateTime?
+  createdAt             DateTime        @default(now())
 
   // Relations
-  loan      Loan @relation(fields: [loanId], references: [id])
-  applicant User @relation("ApplicantGuarantors", fields: [applicantUserId], references: [id])
+  loan      Loan  @relation(fields: [loanId], references: [id])
+  applicant User  @relation("ApplicantGuarantors", fields: [applicantUserId], references: [id])
   user      User? @relation("GuarantorUser", fields: [userId], references: [id])
 
   @@map("guarantors")
 }
 
 model RecoveryCase {
-  id             String           @id @default(uuid())
-  loanId         String           @unique
-  status         RecoveryStatus   @default(active)
-  stage          RecoveryStage    @default(initial_notice)
-  totalAtRisk    Decimal          @db.Decimal(15, 2)
+  id              String         @id @default(uuid())
+  loanId          String         @unique
+  status          RecoveryStatus @default(active)
+  stage           RecoveryStage  @default(initial_notice)
+  totalAtRisk     Decimal        @db.Decimal(15, 2)
   assignedOfficer String?
-  openedAt       DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  closedAt       DateTime?
-  resolution     String?          // settled, legal_action, written_off
+  openedAt        DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  closedAt        DateTime?
+  resolution      String? // settled, legal_action, written_off
 
   // Relations
-  loan           Loan             @relation(fields: [loanId], references: [id])
-  activities     RecoveryActivity[]
+  loan       Loan               @relation(fields: [loanId], references: [id])
+  activities RecoveryActivity[]
 
   @@map("recovery_cases")
 }
 
 model RecoveryActivity {
-  id             String           @id @default(uuid())
-  caseId         String
-  action         String           // call, email, sms, demand_letter, site_visit
-  actorId        String?          // admin who performed the action
-  notes          String?
-  metadata       Json?            // results, external refs
-  createdAt      DateTime         @default(now())
+  id        String   @id @default(uuid())
+  caseId    String
+  action    String // call, email, sms, demand_letter, site_visit
+  actorId   String? // admin who performed the action
+  notes     String?
+  metadata  Json? // results, external refs
+  createdAt DateTime @default(now())
 
   // Relations
-  recoveryCase   RecoveryCase     @relation(fields: [caseId], references: [id])
+  recoveryCase RecoveryCase @relation(fields: [caseId], references: [id])
 
   @@map("recovery_activities")
 }
@@ -571,7 +639,7 @@ model AuditLog {
 model Notification {
   id        String   @id @default(uuid())
   userId    String
-  type      String   // payment_reminder, loan_approved, etc.
+  type      String // payment_reminder, loan_approved, etc.
   title     String
   message   String
   isRead    Boolean  @default(false)
@@ -587,14 +655,14 @@ model Notification {
 // ---- New Infrastructure Tables ----
 
 model RefreshToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   tokenHash String
   expiresAt DateTime
-  revoked   Boolean  @default(false)
+  revoked   Boolean   @default(false)
   revokedAt DateTime?
-  familyId  String   // for reuse detection
-  createdAt DateTime @default(now())
+  familyId  String // for reuse detection
+  createdAt DateTime  @default(now())
 
   // Relations
   user User @relation(fields: [userId], references: [id])
@@ -624,7 +692,7 @@ model IdempotencyKey {
 
 model WebhookEvent {
   id           String             @id @default(uuid())
-  provider     String             // paystack, flutterwave
+  provider     String // paystack, flutterwave
   eventType    String
   eventId      String             @unique // provider's event ID for dedup
   payload      Json
@@ -645,8 +713,8 @@ model PaymentTransaction {
   orderId        String?
   loanId         String?
   repaymentId    String?
-  provider       String            // paystack
-  providerRef    String?           // paystack transaction reference
+  provider       String // paystack
+  providerRef    String? // paystack transaction reference
   amount         Decimal           @db.Decimal(15, 2)
   currency       String            @default("NGN")
   status         TransactionStatus @default(initiated)
@@ -668,14 +736,14 @@ model PaymentTransaction {
 }
 
 model DailySaving {
-  id         String           @id @default(uuid())
+  id         String            @id @default(uuid())
   userId     String
   loanId     String
-  date       DateTime         @db.Date
-  amount     Decimal          @default(1000) @db.Decimal(15, 2)
+  date       DateTime          @db.Date
+  amount     Decimal           @default(1000) @db.Decimal(15, 2)
   status     DailySavingStatus @default(pending)
   paymentRef String?
-  createdAt  DateTime         @default(now())
+  createdAt  DateTime          @default(now())
 
   // Relations
   user User @relation(fields: [userId], references: [id])
@@ -704,11 +772,11 @@ model Wallet {
 
 model LedgerEntry {
   id        String   @id @default(uuid())
-  groupId   String   // joins debit & credit events
-  account   String   // 'wallet_main', 'wallet_locked', 'platform_revenue', etc.
+  groupId   String // joins debit & credit events
+  account   String // 'wallet_main', 'wallet_locked', 'platform_revenue', etc.
   debit     Decimal  @default(0) @db.Decimal(15, 2)
   credit    Decimal  @default(0) @db.Decimal(15, 2)
-  reference String   // txId, repaymentId, etc.
+  reference String // txId, repaymentId, etc.
   details   String?
   createdAt DateTime @default(now())
 
@@ -727,32 +795,32 @@ model SystemConfig {
 }
 
 model Settlement {
-  id             String   @id @default(uuid())
-  provider       String   // paystack, mono
-  providerRef    String   @unique // Provider's payout ID
-  amount         Decimal  @db.Decimal(15, 2)
-  currency       String   @default("NGN")
-  status         String   // pending, successful, failed
+  id             String    @id @default(uuid())
+  provider       String // paystack, mono
+  providerRef    String    @unique // Provider's payout ID
+  amount         Decimal   @db.Decimal(15, 2)
+  currency       String    @default("NGN")
+  status         String // pending, successful, failed
   payoutDate     DateTime
   processedAt    DateTime?
   transactionIds String[] // IDs of transactions included in this settlement
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   @@map("settlements")
 }
 
 model ReconciliationLog {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   jobId          String
-  startedAt      DateTime @default(now())
+  startedAt      DateTime  @default(now())
   completedAt    DateTime?
-  status         String   // processing, completed, failed
-  totalProcessed Int      @default(0)
-  totalMatched   Int      @default(0)
-  totalFlagged   Int      @default(0)
-  details        Json?    // Summary of discrepancies
+  status         String // processing, completed, failed
+  totalProcessed Int       @default(0)
+  totalMatched   Int       @default(0)
+  totalFlagged   Int       @default(0)
+  details        Json? // Summary of discrepancies
   errors         String?
-  
+
   @@map("reconciliation_logs")
 }
 
@@ -762,7 +830,7 @@ model Accessory {
   description   String?
   price         Decimal  @db.Decimal(15, 2)
   images        String[]
-  category      String   // 'battery', 'charger'
+  category      String // 'battery', 'charger'
   stockQuantity Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -773,14 +841,14 @@ model Accessory {
 }
 
 model OrderAccessory {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   orderId     String
   accessoryId String
-  quantity    Int      @default(1)
-  unitPrice   Decimal  @db.Decimal(15, 2)
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(15, 2)
 
-  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  accessory   Accessory @relation(fields: [accessoryId], references: [id])
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  accessory Accessory @relation(fields: [accessoryId], references: [id])
 
   @@map("order_accessories")
 }

@@ -1,88 +1,58 @@
+import { normalizeNigerianPhone } from '@/lib/phone';
 import logger from './logger';
 
-const TERMII_API_KEY = process.env.TERMII_API_KEY;
 const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'DandoEv';
-const TERMII_BASE_URL = (process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/+$/, '');
 
-/**
- * Send an SMS using Termii API.
- */
 export async function sendSms(to: string, message: string) {
-  if (!TERMII_API_KEY) {
-    logger.warn({ to }, 'Termii API key missing, skipping SMS');
-    return;
-  }
-
-  // Ensure phone number is in international format without '+'
-  const formattedPhone = to.startsWith('+') ? to.slice(1) : to;
-
-  try {
-    const response = await fetch(`${TERMII_BASE_URL}/api/sms/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: formattedPhone,
-        from: TERMII_SENDER_ID,
-        sms: message,
-        type: 'plain',
-        channel: 'generic',
-        api_key: TERMII_API_KEY,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.code !== 'ok') {
-      throw new Error(data.message || 'Failed to send SMS via Termii');
-    }
-
-    logger.info({ to, messageId: data.message_id }, 'SMS sent successfully via Termii');
-    return data;
-  } catch (error: any) {
-    logger.error({ to, error: error.message }, 'Termii SMS dispatch failed');
-    throw error;
-  }
+  const apiKey = process.env.TERMII_API_KEY;
+  if (!apiKey) { logger.warn({ to }, 'Termii API key missing, skipping SMS'); return; }
+  const response = await fetch(`${(process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/$/, '')}/api/sms/send`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: to.replace(/^\+/, ''), from: TERMII_SENDER_ID, sms: message, type: 'plain', channel: 'generic', api_key: apiKey }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || (data?.code && data.code !== 'ok')) throw new Error(data?.message || 'Failed to send SMS via Termii');
+  return data;
 }
 
-/**
- * Send a WhatsApp message using Termii API.
- */
 export async function sendWhatsApp(to: string, message: string) {
-  if (!TERMII_API_KEY) {
-    logger.warn({ to }, 'Termii API key missing, skipping WhatsApp');
-    return;
-  }
+  const apiKey = process.env.TERMII_API_KEY;
+  if (!apiKey) { logger.warn({ to }, 'Termii API key missing, skipping WhatsApp'); return; }
+  const response = await fetch(`${(process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/$/, '')}/api/sms/send`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: to.replace(/^\+/, ''), from: TERMII_SENDER_ID, sms: message, type: 'plain', channel: 'whatsapp', api_key: apiKey }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || (data?.code && data.code !== 'ok')) throw new Error(data?.message || 'Failed to send WhatsApp via Termii');
+  return data;
+}
 
-  const formattedPhone = to.startsWith('+') ? to.slice(1) : to;
+function config() {
+  const apiKey = process.env.TERMII_API_KEY;
+  const baseUrl = (process.env.TERMII_BASE_URL || 'https://api.ng.termii.com').replace(/\/$/, '');
+  if (!apiKey) throw new Error('Termii is not configured');
+  return { apiKey, baseUrl };
+}
 
-  try {
-    const response = await fetch(`${TERMII_BASE_URL}/api/sms/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: formattedPhone,
-        from: TERMII_SENDER_ID,
-        sms: message,
-        type: 'plain',
-        channel: 'whatsapp',
-        api_key: TERMII_API_KEY,
-      }),
-    });
+export async function sendPhoneOtp(phone: string) {
+  const normalized = normalizeNigerianPhone(phone);
+  if (!normalized) throw new Error('Enter a valid Nigerian phone number');
+  const { apiKey, baseUrl } = config();
+  const response = await fetch(`${baseUrl}/api/sms/otp/generate`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey, pin_type: 'NUMERIC', phone_number: normalized.replace(/^\+/, ''), pin_attempts: 3, pin_time_to_live: 10, pin_length: 6 }),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.pin_id) throw new Error(payload?.message || 'Unable to send verification code');
+  return { pinId: payload.pin_id, phone: normalized };
+}
 
-    const data = await response.json();
-
-    if (!response.ok || data.code !== 'ok') {
-      throw new Error(data.message || 'Failed to send WhatsApp via Termii');
-    }
-
-    logger.info({ to, messageId: data.message_id }, 'WhatsApp sent successfully via Termii');
-    return data;
-  } catch (error: any) {
-    logger.error({ to, error: error.message }, 'Termii WhatsApp dispatch failed');
-    throw error;
-  }
+export async function verifyPhoneOtp(pinId: string, pin: string) {
+  const { apiKey, baseUrl } = config();
+  const response = await fetch(`${baseUrl}/api/sms/otp/verify`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey, pin_id: pinId, pin }),
+  });
+  const payload = await response.json().catch(() => null);
+  return { verified: response.ok && String(payload?.verified).toLowerCase() === 'true', phone: payload?.msisdn || null };
 }

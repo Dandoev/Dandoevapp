@@ -64,18 +64,20 @@ function CheckoutContent() {
 
     async function fetchData() {
       try {
+        let loadedBike: CheckoutBike | null = null;
         if (bikeId) {
           const res = await fetch(`/api/bikes/${bikeId}`);
           const data = await res.json();
           if (data.success) {
-            setBike(data.data);
+            loadedBike = data.data;
+            setBike(loadedBike);
           } else {
             setPageError('Bike not found');
             return;
           }
         }
 
-        if (accessoryIds.length > 0) {
+        if (accessoryIds.length > 0 || bikeId) {
           const res = await fetch('/api/accessories');
           const data = await res.json();
           if (data.success && Array.isArray(data.data)) {
@@ -86,6 +88,14 @@ function CheckoutContent() {
                 return found ? { ...found, quantity: 1 } : null;
               })
               .filter((accessory): accessory is CheckoutAccessory => accessory !== null);
+            const model = String(loadedBike?.name || '').toLowerCase();
+            if (loadedBike && /x2|x4|x5 lite/.test(model)) {
+              const required = allAccs.find((a) => {
+                const name = String(a.name || '').toLowerCase();
+                return name.includes('extra battery') && ((model.includes('x2') && name.includes('36v')) || (!model.includes('x2') && name.includes('48v 15ah')));
+              });
+              if (required && !matchedAccs.some((a) => a.id === required.id)) matchedAccs.push({ ...required, quantity: 1 });
+            }
             setCheckoutAccessories(matchedAccs);
           }
         }

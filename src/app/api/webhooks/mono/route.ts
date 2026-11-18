@@ -19,6 +19,7 @@ import {
   notifyDownPaymentSuccess,
   notifyOrderPaymentFailed,
 } from "@/lib/notifications";
+import { enqueueNotification } from "@/lib/queue";
 
 export async function POST(req: NextRequest) {
   const log = logger.child({ route: "webhooks/mono" });
@@ -366,6 +367,14 @@ export async function POST(req: NextRequest) {
             Math.round(Number(transaction.amount) * 100) !==
               Math.round(amountNgn * 100)
           ) {
+            if (transaction?.loanId && (transaction.metadata as any)?.type === 'early_settlement' && Math.round(Number(transaction.amount) * 100) === Math.round(amountNgn * 100)) {
+              await prisma.$transaction(async (tx) => {
+                await tx.paymentTransaction.update({ where: { id: transaction.id }, data: { status: 'success', reconciledAt: new Date(), metadata: data } });
+                await tx.repayment.updateMany({ where: { loanId: transaction.loanId!, status: { not: 'paid' } }, data: { status: 'paid', paidDate: new Date() } });
+                await tx.loan.update({ where: { id: transaction.loanId! }, data: { status: 'completed', completedAt: new Date(), monoMandateStatus: 'cancelled' } });
+              });
+              break;
+            }
             throw new Error(
               "Mono debit does not match a pending repayment transaction",
             );
@@ -404,6 +413,9 @@ export async function POST(req: NextRequest) {
                   monoMandateStatus: "completed",
                 },
               });
+            if (transaction.repaymentId) {
+              await enqueueNotification({ userId: transaction.userId, type: "payment_success", title: "Repayment confirmed", message: `Your installment payment of ₦${amountNgn.toLocaleString()} has been confirmed by Mono.`, channels: ["email", "sms"] }).catch(() => {});
+            }
           });
         } catch (error) {
           log.error(
@@ -441,6 +453,7 @@ export async function POST(req: NextRequest) {
                 where: { id: attempt.repaymentId, paymentReference: reference, status: { not: "paid" } },
                 data: { paymentReference: null, status: "failed", retryCount: { increment: 1 } },
               });
+              await enqueueNotification({ userId: attempt.userId, type: "payment_failed", title: "Repayment failed", message: "Mono could not complete your installment debit. Fund your wallet and we will retry automatically.", channels: ["email", "sms"] }).catch(() => {});
             }
           }
         });
@@ -615,6 +628,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, event: payload.event });
   } catch (error: any) {
     log.error({ error: error.message }, "Mono webhook processing error");
+    try {
+      const raw = await req.clone().json();
+      const failedEventId = raw?.event_id || `mono:${crypto.createHash("sha256").update(JSON.stringify(raw)).digest("hex")}`;
+      await updateWebhookEventStatus(failedEventId, "failed", error.message);
+    } catch {}
     return NextResponse.json(
       { error: "Webhook processing failed" },
       { status: 500 },

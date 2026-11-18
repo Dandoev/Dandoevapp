@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withRoles, withValidation, type ApiContext } from "@/lib/api-handler";
 import { loanActionSchema, type LoanActionInput } from "@/lib/schemas";
-import {
-  buildRepaymentSchedule,
-  getApprovalBlockers,
-} from "@/lib/bnpl-workflow";
+import { getApprovalBlockers } from "@/lib/bnpl-workflow";
 import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
-import { notifyBikeAssigned, notifyLoanStatusChanged } from "@/lib/notifications";
+import { notifyLoanStatusChanged } from "@/lib/notifications";
 import { decryptField } from "@/lib/encryption";
-import { getMonoMandateStatus } from "@/lib/mono";
 
 const roles = ["super_admin", "credit_underwriter", "finance_admin"];
 const loanIdFrom = (req: NextRequest) => req.nextUrl.pathname.split("/").pop()!;
@@ -121,23 +117,6 @@ export const PATCH = withRoles(
           });
         }
 
-        if (!loan.monoMandateId || loan.monoMandateId.startsWith("MND-PENDING"))
-          return NextResponse.json({ error: "A Mono Sweep mandate must be authorised before approval" }, { status: 409 });
-        let mandate;
-        try {
-          mandate = await getMonoMandateStatus(loan.monoMandateId);
-        } catch (error) {
-          logger.warn({ error, loanId: id }, "Could not verify Mono mandate for approval");
-          return NextResponse.json({ error: "Could not confirm Mono Sweep mandate readiness. Retry after Mono is available." }, { status: 503 });
-        }
-        if (!mandate.readyToDebit || mandate.status !== "active") {
-          await prisma.loan.update({ where: { id }, data: { monoMandateStatus: mandate.status } });
-          return NextResponse.json({ error: "Mono Sweep mandate is not ready to debit", mandateStatus: mandate.status }, { status: 409 });
-        }
-        if (loan.monoMandateStatus !== "active") {
-          await prisma.loan.update({ where: { id }, data: { monoMandateStatus: "active" } });
-          loan.monoMandateStatus = "active";
-        }
         const blockers = getApprovalBlockers(loan);
         const financialBlockers = blockers.filter((blocker) => blocker.includes('financial assessment') || blocker.includes('affordability'));
         if (Number(loan.downPayment) > 0) {
@@ -175,14 +154,6 @@ export const PATCH = withRoles(
             { status: 409 },
           );
 
-        const schedule = buildRepaymentSchedule({
-          loanId: loan.id,
-          userId: loan.userId,
-          totalRepayable: Number(loan.totalRepayable),
-          tenureMonths: loan.tenure,
-          frequency: loan.deductionFrequency as
-            "daily" | "bidaily" | "weekly" | "monthly",
-        });
         const approved = await prisma.$transaction(async (tx) => {
           const reserved = await tx.bike.updateMany({
             where: { id: loan.bikeId, stockQuantity: { gt: 0 } },
@@ -193,7 +164,8 @@ export const PATCH = withRoles(
           const updated = await tx.loan.update({
             where: { id },
             data: {
-              status: "active",
+              status: "approved",
+              monoMandateStatus: "awaiting_authorization",
               approvedAt: new Date(),
               approvedBy: ctx.user.email || ctx.user.sub,
               adminNotes: data.adminNotes,
@@ -205,11 +177,6 @@ export const PATCH = withRoles(
               guarantorsVerified: true,
             },
           });
-          await tx.user.update({
-            where: { id: loan.userId },
-            data: { customerStatus: "active_bnpl" },
-          });
-          await tx.repayment.createMany({ data: schedule });
           await tx.auditLog.create({
             data: {
               userId: ctx.user.sub,
@@ -217,7 +184,7 @@ export const PATCH = withRoles(
               resource: "loan",
               resourceId: id,
               details: JSON.stringify({
-                installments: schedule.length,
+                installments: 0,
                 mandateId: loan.monoMandateId,
                 approvedBy: ctx.user.email || ctx.user.sub,
               }),
@@ -228,18 +195,10 @@ export const PATCH = withRoles(
         const invoiceRef = `DND-INV-${id.slice(0, 8).toUpperCase()}`;
         const receiptRef = `DND-RCP-${id.slice(0, 8).toUpperCase()}`;
         const agreementRef = `DND-AGR-${id.slice(0, 8).toUpperCase()}`;
-        await notifyBikeAssigned(loan.user, {
-          loanId: id,
-          bikeName: loan.bike.name,
-          bikeSerialNumber: approved.bikeSerialNumber,
-          chassisNumber: approved.chassisNumber,
-          totalRepayable: Number(approved.totalRepayable),
-          tenureMonths: approved.tenure,
-          approvedAt: approved.approvedAt || new Date(),
-        });
+        await notifyLoanStatusChanged(loan.user, id, "approved", "Your credit application is approved. Authorize Mono Sweep in the app to activate your plan.");
         return NextResponse.json({
           success: true,
-          message: `Loan approved and ${schedule.length} repayments scheduled`,
+          message: "Credit approved. Customer must authorize Mono Sweep before activation and repayment scheduling.",
           documents: { invoiceRef, receiptRef, agreementRef },
           data: approved,
         });

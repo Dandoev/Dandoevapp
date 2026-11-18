@@ -1,9 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Mono production integration", () => {
+  // These tests use test_sk_ keys, which are only accepted in sandbox mode.
+  beforeEach(() => {
+    process.env.MONO_ENVIRONMENT = "sandbox";
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.resetModules();
+    delete process.env.MONO_ENVIRONMENT;
     delete process.env.MONO_PAYMENTS_SECRET_KEY;
     delete process.env.MONO_CONNECT_SECRET_KEY;
     delete process.env.MONO_LOOKUP_SECRET_KEY;

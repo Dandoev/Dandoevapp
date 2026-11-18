@@ -43,6 +43,10 @@ export async function POST(req: NextRequest) {
       );
     }
     const providedEmail = data.email ? String(data.email).toLowerCase().trim() : null;
+    if (normalizedPhone) {
+      const phoneChallenge = await prisma.phoneOtpChallenge.findFirst({ where: { phone: { in: phoneLookupVariants(normalizedPhone) }, purpose: 'signup', verified: true, expiresAt: { gt: new Date() } }, orderBy: { createdAt: 'desc' } });
+      if (!phoneChallenge) return NextResponse.json({ error: 'Verify your phone number with the OTP before creating your account.' }, { status: 403 });
+    }
     // Phone-only sign-ups get a private placeholder email so Supabase Auth has a unique login id.
     const cleanEmail = providedEmail || phoneToPlaceholderEmail(normalizedPhone!);
 

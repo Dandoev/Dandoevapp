@@ -1637,7 +1637,7 @@ export function calculateMandateTermsFromLoan(params: {
       ? rawFreq
       : "bidaily";
 
-  const dailySavings = params.dailySavingsEscrow ?? 1000;
+  const dailySavings = params.dailySavingsEscrow ?? 0;
 
   let totalInstallments: number;
   let stepDays: number;

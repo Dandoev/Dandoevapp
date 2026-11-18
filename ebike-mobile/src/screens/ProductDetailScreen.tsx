@@ -380,7 +380,7 @@ export default function ProductDetailScreen({
                   {activeCadenceSuffix}
                 </Text>
                 <Text style={styles.bnplTagSub}>
-                  100% Returnable Escrow • {selectedTenure} Mo
+                  Flexible BNPL • {selectedTenure} Mo
                 </Text>
               </View>
             ) : (
@@ -875,15 +875,6 @@ export default function ProductDetailScreen({
                 </Text>
                 <Text style={styles.bnplDetailVal}>
                   ₦{breakdown.totalInterest?.toLocaleString()}
-                </Text>
-              </View>
-
-              <View style={styles.bnplDetailRow}>
-                <Text style={styles.bnplDetailLabel}>
-                  Save-As-You-Ride Sweep (100% Returnable):
-                </Text>
-                <Text style={styles.bnplDetailVal}>
-                  ₦1,000/day (Unlocked at Payoff)
                 </Text>
               </View>
 

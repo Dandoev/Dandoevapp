@@ -11,7 +11,24 @@ import logger from '@/lib/logger';
 export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const log = logger.child({ requestId: ctx.requestId, route: 'wallet' });
   try {
-    const wallet = await ensureWallet(prisma, ctx.user.sub);
+    const [wallet, transactions] = await Promise.all([
+      ensureWallet(prisma, ctx.user.sub),
+      prisma.paymentTransaction.findMany({
+        where: { userId: ctx.user.sub },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: {
+          id: true,
+          amount: true,
+          status: true,
+          provider: true,
+          providerRef: true,
+          loanId: true,
+          metadata: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -21,6 +38,16 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
         lockedSaving: Number(wallet.lockedSaving),
         currency: 'NGN',
         updatedAt: wallet.updatedAt,
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          amount: Number(t.amount),
+          status: t.status,
+          provider: t.provider,
+          reference: t.providerRef,
+          loanId: t.loanId,
+          type: (t.metadata as Record<string, unknown> | null)?.type ?? null,
+          createdAt: t.createdAt,
+        })),
       },
     });
   } catch (error: any) {

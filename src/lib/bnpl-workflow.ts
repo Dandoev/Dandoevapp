@@ -16,7 +16,6 @@ export function getApprovalBlockers(loan: ApprovalSnapshot): string[] {
   if (!loan.agreementAcceptedAt) blockers.push('Applicant BNPL agreement is not accepted');
   const verifiedGuarantors = loan.guarantors.filter((g) => g.status === 'accepted' && g.verifiedAt && g.agreementAcceptedAt);
   if (verifiedGuarantors.length < 2) blockers.push('Two verified guarantors with signed agreements are required');
-  if (!loan.monoMandateId || loan.monoMandateStatus !== 'active') blockers.push('Mono mandate is not active and ready to debit');
   return blockers;
 }
 

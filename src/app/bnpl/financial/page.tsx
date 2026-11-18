@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import { NIGERIAN_BANKS } from '@/lib/constants';
 import { formatNaira } from '@/lib/utils';
+import { getMonoConnectPublicKey } from '@/lib/mono-public';
 import {
   Info,
   FileText,
@@ -231,9 +232,7 @@ export default function FinancialInfoPage() {
 
   const handleConnectBank = () => {
     const MonoConnect = (window as any).MonoConnect;
-    const publicKey = process.env.NEXT_PUBLIC_MONO_ENVIRONMENT === 'sandbox'
-      ? process.env.NEXT_PUBLIC_MONO_SANDBOX_PUBLIC_KEY
-      : process.env.NEXT_PUBLIC_MONO_PUBLIC_KEY;
+    const publicKey = getMonoConnectPublicKey();
 
     if (MonoConnect && publicKey) {
       try {

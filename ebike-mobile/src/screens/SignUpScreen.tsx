@@ -33,6 +33,9 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
   const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   // One-click helper to fill sample buyer registration info
   const handleAutoFill = () => {
@@ -89,6 +92,18 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
     try {
       const cleanEmail = hasEmail ? email.trim().toLowerCase() : undefined;
       const cleanPhone = hasPhone ? phone.trim() : undefined;
+      if (cleanPhone && !phoneVerified) {
+        if (!otpSent) {
+          await MobileApi.sendPhoneOtp(cleanPhone, 'signup');
+          setOtpSent(true);
+          setErrorMessage('Verification code sent. Enter it below and tap Create Account again.');
+        } else {
+          await MobileApi.verifyPhoneOtp(cleanPhone, otp.trim(), 'signup');
+          setPhoneVerified(true);
+          setErrorMessage('Phone verified. Tap Create Account again to finish registration.');
+        }
+        return;
+      }
       // 1. Try Backend API endpoint if reachable (auto-confirms user and synchronizes profile)
       try {
         const apiData = await MobileApi.signUp({
@@ -231,6 +246,8 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
                 value={phone}
                 onChangeText={(t) => {
                   setPhone(t);
+                  setOtpSent(false);
+                  setPhoneVerified(false);
                   setErrorMessage(null);
                 }}
               />
@@ -256,6 +273,15 @@ export default function SignUpScreen({ navigateTo, setToken }: SignUpScreenProps
             <Text style={{ fontSize: 13, color: '#64748B', fontFamily: 'Inter_500Medium', marginTop: -8, marginBottom: 12 }}>
               Sign in with your phone number or email. Provide at least one.
             </Text>
+
+            {otpSent && !phoneVerified && (
+              <>
+                <Text style={styles.label}>Phone verification code</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput style={styles.input} placeholder="Enter 6-digit code" placeholderTextColor="#9CA3AF" keyboardType="number-pad" value={otp} onChangeText={setOtp} maxLength={8} />
+                </View>
+              </>
+            )}
 
             {/* Password Input */}
             <Text style={styles.label}>Create Password</Text>

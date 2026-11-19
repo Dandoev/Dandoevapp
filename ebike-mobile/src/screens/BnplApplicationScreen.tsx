@@ -15,7 +15,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import * as WebBrowser from "expo-web-browser";
+import { WebView } from "react-native-webview";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ArrowLeft,
@@ -239,6 +239,7 @@ export default function BnplApplicationScreen({
   const [accountChecking, setAccountChecking] = useState(false);
   const [accountVerified, setAccountVerified] = useState(false);
   const [connectBusy, setConnectBusy] = useState(false);
+  const [connectUrl, setConnectUrl] = useState<string | null>(null);
   const [connectMessage, setConnectMessage] = useState("");
   const [connectedAssessment, setConnectedAssessment] = useState<Awaited<ReturnType<typeof MobileApi.getMonoFinancial>>["data"] | null>(null);
 
@@ -278,23 +279,30 @@ export default function BnplApplicationScreen({
       const session = await MobileApi.initiateMonoConnect(redirectUrl, token);
       const url = session.data?.url || session.data?.mono_url;
       if (!url || !/^https:\/\//i.test(url)) throw new Error("Mono did not return a valid bank connection link. Please retry.");
-      const browser = await WebBrowser.openAuthSessionAsync(url, "dandoev://mono-connect-callback");
-      if (browser.type !== "success" || !browser.url?.startsWith("dandoev://mono-connect-callback")) {
-        setError("Bank connection was closed. Tap Connect bank with Mono to try again.");
+      if (Platform.OS === "web") {
+        window.open(url, "_blank", "noopener,noreferrer");
+        setConnectMessage("Mono opened in a secure browser tab. Complete your bank connection there, then return here and tap Refresh connection status.");
         return;
       }
-      const returnStatus = new URL(browser.url).searchParams.get("status")?.toLowerCase();
-      if (returnStatus === "failed" || returnStatus === "error" || returnStatus === "cancelled") {
-        setError("Mono could not connect your bank. Check your bank login and try again.");
-        return;
-      }
-      const assessment = await refreshConnectStatus();
-      if (!assessment?.monoAccountId) setConnectMessage("Mono is confirming your bank and preparing its statement. Tap Refresh connection status shortly.");
+      setConnectUrl(url);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Bank connection failed. Please try again.");
     } finally {
       setConnectBusy(false);
     }
+  };
+
+  const handleMonoConnectNavigation = async (url: string) => {
+    if (!url.includes("/mono-connect/mobile-return") && !url.startsWith("dandoev://mono-connect-callback")) return;
+    const parsed = new URL(url);
+    const returnStatus = parsed.searchParams.get("status")?.toLowerCase();
+    setConnectUrl(null);
+    if (returnStatus === "failed" || returnStatus === "error" || returnStatus === "cancelled") {
+      setError("Mono could not connect your bank. Check your bank login and try again.");
+      return;
+    }
+    const assessment = await refreshConnectStatus();
+    if (!assessment?.monoAccountId) setConnectMessage("Mono is confirming your bank and preparing its statement. Tap Refresh connection status shortly.");
   };
 
   const draftKey = `@dandoev_bnpl_draft_${product.id}`;
@@ -774,6 +782,31 @@ export default function BnplApplicationScreen({
   // ==========================================
   return (
     <SafeAreaView style={styles.container}>
+      <Modal visible={Boolean(connectUrl)} animationType="slide" onRequestClose={() => setConnectUrl(null)}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.topNav}>
+            <TouchableOpacity style={styles.navBtn} onPress={() => setConnectUrl(null)}>
+              <X size={20} color="#0A154F" />
+            </TouchableOpacity>
+            <Text style={styles.navTitle}>Secure bank connection</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          {connectUrl ? (
+            <WebView
+              source={{ uri: connectUrl }}
+              startInLoadingState
+              renderLoading={() => <ActivityIndicator style={{ flex: 1 }} size="large" color="#2E3192" />}
+              onShouldStartLoadWithRequest={(request) => {
+                if (request.url.startsWith("dandoev://mono-connect-callback") || request.url.includes("/mono-connect/mobile-return")) {
+                  void handleMonoConnectNavigation(request.url);
+                  return false;
+                }
+                return true;
+              }}
+            />
+          ) : null}
+        </SafeAreaView>
+      </Modal>
       {/* Mobile Top Navigation Bar */}
       <View style={styles.topNav}>
         <TouchableOpacity

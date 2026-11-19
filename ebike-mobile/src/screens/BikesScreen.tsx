@@ -69,7 +69,7 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
       productCategory.toLowerCase().includes(query);
 
     return matchesSearch;
-  });
+  }).sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
 
   const getInstallmentDisplay = (price: number) => {
     // 12 months tenure, weekly deduction (48 weeks)
@@ -170,7 +170,7 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
           const isCharger = product.category === 'Chargers';
           const isFlagship = product.name.includes('G90') && !product.name.includes('Lite');
           const isSports = product.name.includes('X5') || product.name.includes('X6');
-          const badgeText = isFlagship ? 'FLAGSHIP' : isSports ? (product.name.includes('X6') ? 'ALL-TERRAIN' : 'SPORTS') : product.category.toUpperCase();
+          const badgeText = isFlagship ? 'ALL TERRAIN' : isSports ? (product.name.includes('X6') ? 'ALL-TERRAIN' : 'SPORTS') : product.category.toUpperCase();
 
           return (
             <TouchableOpacity
@@ -205,7 +205,7 @@ export default function BikesScreen({ onSelectProduct, token }: BikesScreenProps
                   </View>
                   <Text style={styles.bikeName}>{product.name}</Text>
                   <Text style={styles.bikeBrand}>
-                    {isFlagship ? 'All terrain e-bike' : isSports ? 'Sports fat-tire e-bike' : product.brand}
+                    {isFlagship ? 'Flagship All Terrain E-bike' : isSports ? 'Sports fat-tire e-bike' : product.brand}
                   </Text>
                 </View>
               </View>

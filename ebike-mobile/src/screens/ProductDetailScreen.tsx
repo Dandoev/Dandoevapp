@@ -109,6 +109,7 @@ export default function ProductDetailScreen({
     : undefined;
   const extraBatteryPrice = includeExtraBattery ? Number(extraBattery?.price || 0) : 0;
   const displayOutrightTotal = breakdown.totalOutright + extraBatteryPrice;
+  const batteryRequired = Boolean(extraBattery);
 
   const weeklyAmt = breakdown.weeklyDeduction || 0;
   const activeCadenceAmount = weeklyAmt;
@@ -120,6 +121,10 @@ export default function ProductDetailScreen({
   };
 
   const handleBuyOutright = async () => {
+    if (batteryRequired && !includeExtraBattery) {
+      setPurchaseError("Select the compulsory extra battery before continuing.");
+      return;
+    }
     if (!token || token.startsWith("demo-token")) {
       setPurchaseError(
         "Sign in with your customer account to complete a real purchase.",
@@ -428,17 +433,17 @@ export default function ProductDetailScreen({
               <Image source={getProductAsset(extraBattery.image)} style={styles.extraBatteryImage} resizeMode="contain" />
             </View>
             <View style={styles.extraBatteryCopy}>
-              <Text style={styles.extraBatteryEyebrow}>Compatible add-on</Text>
+              <Text style={styles.extraBatteryEyebrow}>Compulsory for this model</Text>
               <Text style={styles.extraBatteryTitle}>Extra battery</Text>
               <Text style={styles.extraBatteryDescription}>Keep a charged backup ready for longer delivery days.</Text>
               <Text style={styles.extraBatteryPrice}>₦{Number(extraBattery.price).toLocaleString()}</Text>
               <TouchableOpacity
                 style={[styles.extraBatteryButton, includeExtraBattery && styles.extraBatteryButtonActive]}
-                onPress={() => setIncludeExtraBattery((value) => !value)}
+                onPress={() => setIncludeExtraBattery(true)}
               >
                 <Check size={16} color={includeExtraBattery ? "#FFFFFF" : "#2E3192"} />
                 <Text style={[styles.extraBatteryButtonText, includeExtraBattery && styles.extraBatteryButtonTextActive]}>
-                  {includeExtraBattery ? "Added to checkout" : "Add to checkout"}
+                  {includeExtraBattery ? "Added to checkout" : "Select before continuing"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -949,8 +954,7 @@ export default function ProductDetailScreen({
                   {activeCadenceSuffix}
                 </Text>
                 <Text style={styles.calcResultSub}>
-                  Includes 100% returnable compulsory savings unlocked upon loan
-                  completion
+                  Extra battery is included in the financed purchase total.
                 </Text>
               </View>
             </View>
@@ -981,7 +985,20 @@ export default function ProductDetailScreen({
 
             <TouchableOpacity
               style={styles.applyBtn}
-              onPress={() => onApplyBNPL(product, selectedTenure)}
+              onPress={() => {
+                if (batteryRequired && !includeExtraBattery) {
+                  setPurchaseError("Select the compulsory extra battery before continuing.");
+                  return;
+                }
+                const financedProduct = includeExtraBattery && extraBattery
+                  ? {
+                      ...product,
+                      price: product.price + Number(extraBattery.price),
+                      name: product.name,
+                    }
+                  : product;
+                onApplyBNPL(financedProduct, selectedTenure);
+              }}
               activeOpacity={0.85}
             >
               <CreditCard size={16} color="#FFFFFF" />

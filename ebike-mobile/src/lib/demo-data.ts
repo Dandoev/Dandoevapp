@@ -373,7 +373,6 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     features: [
       'Basic LCD dashboard',
       'Single 48V 15Ah battery',
-      'Optional extra battery (+₦350,000)',
       '29-inch tyres',
       'Front & rear disc brakes',
       'No NFC, phone charger, USB, GPS or anti-theft alerts',
@@ -405,7 +404,6 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     features: [
       'Basic LCD dashboard',
       'Single 48V 15Ah battery',
-      'Optional extra battery (+₦350,000)',
       '26*4 fat tyres',
       'Front & rear disc brakes',
       'No NFC, phone charger, USB, GPS or anti-theft alerts',
@@ -437,7 +435,6 @@ export const ALL_PRODUCTS: DemoProduct[] = [
     features: [
       'Basic LCD dashboard',
       'Single 36V 15Ah battery',
-      'Optional extra battery (+₦250,000)',
       '26-inch tyres',
       'Disc brakes',
       'No NFC, phone charger, USB, GPS or anti-theft alerts',

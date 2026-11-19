@@ -358,7 +358,7 @@ function DemoDashboardScreen({
           const isFlagship = product.name.includes('G90') && !product.name.includes('Lite');
           const isFatTire = product.name.includes('X5');
           const isAllTerrain = product.name.includes('X6');
-          const badgeText = isFlagship ? 'FLAGSHIP COMMUTER' : isFatTire ? 'FAT-TIRE' : isAllTerrain ? 'ALL-TERRAIN' : product.category.toUpperCase();
+          const badgeText = isFlagship ? 'G90 COMMUTER' : isFatTire ? 'FAT-TIRE' : isAllTerrain ? 'ALL-TERRAIN' : product.category.toUpperCase();
 
           return (
             <TouchableOpacity

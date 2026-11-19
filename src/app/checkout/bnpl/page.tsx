@@ -51,6 +51,7 @@ function BnplCheckoutContent() {
   const [accessories, setAccessories] = useState<
     Array<{ id: string; name: string; price: number; quantity: number }>
   >([]);
+  const [requiredBatteryId, setRequiredBatteryId] = useState<string | null>(null);
 
   // Financing Configuration
   const [tenureMonths, setTenureMonths] = useState<number>(BNPL_CONFIG.defaultTenure || 12);
@@ -148,6 +149,27 @@ function BnplCheckoutContent() {
       .catch(() => {});
   }, [queryBikeId]);
 
+  useEffect(() => {
+    const model = `${bike.name} ${bike.id}`.toLowerCase();
+    if (!/x2|x4|x5 lite/.test(model)) {
+      setRequiredBatteryId(null);
+      return;
+    }
+    fetch('/api/accessories')
+      .then((response) => response.json())
+      .then((result) => {
+        const items = Array.isArray(result.data) ? result.data : [];
+        const required = items.find((item: any) => {
+          const name = String(item.name || '').toLowerCase();
+          return name.includes('extra battery') &&
+            ((model.includes('x2') && name.includes('36v')) ||
+              (!model.includes('x2') && name.includes('48v 15ah')));
+        });
+        setRequiredBatteryId(required?.id || null);
+      })
+      .catch(() => setRequiredBatteryId(null));
+  }, [bike.id, bike.name]);
+
   const accessoriesTotal = accessories.reduce(
     (sum, a) => sum + Number(a.price || 0) * (a.quantity || 1),
     0
@@ -175,6 +197,10 @@ function BnplCheckoutContent() {
   const activeRepaymentSuffix = '/ week';
 
   const handleStep1Continue = () => {
+    if (requiredBatteryId && !accessories.some((item) => item.id === requiredBatteryId)) {
+      setFormError('Select the compulsory extra battery before continuing with this BNPL application.');
+      return;
+    }
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.phone.trim() || !formData.deliveryAddress.trim()) {
       setFormError('Please fill in your name, WhatsApp phone number, and street delivery address.');
       return;
@@ -243,6 +269,10 @@ function BnplCheckoutContent() {
 
   // Final Loan Application & Mono Mandate Order Submission
   const handleSubmitApplication = async () => {
+    if (requiredBatteryId && !accessories.some((item) => item.id === requiredBatteryId)) {
+      setFormError('Select the compulsory extra battery before submitting your BNPL application.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       // 1. Create Mono Direct Debit Mandate Order for the exact loan term & cadence

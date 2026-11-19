@@ -44,7 +44,7 @@ export async function runDailySavingsSweep(targetDate: Date = new Date()) {
     for (const record of pendingSavings) {
       try {
         const wallet = record.user.wallet;
-        const walletBalance = wallet ? Number(wallet.mainBalance) : 0;
+        const walletBalance = Number(wallet?.mainBalance || 0);
         const amount = Number(record.amount);
 
         // --- Path 1: Sufficient wallet balance ---

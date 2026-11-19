@@ -197,12 +197,13 @@ describe('End-to-End User Journeys: Web, Mobile, Mono Open Banking & DirectPay',
       expect(installmentTerms.totalInterest).toBe(648000);
       expect(installmentTerms.processingFee).toBe(20000);
       expect(installmentTerms.healthInsuranceFee).toBe(135000); // 10% of financed principal
+      expect(installmentTerms.vatFee).toBe(101250); // 7.5% VAT
 
       // Save-As-You-Ride uses the product's 28-day repayment month.
-      expect(installmentTerms.totalSavings).toBe(336000);
+      expect(installmentTerms.totalSavings).toBe(0);
 
-      // Principal + interest + processing + insurance + returnable savings.
-      expect(installmentTerms.totalRepayable).toBe(2489000);
+      // Principal + interest + processing + insurance + VAT. Savings are separate.
+      expect(installmentTerms.totalRepayable).toBe(2254250);
       expect(installmentTerms.numberOfInstallments).toBe(48); // weekly over 12 product months
     });
 

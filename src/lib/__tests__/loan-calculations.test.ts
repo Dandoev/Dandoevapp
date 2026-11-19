@@ -10,7 +10,7 @@ describe('BNPL Loan Calculations & Terms', () => {
     expect(calculateDownPayment(price, 20)).toBe(300000);
   });
 
-  it('calculates installment terms with 10% insurance, processing fees and weekly savings', () => {
+  it('calculates installment terms with insurance, VAT, processing fees and separate weekly savings', () => {
     const principal = 1000000; // 1,000,000 NGN
     const monthlyRate = 4; // 4% flat monthly
     const tenureMonths = 6;
@@ -21,19 +21,19 @@ describe('BNPL Loan Calculations & Terms', () => {
     // Interest = 1,000,000 * (4 / 100) * 6 = 240,000
     expect(terms.totalInterest).toBe(240000);
     expect(terms.healthInsuranceFee).toBe(100000); // 10% insurance
+    expect(terms.vatFee).toBe(75000); // 7.5% VAT
     expect(terms.processingFee).toBe(20000);
 
-    // Compulsory savings: 6 months * 4 weeks * 7,000 NGN = 168,000
-    expect(terms.totalSavings).toBe(168000);
+    expect(terms.totalSavings).toBe(0);
 
-    // Total repayable = 1,000,000 + 240,000 + 100,000 + 20,000 + 168,000 = 1,528,000
-    expect(terms.totalRepayable).toBe(1528000);
+    // Loan repayable excludes the separately collected returnable savings.
+    expect(terms.totalRepayable).toBe(1435000);
 
     // Total weekly installments = 24
     expect(terms.numberOfInstallments).toBe(24);
 
-    // Installment amount = ceil(1,528,000 / 24) = 63,667
-    expect(terms.installmentAmount).toBe(63667);
+    // Installment amount = ceil(1,435,000 / 24) = 59,792
+    expect(terms.installmentAmount).toBe(59792);
   });
 
   it('computes risk score deterministically within bounds [0, 100]', () => {

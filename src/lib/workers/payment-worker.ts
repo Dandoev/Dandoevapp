@@ -1,7 +1,6 @@
 import { Job } from 'bullmq';
 import prisma from '../prisma';
 import logger from '../logger';
-import { creditLockedSavings } from '../wallet';
 
 export async function processPaymentJob(job: Job) {
   const { eventId, eventType, payload } = job.data as {
@@ -72,17 +71,7 @@ async function handleChargeSuccess(payload: any) {
         data: { status: 'PAID', updatedAt: new Date() },
       });
 
-      // ---- Compulsory Savings Hook (Phase 3) ----
-      // Credits savings balance with flat 2000 NGN allocation for the installment
-      await creditLockedSavings(
-        tx,
-        transaction.userId,
-        2000,
-        transaction.id,
-        'Compulsory Savings allocation from Repayment'
-      );
-
-      logger.info({ repaymentId: transaction.repaymentId }, 'Repayment marked as PAID & Savings credited');
+      logger.info({ repaymentId: transaction.repaymentId }, 'Repayment marked as PAID');
     }
 
     if (transaction.orderId) {

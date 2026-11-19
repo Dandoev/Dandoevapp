@@ -120,7 +120,7 @@ export default function LoanTermsPage() {
     0
   );
   const loanAmount = Number(bike.price) + accessoriesPrice;
-  const { totalRepayable, totalInterest, healthInsuranceFee, totalSavings } = calculateInstallment(
+  const { totalRepayable, totalInterest, healthInsuranceFee, vatFee } = calculateInstallment(
     loanAmount,
     BNPL_CONFIG.interestRate,
     selectedTenure
@@ -373,11 +373,8 @@ export default function LoanTermsPage() {
               value: formatNaira(totalInterest),
             },
             { label: 'Health & Asset Insurance Fee', value: formatNaira(healthInsuranceFee || 25000) },
-            { label: 'Origination & Processing Fee', value: formatNaira(BNPL_CONFIG.processingFee) },
-            {
-              label: `Compulsory Returnable Savings (₦${BNPL_CONFIG.dailySavings}/day)`,
-              value: formatNaira(totalSavings || 0),
-            },
+            { label: 'Processing Fee', value: formatNaira(BNPL_CONFIG.processingFee) },
+            { label: 'VAT (7.5%)', value: formatNaira(vatFee) },
             {
               label: 'Logistics & Delivery Fee',
               value: deliveryFee === 0 ? 'Free (Hub Pickup)' : formatNaira(deliveryFee),
@@ -392,7 +389,7 @@ export default function LoanTermsPage() {
           <div className="pt-2 space-y-1.5">
             <div className="flex justify-between items-center">
               <span className="font-bold text-slate-700">
-                Total Contract Repayable (inc. Returnable Savings)
+                Total Loan Repayable
               </span>
               <span className="font-black text-primary text-base tabular-nums">
                 {formatNaira(totalRepayableWithDelivery)}

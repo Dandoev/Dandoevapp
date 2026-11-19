@@ -184,8 +184,8 @@ export function getProductPriceBreakdown(
 
   // BNPL FINANCING (E-Bikes):
   // Comprehensive Insurance: 10% of base asset price
-  // Service fee: ₦20,000
-  // Total Financed = Base Price + Insurance (10%) + Service Fee (₦20k) + Delivery Fee (₦0/20k/50k)
+  // Processing fee: ₦20,000
+  // Total Financed = Base Price + Insurance (10%) + Processing Fee (₦20k) + Delivery Fee (₦0/20k/50k)
   const serviceFee = 20000;
   const totalFinanced = basePrice + insuranceFee + serviceFee + deliveryFee;
   const monthlyRate = 0.04;

@@ -16,7 +16,8 @@ export async function runDailySavingsSweep(targetDate: Date = new Date()) {
     service: 'daily-savings-sweep',
     date: targetDate.toISOString().split('T')[0],
   });
-  log.info('Starting daily savings collection sweep...');
+  log.info('Savings feature disabled; no savings sweep will run.');
+  return { collectedCount: 0, missedCount: 0, skipped: true };
 
   const endOfDay = new Date(targetDate);
   endOfDay.setHours(23, 59, 59, 999);

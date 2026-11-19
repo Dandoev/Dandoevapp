@@ -40,6 +40,7 @@ import {
 } from "lucide-react-native";
 import {
   demoStore,
+  ALL_PRODUCTS,
   DemoProduct,
   getProductPriceBreakdown,
   DeliveryType,
@@ -82,6 +83,7 @@ export default function ProductDetailScreen({
     amount: number;
   } | null>(null);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  const [includeExtraBattery, setIncludeExtraBattery] = useState(false);
   const [confirmedOrderData, setConfirmedOrderData] = useState<{
     orderId: string;
     reference: string;
@@ -98,6 +100,15 @@ export default function ProductDetailScreen({
     selectedTenure,
     deliveryType,
   );
+  const extraBattery = isBike
+    ? ALL_PRODUCTS.find((item) =>
+        item.type === "battery" &&
+        ((/x2/i.test(product.model || product.name) && item.id === "battery-36v-15ah") ||
+          (!/x2/i.test(product.model || product.name) && /x4|x5 lite/i.test(product.model || product.name) && item.id === "battery-48v-15ah")),
+      )
+    : undefined;
+  const extraBatteryPrice = includeExtraBattery ? Number(extraBattery?.price || 0) : 0;
+  const displayOutrightTotal = breakdown.totalOutright + extraBatteryPrice;
 
   const weeklyAmt = breakdown.weeklyDeduction || 0;
   const activeCadenceAmount = weeklyAmt;
@@ -150,9 +161,10 @@ export default function ProductDetailScreen({
                 deliveryType === "pickup" ? "Lagos" : deliveryState.trim(),
               deliveryPhone: deliveryPhone.trim(),
               accessories:
-                product.type !== "bike"
-                  ? [{ id: product.id, quantity: 1 }]
-                  : undefined,
+                [
+                  ...(product.type !== "bike" ? [{ id: product.id, quantity: 1 }] : []),
+                  ...(includeExtraBattery && extraBattery ? [{ id: extraBattery.id, quantity: 1 }] : []),
+                ],
             },
             token,
           );
@@ -361,7 +373,7 @@ export default function ProductDetailScreen({
             Brand: {product.brand} • Model: {product.model}
           </Text>
 
-          <View style={styles.pricingCard}>
+            <View style={styles.pricingCard}>
             <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
               <Text style={styles.cashLabel}>Base Item Price</Text>
               <Text style={styles.cashPrice}>
@@ -408,6 +420,30 @@ export default function ProductDetailScreen({
             )}
           </View>
         </View>
+
+        {/* Technical Specifications Matrix */}
+        {extraBattery && (
+          <View style={styles.extraBatteryCard}>
+            <View style={styles.extraBatteryImageWrap}>
+              <Image source={getProductAsset(extraBattery.image)} style={styles.extraBatteryImage} resizeMode="contain" />
+            </View>
+            <View style={styles.extraBatteryCopy}>
+              <Text style={styles.extraBatteryEyebrow}>Compatible add-on</Text>
+              <Text style={styles.extraBatteryTitle}>Extra battery</Text>
+              <Text style={styles.extraBatteryDescription}>Keep a charged backup ready for longer delivery days.</Text>
+              <Text style={styles.extraBatteryPrice}>₦{Number(extraBattery.price).toLocaleString()}</Text>
+              <TouchableOpacity
+                style={[styles.extraBatteryButton, includeExtraBattery && styles.extraBatteryButtonActive]}
+                onPress={() => setIncludeExtraBattery((value) => !value)}
+              >
+                <Check size={16} color={includeExtraBattery ? "#FFFFFF" : "#2E3192"} />
+                <Text style={[styles.extraBatteryButtonText, includeExtraBattery && styles.extraBatteryButtonTextActive]}>
+                  {includeExtraBattery ? "Added to checkout" : "Add to checkout"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Technical Specifications Matrix */}
         <View style={styles.section}>
@@ -664,6 +700,15 @@ export default function ProductDetailScreen({
               </Text>
             </View>
 
+            {includeExtraBattery && extraBattery && (
+              <View style={styles.breakdownItem}>
+                <Text style={styles.breakdownItemLabel}>Extra battery</Text>
+                <Text style={styles.breakdownItemVal}>
+                  ₦{extraBatteryPrice.toLocaleString()}
+                </Text>
+              </View>
+            )}
+
             <View style={[styles.breakdownItem, { borderBottomWidth: 0 }]}>
               <View>
                 <Text style={styles.breakdownItemLabel}>
@@ -699,7 +744,7 @@ export default function ProductDetailScreen({
               Total Outright Amount Payable
             </Text>
             <Text style={styles.breakdownTotalVal}>
-              ₦{breakdown.totalOutright.toLocaleString()}
+              ₦{displayOutrightTotal.toLocaleString()}
             </Text>
           </View>
         </View>
@@ -809,7 +854,7 @@ export default function ProductDetailScreen({
               <View style={styles.bnplDetailRow}>
                 <View>
                   <Text style={styles.bnplDetailLabel}>
-                    Platform & Loan Servicing Fee:
+                    Processing Fee:
                   </Text>
                   <Text style={styles.bnplDetailHint}>
                     Underwriting & direct-debit setup
@@ -930,7 +975,7 @@ export default function ProductDetailScreen({
                 Buy Outright
               </Text>
               <Text style={styles.outrightSecondaryBtnSub} numberOfLines={1}>
-                ₦{breakdown.totalOutright.toLocaleString()}
+                ₦{displayOutrightTotal.toLocaleString()}
               </Text>
             </TouchableOpacity>
 
@@ -1335,7 +1380,7 @@ export default function ProductDetailScreen({
                       ? "Processing…"
                       : pendingPayment
                         ? "Return to secure payment"
-                        : `Confirm & Pay ₦${breakdown.totalOutright.toLocaleString()}`}
+                      : `Confirm & Pay ₦${displayOutrightTotal.toLocaleString()}`}
                   </Text>
                 </TouchableOpacity>
                 {pendingPayment && (
@@ -1768,6 +1813,82 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "PlusJakartaSans_700Bold",
     lineHeight: 14,
+  },
+
+  extraBatteryCard: {
+    flexDirection: "row",
+    gap: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#DBE2F0",
+    marginBottom: 16,
+  },
+  extraBatteryImageWrap: {
+    width: 112,
+    height: 112,
+    borderRadius: 16,
+    backgroundColor: "#F6F8FC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  extraBatteryImage: {
+    width: 100,
+    height: 100,
+  },
+  extraBatteryCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  extraBatteryEyebrow: {
+    color: "#2E3192",
+    fontSize: 11,
+    fontFamily: "PlusJakartaSans_700Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  extraBatteryTitle: {
+    color: "#0A154F",
+    fontSize: 17,
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    marginTop: 2,
+  },
+  extraBatteryDescription: {
+    color: "#66728A",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  extraBatteryPrice: {
+    color: "#2E3192",
+    fontSize: 15,
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    marginTop: 5,
+  },
+  extraBatteryButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderColor: "#2E3192",
+    borderRadius: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    marginTop: 7,
+  },
+  extraBatteryButtonActive: {
+    backgroundColor: "#2E3192",
+  },
+  extraBatteryButtonText: {
+    color: "#2E3192",
+    fontSize: 11,
+    fontFamily: "PlusJakartaSans_700Bold",
+  },
+  extraBatteryButtonTextActive: {
+    color: "#FFFFFF",
   },
 
   /* Itemized Breakdown Card */

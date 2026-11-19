@@ -93,35 +93,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // ---- 3. Create Daily Savings Entries for Active Loans ----
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const activeLoans = await prisma.loan.findMany({
-      where: { status: 'active' },
-      select: { id: true, userId: true },
-    });
-
-    let savingsCreated = 0;
-    for (const loan of activeLoans) {
-      try {
-        await prisma.dailySaving.create({
-          data: {
-            userId: loan.userId,
-            loanId: loan.id,
-            date: today,
-            amount: 1000, // ₦1,000/day fixed
-            status: 'pending',
-          },
-        });
-        savingsCreated++;
-      } catch {
-        // Already exists for today — skip
-      }
-    }
-
-    results.savingsEntriesCreated = savingsCreated;
-    log.info({ count: savingsCreated }, 'Daily savings entries created');
+    // Savings are disabled; no daily savings records are created.
+    results.savingsEntriesCreated = 0;
   } catch (err: any) {
     errors.push(`Savings creation failed: ${err.message}`);
     log.error({ error: err.message }, 'Failed to create daily savings entries');
@@ -140,11 +113,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // ---- 5. Execute Daily Savings Auto-Deduction Sweep ----
-    const savingsSweep = await runDailySavingsSweep(now);
-    results.savingsAutoCollected = savingsSweep.collectedCount;
-    results.savingsMissed = savingsSweep.missedCount;
-    log.info(savingsSweep, 'Daily savings sweep completed');
+    // Savings are disabled; keep the response fields for backwards-compatible monitoring.
+    results.savingsAutoCollected = 0;
+    results.savingsMissed = 0;
   } catch (err: any) {
     errors.push(`Daily savings sweep failed: ${err.message}`);
     log.error({ error: err.message }, 'Failed to run daily savings sweep');

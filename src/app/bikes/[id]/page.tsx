@@ -441,6 +441,15 @@ export default function BikeDetailPage() {
                               : 'border-slate-200 hover:border-slate-300 bg-white'
                           }`}
                         >
+                          {acc.images?.[0] ? (
+                            <img
+                              src={acc.images[0]}
+                              alt=""
+                              className="h-16 w-16 rounded-lg bg-slate-50 object-contain shrink-0"
+                            />
+                          ) : (
+                            <div className="h-16 w-16 rounded-lg bg-slate-50 flex items-center justify-center text-2xl shrink-0">🔋</div>
+                          )}
                           <input
                             type="checkbox"
                             checked={isSelected}

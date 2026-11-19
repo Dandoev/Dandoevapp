@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   Building,
   FileCheck,
-  PiggyBank,
   Zap,
   Sparkles,
   Loader2,
@@ -163,8 +162,8 @@ function BnplCheckoutContent() {
     totalInterest,
     totalRepayable,
     healthInsuranceFee,
+    vatFee,
     processingFee,
-    totalSavings,
   } = calculateInstallment(principal, BNPL_CONFIG.interestRate, tenureMonths);
 
   const biDailyRepayment = installmentAmount;
@@ -353,12 +352,6 @@ function BnplCheckoutContent() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Compulsory Savings Vault:</span>
-                <span className="font-bold text-secondary tabular-nums">
-                  {formatNaira(totalSavings)} (100% Returnable)
-                </span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-slate-500">Direct Debit Mandate:</span>
                 <span className="font-bold text-slate-800">{monoData?.bankName || selectedBank}</span>
               </div>
@@ -375,7 +368,7 @@ function BnplCheckoutContent() {
                 href="/dashboard/repayments"
                 className="w-full py-3.5 bg-teal-50 hover:bg-teal-100 text-secondary border border-teal-200 font-bold rounded-xl text-sm transition-all block"
               >
-                View Repayment & Savings Schedule
+                View Repayment Schedule
               </Link>
             </div>
           </div>
@@ -801,19 +794,6 @@ function BnplCheckoutContent() {
                   </div>
                 </div>
 
-                {/* Compulsory Savings Callout */}
-                <div className="p-4 bg-teal-50/80 border border-teal-200 rounded-2xl flex items-start gap-3">
-                  <PiggyBank className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
-                  <div className="text-xs leading-relaxed">
-                    <div className="font-bold text-primary">
-                      Includes {formatNaira(totalSavings)} Save-As-You-Ride Compulsory Escrow
-                    </div>
-                    <p className="text-slate-600 mt-0.5">
-                      ₦1,000/day is locked in your personal savings vault during the loan and <strong>100% refunded to your wallet</strong> upon completion.
-                    </p>
-                  </div>
-                </div>
-
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setStep(2)}
@@ -870,12 +850,6 @@ function BnplCheckoutContent() {
                     <span className="text-slate-500">Scheduled Auto-Debit Installment:</span>
                     <span className="font-extrabold text-primary tabular-nums">
                       {formatNaira(activeRepaymentAmount)} {activeRepaymentSuffix} ({tenureMonths} Months)
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-200/70 pb-2.5">
-                    <span className="text-slate-500">Returnable Rider Savings Vault:</span>
-                    <span className="font-bold text-secondary tabular-nums">
-                      {formatNaira(totalSavings)} (Unlocked at maturity)
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -1011,14 +985,10 @@ function BnplCheckoutContent() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Processing & Health Insurance:</span>
+                  <span className="text-slate-500">Insurance, VAT & Processing:</span>
                   <span className="text-slate-700 font-semibold tabular-nums">
-                    {formatNaira(processingFee + healthInsuranceFee)}
+                    {formatNaira(processingFee + healthInsuranceFee + vatFee)}
                   </span>
-                </div>
-                <div className="flex justify-between text-secondary">
-                  <span className="font-semibold">Returnable Rider Savings Escrow:</span>
-                  <span className="font-bold tabular-nums">{formatNaira(totalSavings)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Total Interest ({tenureMonths} mo):</span>

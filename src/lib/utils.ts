@@ -32,6 +32,7 @@ export function calculateInstallment(principal: number, monthlyInterestRate: num
     totalRepayable: number;
     numberOfInstallments: number;
     healthInsuranceFee: number;
+    vatFee: number;
     processingFee: number;
     totalSavings: number;
 } {
@@ -43,17 +44,18 @@ export function calculateInstallment(principal: number, monthlyInterestRate: num
 
     // Comprehensive Insurance: 10% on every product
     const healthInsuranceFee = Math.round(principal * 0.10);
+    // VAT is charged once on the financed asset and compulsory accessories.
+    const vatFee = Math.round(principal * 0.075);
     // Processing Fee: Fixed 20,000
     const processingFee = 20000;
 
-    // 4. Compulsory Savings
-    // ₦7,000 Naira per WEEK (Weekly deduction model)
+    // Savings are disabled. Wallet funding remains available, but no BNPL
+    // repayment or automatic sweep creates a savings obligation.
     const totalWeeks = tenureMonths * 4;
-    const totalSavings = totalWeeks * 7000;
+    const totalSavings = 0;
 
-    // 5. Total Repayable
-    // Includes Principal + Interest + 10% Insurance + Processing + Savings
-    const totalRepayable = principal + totalInterest + healthInsuranceFee + processingFee + totalSavings;
+    // 5. Loan repayment total. No savings obligation is created.
+    const totalRepayable = principal + totalInterest + healthInsuranceFee + vatFee + processingFee;
 
     // 6. Installments (Weekly Deductions Only)
     const numberOfInstallments = totalWeeks;
@@ -65,6 +67,7 @@ export function calculateInstallment(principal: number, monthlyInterestRate: num
         totalRepayable,
         numberOfInstallments,
         healthInsuranceFee,
+        vatFee,
         processingFee,
         totalSavings
     };
@@ -89,7 +92,7 @@ export function calculateTotalRepayable(emi: number, tenureMonths: number): numb
 }
 
 /**
- * Calculate service fee
+ * Calculate processing fee
  */
 export function calculateServiceFee(loanAmount: number, feePercentage: number = 3): number {
     return Math.round(loanAmount * feePercentage / 100);

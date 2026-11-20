@@ -128,10 +128,10 @@ export const POST = withAuth(
           // ---- 3. Create order in a transaction ----
           const order = await prisma.$transaction(async (tx: TxClient) => {
             // Decrement bike stock if applicable with strict stock availability check
-            if (bike && data.bikeId) {
+            if (bike) {
               const bikeUpdate = await tx.bike.updateMany({
                 where: {
-                  id: data.bikeId,
+                  id: bike.id,
                   stockQuantity: { gte: data.quantity },
                 },
                 data: { stockQuantity: { decrement: data.quantity } },

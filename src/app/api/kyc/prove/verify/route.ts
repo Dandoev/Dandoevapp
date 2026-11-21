@@ -103,7 +103,20 @@ async function handleVerification(req: NextRequest, ctx: ApiContext) {
         });
       }
     } catch (err: any) {
-      // If fetching from Mono threw an error, fallback to checking audit log
+      // A Prove customer can be deleted or expire in the Mono dashboard while
+      // our audit log still contains its reference. Do not leave the user in
+      // a perpetual pending state; let the client start a fresh session.
+      const providerMessage = String(err?.message || '').toLowerCase();
+      if (/404|not found|does not exist|deleted|invalid customer|invalid reference/.test(providerMessage)) {
+        return NextResponse.json({
+          success: true,
+          verified: false,
+          status: 'needs_action',
+          message: 'Your previous Mono identity session is no longer available. Start a new facial verification session.',
+          code: 'MONO_PROVE_SESSION_INVALID',
+        });
+      }
+      // For transient provider errors, retain the pending state and allow retry.
     }
   }
 

@@ -51,7 +51,12 @@ export class MonoFeatureUnavailableError extends Error {
             ? `Mono ${product} secret key is not configured in this environment`
             : `Mono ${product} is not enabled for this business`,
     );
-    this.name = "MonoFeatureUnavailableError";
+    Object.defineProperty(this, "name", {
+      value: "MonoFeatureUnavailableError",
+      configurable: true,
+      enumerable: false,
+      writable: false,
+    });
   }
 }
 

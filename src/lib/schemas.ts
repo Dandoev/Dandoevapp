@@ -88,7 +88,9 @@ export const createLoanSchema = z.object({
   firstName: z.string().max(100).trim().optional(),
   lastName: z.string().max(100).trim().optional(),
   email: z.string().email().max(255).trim().optional().or(z.literal('')),
-  phone: z.string().max(25).trim().optional(),
+  // BNPL applications require a reachable applicant phone for guarantor
+  // invites, status notifications, and payment failure alerts.
+  phone: z.string().min(10, 'A valid applicant phone number is required').max(25).trim(),
   // Mono Open Banking & Direct Debit Mandate fields
   monoAccountId: z.string().max(120).optional(),
   monoMandateId: z.string().max(120).optional(),

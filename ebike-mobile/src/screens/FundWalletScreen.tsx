@@ -68,7 +68,7 @@ function DemoWalletScreen({ token, onBack, onSuccess }: FundWalletScreenProps) {
 
   const handleCompleteFunding = () => {
     const num = parseInt(amount, 10) || 0;
-    if (num <= 0) return;
+    if (num < 1000) return;
 
     setProcessing(true);
     setTimeout(() => {
@@ -175,6 +175,7 @@ function DemoWalletScreen({ token, onBack, onSuccess }: FundWalletScreenProps) {
           /* Funding Input & Method Selector */
           <View style={styles.fundingCard}>
             <Text style={styles.fundingTitle}>Select Top-Up Amount</Text>
+            <Text style={styles.helperText}>Minimum wallet funding is ₦1,000.</Text>
 
             {/* Custom Amount Input */}
             <View style={styles.amountInputContainer}>
@@ -500,6 +501,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#0A154F',
+    marginBottom: 12,
+  },
+  helperText: {
+    color: '#66728A',
+    fontSize: 12,
+    marginTop: -6,
     marginBottom: 12,
   },
   amountInputContainer: {

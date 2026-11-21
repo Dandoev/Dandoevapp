@@ -25,6 +25,18 @@
     "android": {
       "package": "com.dandoev.mobile",
       "versionCode": 26,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            { "scheme": "dandoev", "host": "payment-callback" },
+            { "scheme": "dandoev", "host": "mono-connect-callback" },
+            { "scheme": "dandoev", "host": "kyc-callback" }
+          ]
+        }
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png"

@@ -207,8 +207,12 @@ export default function ProductDetailScreen({
         "dandoev://payment-callback",
       );
       if (browserResult.type !== "success") {
+        // Mono payment references are single-use. Keep the order so retrying
+        // does not duplicate it, but discard the old session so the next
+        // attempt receives a fresh reference from DirectPay.
+        setPendingPayment(null);
         setPaymentNotice(
-          "Payment window closed. Your order is saved. You can return to payment or check its status.",
+          "Payment was cancelled or the payment window closed. Your order is saved; tap Confirm & Pay to start a new secure session.",
         );
         return;
       }
@@ -217,9 +221,12 @@ export default function ProductDetailScreen({
         token,
       );
       if (verification.data.status !== "success") {
-        setPaymentNotice(
-          "Mono is still confirming your payment. Use Check payment status shortly.",
-        );
+        if (verification.data.status === "failed") {
+          setPendingPayment(null);
+          setPaymentNotice("Mono reported that payment failed. Tap Confirm & Pay to start a new secure session.");
+        } else {
+          setPaymentNotice("Mono is still confirming your payment. Use Check payment status shortly.");
+        }
         return;
       }
       setConfirmedOrderData({
@@ -246,6 +253,9 @@ export default function ProductDetailScreen({
       setPaymentNotice(null);
       setOutrightSuccess(true);
     } catch (error) {
+      // A failed Mono initialization/session must never be retried with the
+      // same single-use reference. The existing order remains reusable.
+      setPendingPayment(null);
       setPurchaseError(
         error instanceof Error
           ? error.message

@@ -387,6 +387,7 @@ model Loan {
   id                  String     @id @default(uuid())
   userId              String
   bikeId              String
+  applicantPhone      String?
   downPayment         Decimal?   @db.Decimal(15, 2)
   loanAmount          Decimal    @db.Decimal(15, 2)
   interestRate        Decimal    @db.Decimal(5, 2)

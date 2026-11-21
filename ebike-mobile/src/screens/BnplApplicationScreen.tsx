@@ -323,6 +323,11 @@ export default function BnplApplicationScreen({
           // verification is a separate Mono Prove status.
           setFaceVerified(profile?.faceVerified === true);
           setLookupVerified(profile?.identityLookupVerified === true);
+          // Reuse the authenticated profile details so an email-only account
+          // cannot reach submission with an empty applicant phone number.
+          if (profile?.firstName && !firstName) setFirstName(profile.firstName);
+          if (profile?.lastName && !lastName) setLastName(profile.lastName);
+          if (profile?.phone && !phone) setPhone(profile.phone);
         }
       })
       .catch(() => {
@@ -578,6 +583,8 @@ export default function BnplApplicationScreen({
 
   // Final In-App Submission
   const handleSubmit = async () => {
+    const personalError = validateStep0();
+    if (personalError) { setStep(0); setError(personalError); return; }
     const bankError = validateStep2();
     if (bankError) { setStep(2); setError(bankError); return; }
     setBusy(true);
@@ -952,7 +959,8 @@ export default function BnplApplicationScreen({
                 </View>
               </View>
 
-              <Text style={styles.inputLabel}>Phone Number (WhatsApp Active)</Text>
+              <Text style={styles.inputLabel}>BNPL Contact Phone Number</Text>
+              <Text style={styles.helperText}>Use your account number or another reachable WhatsApp/SMS number for this application.</Text>
               <TextInput
                 style={styles.input}
                 placeholder="0801 234 5678"

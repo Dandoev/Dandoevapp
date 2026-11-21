@@ -229,6 +229,7 @@ export const POST = withAuth(
               data: {
                 userId: user.id,
                 bikeId: bike.id,
+                applicantPhone: data.phone,
                 downPayment,
                 loanAmount: principal,
                 interestRate: BNPL_CONFIG.interestRate,
@@ -302,7 +303,6 @@ export const POST = withAuth(
                 monoMandateStatus: mandate.status,
                 firstName: data.firstName || user.firstName,
                 lastName: data.lastName || user.lastName,
-                phone: data.phone || user.phone,
                 dateOfBirth: data.dateOfBirth
                   ? new Date(data.dateOfBirth)
                   : user.dateOfBirth,

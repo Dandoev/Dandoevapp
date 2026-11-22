@@ -3,7 +3,7 @@
     "name": "DandoEv",
     "slug": "dandoev",
     "scheme": "dandoev",
-    "version": "1.0.20",
+    "version": "1.0.21",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dandoev.mobile",
-      "buildNumber": "33",
+      "buildNumber": "35",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "DandoEv requires camera access to capture KYC identity documents and selfie verification.",
@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 31,
+      "versionCode": 33,
       "intentFilters": [
         {
           "action": "VIEW",

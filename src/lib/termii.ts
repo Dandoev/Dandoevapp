@@ -38,13 +38,34 @@ export async function sendPhoneOtp(phone: string) {
   const normalized = normalizeNigerianPhone(phone);
   if (!normalized) throw new Error('Enter a valid Nigerian phone number');
   const { apiKey, baseUrl } = config();
-  const response = await fetch(`${baseUrl}/api/sms/otp/generate`, {
+  const generateResponse = await fetch(`${baseUrl}/api/sms/otp/generate`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ api_key: apiKey, pin_type: 'NUMERIC', phone_number: normalized.replace(/^\+/, ''), pin_attempts: 3, pin_time_to_live: 10, pin_length: 6 }),
   });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.pin_id) throw new Error(payload?.message || 'Unable to send verification code');
-  return { pinId: payload.pin_id, phone: normalized };
+  const generated = await generateResponse.json().catch(() => null);
+  if (!generateResponse.ok || !generated?.pin_id || !generated?.otp)
+    throw new Error(generated?.message || 'Unable to generate verification code');
+
+  // /otp/generate creates a verifiable Termii PIN but does not deliver it.
+  // Dispatch the generated PIN separately over the transactional DND route so
+  // login codes reach Nigerian numbers that have DND enabled.
+  const deliveryResponse = await fetch(`${baseUrl}/api/sms/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: apiKey,
+      to: normalized.replace(/^\+/, ''),
+      from: TERMII_SENDER_ID,
+      sms: `${generated.otp} is your DandoEv verification code. It expires in 10 minutes. Do not share this code.`,
+      type: 'plain',
+      channel: process.env.TERMII_OTP_CHANNEL || 'dnd',
+    }),
+  });
+  const delivery = await deliveryResponse.json().catch(() => null);
+  if (!deliveryResponse.ok || (delivery?.code && String(delivery.code).toLowerCase() !== 'ok'))
+    throw new Error(delivery?.message || 'Unable to deliver verification code by SMS');
+
+  return { pinId: generated.pin_id, phone: normalized, messageId: delivery?.message_id || null };
 }
 
 export async function verifyPhoneOtp(pinId: string, pin: string) {

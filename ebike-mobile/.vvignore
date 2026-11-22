@@ -1,0 +1,18 @@
+# VibeView cloud uploads must never include secrets or local machine state.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+node_modules/
+.expo/
+dist/
+web-build/
+android/.gradle/
+android/local.properties
+ios/Pods/
+.vibeview/

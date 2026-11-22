@@ -4,6 +4,7 @@
 // ============================================================
 
 import { APP_CONFIG } from "./config";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 import { selectUsableAccessToken, TOKEN_STORAGE_KEY } from "./auth-session";
@@ -260,11 +261,15 @@ export const MobileApi = {
     const rawType = file.mimeType?.toLowerCase().split(";")[0];
     const normalizedType = rawType === "image/jpg" ? "image/jpeg" : rawType === "application/octet-stream" ? inferredType : rawType;
     const uploadType = normalizedType || inferredType || "application/octet-stream";
-    if (typeof window !== "undefined" && file.uri) {
+    if (Platform.OS === "web" && file.uri) {
       const blobResponse = await fetch(file.uri);
       if (!blobResponse.ok) throw new Error("Could not read the selected proof-of-address file");
       const blob = await blobResponse.blob();
-      form.append("file", new File([blob], safeName, { type: uploadType }));
+      // File.name is read-only in browsers. React Native Web's multipart
+      // implementation may try to assign it, causing "name has only getter".
+      // Supply the filename as FormData metadata instead of constructing File.
+      const typedBlob = blob.type === uploadType ? blob : blob.slice(0, blob.size, uploadType);
+      form.append("file", typedBlob, safeName);
     } else {
       form.append("file", { uri: file.uri, name: safeName, type: uploadType } as any);
     }

@@ -112,7 +112,11 @@ export async function GET(req: NextRequest) {
       prisma.auditLog.findFirst({ where: { userId: user.id, action: 'MONO_PROVE_STARTED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
       prisma.auditLog.findFirst({ where: { userId: user.id, action: 'MONO_CONNECT_STARTED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
       prisma.auditLog.findFirst({ where: { userId: user.id, action: 'KYC_AND_STATEMENT_VERIFIED_MONO' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
-      prisma.kycDocument.findFirst({ where: { userId: user.id, type: 'utility_bill' }, orderBy: { uploadedAt: 'desc' }, select: { verificationStatus: true, uploadedAt: true } }),
+      prisma.kycDocument.findFirst({
+        where: { userId: user.id, type: 'utility_bill' },
+        orderBy: { uploadedAt: 'desc' },
+        select: { id: true, fileName: true, fileUrl: true, verificationStatus: true, uploadedAt: true },
+      }),
     ]);
     const kycStage = faceVerified
       ? (financialAssessment ? (proofOfAddress?.verificationStatus === 'verified' ? 'completed' : 'proof_of_address') : connectStarted ? 'bank_verification' : 'identity_lookup')
@@ -123,7 +127,7 @@ export async function GET(req: NextRequest) {
       ? 'complete_face_check'
       : kycStage === 'bank_verification'
       ? 'connect_bank'
-      : kycStage === 'completed' && proofOfAddress?.verificationStatus !== 'verified'
+      : kycStage === 'proof_of_address'
       ? 'upload_proof_of_address'
       : 'none';
     const proofComplete = proofOfAddress?.verificationStatus === 'verified';
@@ -132,7 +136,26 @@ export async function GET(req: NextRequest) {
       : proofComplete && faceVerified
         ? 'verified'
         : 'pending';
-    return NextResponse.json({ user: { ...user, kycStatus: effectiveKycStatus, faceVerified, identityLookupVerified: Boolean(identityLookup), kycStage, kycNextAction, proofOfAddressStatus: proofOfAddress?.verificationStatus || 'not_started' } });
+    return NextResponse.json({
+      user: {
+        ...user,
+        kycStatus: effectiveKycStatus,
+        faceVerified,
+        identityLookupVerified: Boolean(identityLookup),
+        kycStage,
+        kycNextAction,
+        proofOfAddressStatus: proofOfAddress?.verificationStatus || 'not_started',
+        proofOfAddress: proofOfAddress
+          ? {
+              id: proofOfAddress.id,
+              fileName: proofOfAddress.fileName,
+              fileUrl: proofOfAddress.fileUrl,
+              verificationStatus: proofOfAddress.verificationStatus,
+              uploadedAt: proofOfAddress.uploadedAt,
+            }
+          : null,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: 'Authentication internal error' }, { status: 500 });
   }

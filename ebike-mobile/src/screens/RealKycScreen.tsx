@@ -48,6 +48,12 @@ export default function RealKycScreen({
       setStatus(profile?.faceVerified === true ? "verified" : profile?.kycStatus === "failed" ? "failed" : "pending");
       setStage(profile?.kycStage || "identity_lookup");
       setNextAction(profile?.kycNextAction || "verify_identity");
+      if (profile?.proofOfAddress?.fileUrl) {
+        setAddressDocument({
+          ...profile.proofOfAddress,
+          url: profile.proofOfAddress.fileUrl,
+        });
+      }
       setMessage(null);
     } catch (error) {
       setMessage(

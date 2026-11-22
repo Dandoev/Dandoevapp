@@ -240,6 +240,7 @@ export default function BnplApplicationScreen({
   const [accountVerified, setAccountVerified] = useState(false);
   const [connectBusy, setConnectBusy] = useState(false);
   const [connectUrl, setConnectUrl] = useState<string | null>(null);
+  const [connectReference, setConnectReference] = useState<string | null>(null);
   const [connectMessage, setConnectMessage] = useState("");
   const [connectedAssessment, setConnectedAssessment] = useState<Awaited<ReturnType<typeof MobileApi.getMonoFinancial>>["data"] | null>(null);
 
@@ -279,6 +280,7 @@ export default function BnplApplicationScreen({
       const session = await MobileApi.initiateMonoConnect(redirectUrl, token);
       const url = session.data?.url || session.data?.mono_url;
       if (!url || !/^https:\/\//i.test(url)) throw new Error("Mono did not return a valid bank connection link. Please retry.");
+      setConnectReference(session.data?.reference || null);
       if (Platform.OS === "web") {
         window.open(url, "_blank", "noopener,noreferrer");
         setConnectMessage("Mono opened in a secure browser tab. Complete your bank connection there, then return here and tap Refresh connection status.");
@@ -296,10 +298,32 @@ export default function BnplApplicationScreen({
     if (!url.includes("/mono-connect/mobile-return") && !url.startsWith("dandoev://mono-connect-callback")) return;
     const parsed = new URL(url);
     const returnStatus = parsed.searchParams.get("status")?.toLowerCase();
+    const code = parsed.searchParams.get("code");
+    const reference = parsed.searchParams.get("reference") || parsed.searchParams.get("ref") || connectReference;
     setConnectUrl(null);
     if (returnStatus === "failed" || returnStatus === "error" || returnStatus === "cancelled") {
       setError("Mono could not connect your bank. Check your bank login and try again.");
       return;
+    }
+    if (code) {
+      await MobileApi.completeMonoFinancial(code, token, {
+        accountNumber,
+        bankName,
+        tenureMonths: tenure,
+        deductionFrequency: "weekly",
+        proposedMonthlyRepayment: monthly,
+      });
+    } else if (reference) {
+      const completion = await MobileApi.completeMonoLinkedAccount(reference, token, {
+        accountNumber,
+        bankName,
+        tenureMonths: tenure,
+        deductionFrequency: "weekly",
+        proposedMonthlyRepayment: monthly,
+      });
+      if (completion.pending) {
+        setConnectMessage(completion.message || "Mono is preparing your bank statement. Refresh shortly.");
+      }
     }
     const assessment = await refreshConnectStatus();
     if (!assessment?.monoAccountId) setConnectMessage("Mono is confirming your bank and preparing its statement. Tap Refresh connection status shortly.");
@@ -805,7 +829,10 @@ export default function BnplApplicationScreen({
               renderLoading={() => <ActivityIndicator style={{ flex: 1 }} size="large" color="#2E3192" />}
               onShouldStartLoadWithRequest={(request) => {
                 if (request.url.startsWith("dandoev://mono-connect-callback") || request.url.includes("/mono-connect/mobile-return")) {
-                  void handleMonoConnectNavigation(request.url);
+                  void handleMonoConnectNavigation(request.url).catch((cause) => {
+                    setConnectUrl(null);
+                    setError(cause instanceof Error ? cause.message : "Mono could not complete the bank connection. Please try again.");
+                  });
                   return false;
                 }
                 return true;

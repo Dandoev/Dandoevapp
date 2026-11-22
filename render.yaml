@@ -6,7 +6,9 @@ services:
     plan: starter
     branch: main
     buildCommand: npm install --include=dev && npm run build
-    startCommand: npm start
+    # Invoke the production wrapper directly so Render does not depend on npm's
+    # child-process handling while it is waiting for the port to open.
+    startCommand: node scripts/start.js
     healthCheckPath: /
     envVars:
       - key: NODE_ENV

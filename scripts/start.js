@@ -36,6 +36,11 @@ const child = spawn(
   }
 );
 
+child.on('error', (error) => {
+  console.error('[start] Failed to launch Next.js:', error);
+  process.exit(1);
+});
+
 child.on('exit', (code, signal) => {
   if (signal) {
     process.kill(process.pid, signal);

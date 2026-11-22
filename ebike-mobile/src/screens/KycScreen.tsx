@@ -34,12 +34,13 @@ import RealKycScreen from './RealKycScreen';
 
 interface KycScreenProps {
   token?: string | null;
+  contactPhone?: string;
   onBack: () => void;
   onKycComplete: () => void;
 }
 
 export default function KycScreen(props: KycScreenProps) {
-  if (props.token && !props.token.startsWith('demo-')) return <RealKycScreen token={props.token} onBack={props.onBack} onKycComplete={props.onKycComplete} />;
+  if (props.token && !props.token.startsWith('demo-')) return <RealKycScreen token={props.token} contactPhone={props.contactPhone} onBack={props.onBack} onKycComplete={props.onKycComplete} />;
   return <DemoKycScreen {...props} />;
 }
 

@@ -44,12 +44,15 @@ export async function proxy(request: NextRequest) {
   // Customer journeys run in the mobile app. Keep the web surface staff-only;
   // API routes stay available to the mobile client.
   const mobileOnlyPaths = ['/dashboard', '/auth', '/bikes', '/accessories', '/checkout', '/bnpl'];
-  if (mobileOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+  // Mono must be able to return to these public relay pages after a payment.
+  // They cannot be included in the general /checkout customer redirect.
+  const isPaymentCallback = pathname === '/checkout/callback' || pathname === '/checkout/mobile-return';
+  if (!isPaymentCallback && mobileOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
     return NextResponse.redirect(new URL(token ? '/admin' : '/login', request.url));
   }
 
   // ---- Route Protection Logic ----
-  const ADMIN_ROUTES = ['/admin'];
+  const ADMIN_ROUTES = ['/admin', '/swap-admin'];
 
   const isAdmin = ADMIN_ROUTES.some(route => pathname.startsWith(route));
 

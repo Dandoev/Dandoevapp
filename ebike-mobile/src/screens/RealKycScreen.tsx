@@ -22,10 +22,12 @@ import { MobileApi } from "../lib/api";
 
 export default function RealKycScreen({
   token,
+  contactPhone,
   onBack,
   onKycComplete,
 }: {
   token: string;
+  contactPhone?: string;
   onBack: () => void;
   onKycComplete: () => void;
 }) {
@@ -47,9 +49,11 @@ export default function RealKycScreen({
       setStage(profile?.kycStage || "identity_lookup");
       setNextAction(profile?.kycNextAction || "verify_identity");
       setMessage(null);
-    } catch {
+    } catch (error) {
       setMessage(
-        "Unable to refresh your status. Check your connection and try again.",
+        error instanceof Error
+          ? error.message
+          : "Unable to refresh your status. Check your connection and try again.",
       );
     } finally {
       setLoading(false);
@@ -65,6 +69,7 @@ export default function RealKycScreen({
       const session = await MobileApi.initiateMonoProve(
         "dandoev://kyc-callback",
         token,
+        contactPhone,
       );
       const proveUrl = session.data?.url;
       if (!proveUrl || !/^https:\/\//i.test(proveUrl)) {

@@ -3,7 +3,7 @@
     "name": "DandoEv",
     "slug": "dandoev",
     "scheme": "dandoev",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dandoev.mobile",
-      "buildNumber": "28",
+      "buildNumber": "30",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "DandoEv requires camera access to capture KYC identity documents and selfie verification.",
@@ -24,16 +24,28 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 26,
+      "versionCode": 28,
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": false,
-          "category": ["BROWSABLE", "DEFAULT"],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
           "data": [
-            { "scheme": "dandoev", "host": "payment-callback" },
-            { "scheme": "dandoev", "host": "mono-connect-callback" },
-            { "scheme": "dandoev", "host": "kyc-callback" }
+            {
+              "scheme": "dandoev",
+              "host": "payment-callback"
+            },
+            {
+              "scheme": "dandoev",
+              "host": "mono-connect-callback"
+            },
+            {
+              "scheme": "dandoev",
+              "host": "kyc-callback"
+            }
           ]
         }
       ],

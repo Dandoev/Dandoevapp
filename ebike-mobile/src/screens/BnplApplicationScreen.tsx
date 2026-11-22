@@ -157,7 +157,7 @@ export default function BnplApplicationScreen({
   product: DemoProduct;
   resumeStep?: number | null;
   initialIdentity?: { nin: string; bvn: string };
-  onRequestKyc?: (identity: { nin: string; bvn: string }) => void;
+  onRequestKyc?: (identity: { nin: string; bvn: string; phone: string }) => void;
   onBack: () => void;
   onComplete: () => void;
   designPreviewStep?: number;
@@ -1227,7 +1227,7 @@ export default function BnplApplicationScreen({
                   setBusy(true);
                   try {
                     if (faceVerified) setStep(2);
-                    else onRequestKyc?.({ nin: idNumber, bvn });
+                    else onRequestKyc?.({ nin: idNumber, bvn, phone: phone.trim() });
                   } catch (cause) {
                     setError(cause instanceof Error ? cause.message : "Identity verification could not start. Please retry.");
                   } finally {

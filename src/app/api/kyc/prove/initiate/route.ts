@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, type ApiContext } from '@/lib/api-handler';
 import prisma from '@/lib/prisma';
 import { initiateMonoProve, MonoFeatureUnavailableError } from '@/lib/mono';
+import { normalizeNigerianPhone } from '@/lib/phone';
 
 export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const user = await prisma.user.findUnique({ where: { id: ctx.user.sub } });
@@ -9,6 +10,14 @@ export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
 
   const body = await req.json().catch(() => ({}));
   const redirectUrl = body?.redirectUrl || 'dandoev://kyc-callback';
+  const requestedPhone = typeof body?.phone === 'string' ? body.phone : user.phone;
+  const phone = normalizeNigerianPhone(requestedPhone || '');
+  if (!phone) {
+    return NextResponse.json(
+      { error: 'Enter a valid phone number before starting secure verification.' },
+      { status: 400 },
+    );
+  }
   const reference = (body?.reference || `PROVE-${user.id.slice(0, 8)}-${Date.now().toString(36)}`).slice(0, 24);
 
   const bvn = body?.bvn || user.bvn || undefined;
@@ -26,7 +35,7 @@ export const POST = withAuth(async (req: NextRequest, ctx: ApiContext) => {
       customer: {
         name: `${user.firstName} ${user.lastName}`.trim() || 'DandoEv Customer',
         email: user.email,
-        phone: user.phone || undefined,
+        phone,
         address: user.address || undefined,
         ...(identity ? { identity } : {}),
       },

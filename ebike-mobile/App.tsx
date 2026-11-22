@@ -72,7 +72,7 @@ function App() {
     null,
   );
   const [bnplResumeStep, setBnplResumeStep] = useState<number | null>(null);
-  const [bnplIdentity, setBnplIdentity] = useState({ nin: "", bvn: "" });
+  const [bnplIdentity, setBnplIdentity] = useState({ nin: "", bvn: "", phone: "" });
   const [prevScreenBeforeDetail, setPrevScreenBeforeDetail] =
     useState<ScreenType>("Dashboard");
   const [token, setToken] = useState<string | null>(null);
@@ -316,7 +316,7 @@ function App() {
               onBack={() => setCurrentScreen(prevScreenBeforeDetail)}
               onApplyBNPL={(prod, _tenure) => {
                 setSelectedProduct(prod);
-                setBnplIdentity({ nin: "", bvn: "" });
+                setBnplIdentity({ nin: "", bvn: "", phone: "" });
                 setBnplResumeStep(0);
                 setCurrentScreen("BnplApplication");
               }}
@@ -327,6 +327,7 @@ function App() {
           {currentScreen === "Kyc" && (
             <KycScreen
               token={token}
+              contactPhone={bnplIdentity.phone}
               onBack={() =>
                 selectedProduct
                   ? setCurrentScreen("BnplApplication")

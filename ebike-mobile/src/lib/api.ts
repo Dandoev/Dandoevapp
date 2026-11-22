@@ -162,7 +162,7 @@ export const MobileApi = {
   },
 
   async getProfile(token: string) {
-    return apiRequest<{ success: boolean; data: any }>("/auth/me", { token });
+    return apiRequest<{ success: boolean; data: any }>("/auth/me", { token, timeout: 60000 });
   },
 
   async sendPhoneOtp(phone: string, purpose: 'signup' | 'login' = 'signup') {
@@ -274,11 +274,11 @@ export const MobileApi = {
     if (!payload?.data?.url && !payload?.data?.fileUrl) throw new Error("Proof of address was not saved. Please try again.");
     return { ...payload, data: { ...payload.data, url: payload.data.url || payload.data.fileUrl } } as { success: boolean; data: any };
   },
-  async initiateMonoProve(redirectUrl: string, token: string) {
+  async initiateMonoProve(redirectUrl: string, token: string, phone?: string) {
     return apiRequest<{
       success: boolean;
       data: { url: string; reference: string };
-    }>("/kyc/prove/initiate", { method: "POST", body: { redirectUrl }, token });
+    }>("/kyc/prove/initiate", { method: "POST", body: { redirectUrl, ...(phone ? { phone } : {}) }, token });
   },
   async verifyMonoProveStatus(token: string) {
     return apiRequest<{
@@ -287,7 +287,7 @@ export const MobileApi = {
       status?: string;
       message?: string;
       data?: any;
-    }>("/kyc/prove/verify", { method: "POST", token });
+    }>("/kyc/prove/verify", { method: "POST", token, timeout: 60000 });
   },
   async initiateMonoConnect(redirectUrl: string, token: string) {
     return apiRequest<{

@@ -184,7 +184,12 @@ export default function ProductDetailScreen({
             amount: order.amount,
             orderId: order.id,
             provider: "mono",
-            callbackUrl: `${APP_CONFIG.apiBaseUrl}/checkout/mobile-return`,
+            // Web browsers must return to the web verifier. Native builds
+            // use the mobile relay, which forwards back to the app scheme.
+            callbackUrl:
+              Platform.OS === "web"
+                ? `${APP_CONFIG.apiBaseUrl}/checkout/callback`
+                : `${APP_CONFIG.apiBaseUrl}/checkout/mobile-return`,
           },
           token,
         );
@@ -201,6 +206,13 @@ export default function ProductDetailScreen({
           authorizationUrl: initialized.data.authorizationUrl,
         };
         setPendingPayment(payment);
+      }
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        // A delayed window.open is blocked by mobile browsers because the
+        // payment URL is only available after the API request completes.
+        // Same-tab navigation preserves the browser's user-initiated flow.
+        window.location.assign(payment.authorizationUrl);
+        return;
       }
       const browserResult = await WebBrowser.openAuthSessionAsync(
         payment.authorizationUrl,

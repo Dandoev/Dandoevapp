@@ -27,6 +27,10 @@
           "preview": {
             "command": "npm ci && npx expo prebuild --platform ios --no-install && cd ios && pod install && xcodebuild -workspace DandoEv.xcworkspace -scheme DandoEv -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGN_IDENTITY=- -derivedDataPath build",
             "artifact": "ios/build/Build/Products/Release-iphonesimulator/*.app"
+          },
+          "production": {
+            "command": "npm ci && npx expo prebuild --platform ios --no-install && cd ios && pod install && xcodebuild -workspace DandoEv.xcworkspace -scheme DandoEv -configuration Release -sdk iphoneos -archivePath build/DandoEv.xcarchive archive -allowProvisioningUpdates DEVELOPMENT_TEAM=VDFCU7TD4W CODE_SIGN_STYLE=Automatic && xcodebuild -exportArchive -archivePath build/DandoEv.xcarchive -exportPath build/export -exportOptionsPlist ../ExportOptions.plist -allowProvisioningUpdates",
+            "artifact": "ios/build/export/*.ipa"
           }
         }
       }

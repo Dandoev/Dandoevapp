@@ -1159,10 +1159,18 @@ export async function getMonoStatement(
   if (isLiveMonoConfigured && !accountId.startsWith("mono_acct_")) {
     try {
       const period = `last${months}months`;
-      const res = await monoFetch<{ data: any[] }>(
+      const res = await monoFetch<{ data: any[] | { transactions?: any[]; statement?: any[] } }>(
         `/accounts/${accountId}/transactions?period=${period}&paginate=false`,
       );
-      txns = (res.data || []).map((t: any, idx: number) => ({
+      const transactionData = res?.data;
+      const rawTransactions = Array.isArray(transactionData)
+        ? transactionData
+        : Array.isArray(transactionData?.transactions)
+          ? transactionData.transactions
+          : Array.isArray(transactionData?.statement)
+            ? transactionData.statement
+            : [];
+      txns = rawTransactions.map((t: any, idx: number) => ({
         id: t.id || t._id || `tx-${idx}`,
         // Mono returns transaction amounts in kobo
         amount: typeof t.amount === "number" ? Math.round(t.amount / 100) : 0,

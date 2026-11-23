@@ -260,6 +260,12 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       return NextResponse.json({ success: true, pending: true, message: "Waiting for Mono to confirm this bank connection" }, { status: 202 });
     if (String(accountDetails.dataStatus).toUpperCase() === "FAILED")
       return NextResponse.json({ error: "Mono reported that the bank connection failed. Please reconnect your bank." }, { status: 400 });
+    const monoDataStatus = String(accountDetails.dataStatus || "").toUpperCase();
+    const retrievedData = new Set((accountDetails.retrievedData || []).map((item) => String(item).toLowerCase()));
+    if (monoDataStatus === "PROCESSING")
+      return NextResponse.json({ success: true, pending: true, message: "Mono is still preparing your bank statement. Refresh in a moment." }, { status: 202 });
+    if (monoDataStatus === "UNAVAILABLE" || (monoDataStatus === "PARTIAL" && !retrievedData.has("transactions")))
+      return NextResponse.json({ error: "Mono could not retrieve statement transactions for this account. Confirm the account has transaction history, then reconnect or try again later." }, { status: 422 });
     const userClean = String(accountNumber || "").replace(/\D/g, "");
     const monoClean = String(accountDetails.accountNumber || "").replace(/\D/g, "");
     if (userClean && monoClean && userClean !== monoClean && !monoClean.endsWith(userClean) && !userClean.endsWith(monoClean)) {

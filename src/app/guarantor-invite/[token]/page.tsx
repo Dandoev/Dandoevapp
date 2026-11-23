@@ -55,6 +55,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     tier?: string;
   } | null>(null);
   const [isLinkingMono, setIsLinkingMono] = useState(false);
+  const [monoReady, setMonoReady] = useState(false);
   const [monoCode, setMonoCode] = useState('');
   const [error, setError] = useState('');
   const [inviteData, setInviteData] = useState<any>(null);
@@ -103,8 +104,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       script.src = 'https://connect.withmono.com/connect.js';
       script.async = true;
       script.dataset.monoConnect = 'true';
+      script.onload = () => setMonoReady(true);
+      script.onerror = () => setError('Mono Connect could not load. Check your connection and reload the page.');
       document.body.appendChild(script);
-    }
+    } else if ((window as any).MonoConnect) setMonoReady(true);
   }, [token]);
 
   const handleOpenMono = () => {
@@ -120,6 +123,11 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     const instance = new MonoConnect({
       key: publicKey,
       onSuccess: ({ code }: { code: string }) => {
+        if (typeof code !== 'string' || code.length < 3) {
+          setError('Mono did not return a valid bank connection code. Please try again.');
+          setIsLinkingMono(false);
+          return;
+        }
         setMonoCode(code);
         setMonoLinked(true);
         setMonoData({ name: fullName.trim(), bank: 'Mono-connected bank', bvnMasked: 'Verified', tier: 'Mono Verified' });
@@ -132,7 +140,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
   };
 
   const handleAcceptCoSign = async () => {
-    if (!agreedTerms) return;
+    if (!agreedTerms || !monoCode) {
+      setError(monoCode ? 'Accept the guarantor agreement before continuing.' : 'Connect the guarantor bank account with Mono first.');
+      return;
+    }
     setIsSubmitting(true);
     setError('');
     try {
@@ -480,10 +491,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
 
                 <button
                   onClick={handleOpenMono}
-                  disabled={isLinkingMono}
+                  disabled={isLinkingMono || !monoReady}
                   className="w-full py-3.5 bg-secondary hover:opacity-95 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
                 >
-                  {isLinkingMono ? 'Verifying Identity with Mono...' : 'Verify identity with Mono'}
+                  {isLinkingMono ? 'Verifying Identity with Mono...' : !monoReady ? 'Loading secure bank connection...' : monoLinked ? 'Bank account linked' : 'Verify identity with Mono'}
                 </button>
               </div>
             ) : (

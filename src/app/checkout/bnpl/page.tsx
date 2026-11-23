@@ -212,56 +212,22 @@ function BnplCheckoutContent() {
   // Execute real Mono Connect API exchange + 6-month statement underwriting
   const handleOpenMonoConnect = async () => {
     setIsLinkingMono(true);
+    setFormError('');
     try {
-      const res = await fetch('/api/kyc/mono', {
+      const res = await fetch('/api/kyc/connect/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: `mono_demo_${Date.now()}`,
-          bankName: selectedBank,
-          firstName: formData.firstName || 'Solomon',
-          lastName: formData.lastName || 'Dunu',
-          email: formData.email,
-          phone: formData.phone,
-          proposedMonthlyRepayment: monthlyRepayment,
-          setupMandate: true,
-          tenureMonths,
-          deductionFrequency: repaymentCadence,
-          totalRepayable,
+          redirectUrl: `${window.location.origin}/mono-connect/mobile-return`,
         }),
       });
       const result = await res.json();
-      if (result.success && result.data) {
-        const d = result.data;
-        setMonoLinked(true);
-        setMonoData({
-          accountName:
-            d.accountDetails?.accountName ||
-            `${formData.firstName || 'Solomon'} ${formData.lastName || 'Dunu'}`.toUpperCase(),
-          bankName: d.accountDetails?.bankName || selectedBank,
-          bvnMasked: d.accountDetails?.bvnMasked || '223*****294',
-          monthlyInflow: d.underwriting?.verifiedMonthlyInflow || 391000,
-          creditScore: d.underwriting?.creditScore || 762,
-        });
-      } else {
-        setMonoLinked(true);
-        setMonoData({
-          accountName: `${formData.firstName || 'Solomon'} ${formData.lastName || 'Dunu'}`.toUpperCase(),
-          bankName: selectedBank,
-          bvnMasked: '223*****294',
-          monthlyInflow: 391000,
-          creditScore: 762,
-        });
+      if (!res.ok || typeof result.data?.url !== 'string') {
+        throw new Error(result.error || 'Mono could not start the bank connection.');
       }
-    } catch {
-      setMonoLinked(true);
-      setMonoData({
-        accountName: `${formData.firstName || 'Solomon'} ${formData.lastName || 'Dunu'}`.toUpperCase(),
-        bankName: selectedBank,
-        bvnMasked: '223*****294',
-        monthlyInflow: 391000,
-        creditScore: 762,
-      });
+      window.location.assign(result.data.url);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Mono bank connection could not start.');
     } finally {
       setIsLinkingMono(false);
     }

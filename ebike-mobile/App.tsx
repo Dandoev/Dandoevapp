@@ -66,8 +66,8 @@ function App() {
   const { width: viewportWidth, height: viewportHeight } =
     useWindowDimensions();
   const [currentScreen, setCurrentScreen] = useState<ScreenType>("Onboarding");
-  // The shop is the primary point of contact after authentication.
-  const [currentTab, setCurrentTab] = useState<TabType>("bikes");
+  // Overview is the landing page after authentication; Shop remains one tap away.
+  const [currentTab, setCurrentTab] = useState<TabType>("home");
   const [selectedProduct, setSelectedProduct] = useState<DemoProduct | null>(
     null,
   );
@@ -100,7 +100,7 @@ function App() {
         if (session?.access_token) {
           setToken(session.access_token);
           await AsyncStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
-          setCurrentTab("bikes");
+          setCurrentTab("home");
           setCurrentScreen("Dashboard");
           MobileApi.getProfile(session.access_token).catch(() => {});
           return;
@@ -109,7 +109,7 @@ function App() {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
           setToken(storedToken);
-          setCurrentTab("bikes");
+          setCurrentTab("home");
           setCurrentScreen("Dashboard");
           if (!storedToken.startsWith("demo-")) MobileApi.getProfile(storedToken).catch(() => {});
           return;
@@ -158,7 +158,7 @@ function App() {
   const navigateTo = (screen: ScreenType) => {
     setCurrentScreen(screen);
     if (screen === "Dashboard") {
-      setCurrentTab("bikes");
+      setCurrentTab("home");
     }
   };
 
@@ -179,7 +179,7 @@ function App() {
     if (Platform.OS !== "android") return;
     const back = BackHandler.addEventListener("hardwareBackPress", () => {
       if (currentScreen === "Dashboard") {
-        if (currentTab !== "bikes") setCurrentTab("bikes");
+        if (currentTab !== "home") setCurrentTab("home");
         return true;
       }
       if (currentScreen === "ProductDetail") setCurrentScreen(prevScreenBeforeDetail);

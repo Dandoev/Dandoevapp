@@ -210,14 +210,14 @@ export default function RealKycScreen({
           </>
         )}
       </View>
-      <View style={styles.addressCard}>
+      {verified && <View style={styles.addressCard}>
         <Text style={styles.addressTitle}>Proof of address</Text>
         <Text style={styles.addressBody}>Upload a recent utility bill, bank statement, tenancy document, or official correspondence showing your residential address.</Text>
         <TouchableOpacity style={[styles.uploadButton, uploadingAddress && styles.disabled]} onPress={() => void pickProofOfAddress()} disabled={uploadingAddress} accessibilityRole="button">
           {uploadingAddress ? <ActivityIndicator color="#102152" /> : <Text style={styles.uploadButtonText}>{addressDocument ? `Uploaded: ${addressDocument.fileName || "document"}` : "Upload proof of address"}</Text>}
         </TouchableOpacity>
         {addressDocument && <Text style={styles.pendingText}>Pending review · PDF, JPG, and PNG accepted · max 5 MB</Text>}
-      </View>
+      </View>}
       <Text style={styles.sectionTitle}>How it works</Text>
       <View style={styles.step}>
         <View style={styles.stepIcon}>

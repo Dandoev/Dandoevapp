@@ -1408,7 +1408,7 @@ export default function BnplApplicationScreen({
               {connectedAssessment?.monoAccountId ? (
                 <View style={styles.repaymentSummaryBox}>
                   <Text style={styles.verifyAccountText}>Bank connected · Account ending {connectedAssessment.connectedAccountLast4 || accountNumber.slice(-4)}</Text>
-                  <Text style={styles.helperText}>{connectedAssessment.statementMonthsAnalysed} months assessed · {connectedAssessment.underwritingDecision === "MANUAL_REVIEW" ? "Staff credit review required" : connectedAssessment.underwritingDecision?.replace(/_/g, " ") || "Assessment pending"}</Text>
+                  <Text style={styles.helperText}>{(connectedAssessment as any).needsAssessment ? "Statement processing" : `${connectedAssessment.statementMonthsAnalysed} months assessed · ${connectedAssessment.underwritingDecision === "MANUAL_REVIEW" ? "Manual review required" : connectedAssessment.underwritingDecision?.replace(/_/g, " ") || "Assessment completed"}`}</Text>
                 </View>
               ) : <Text style={styles.helperText}>Bank statement not connected yet.</Text>}
               {!!connectMessage && <Text style={styles.helperText}>{connectMessage}</Text>}

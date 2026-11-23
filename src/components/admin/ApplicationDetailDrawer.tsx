@@ -165,7 +165,7 @@ export default function ApplicationDetailDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-6xl bg-white dark:bg-neutral-900 h-full shadow-2xl flex flex-col border-l border-neutral-200 dark:border-neutral-800 animate-slide-in-right overflow-hidden">
+      <div className="w-full max-w-none bg-white dark:bg-neutral-900 h-full shadow-2xl flex flex-col border-l-0 border-neutral-200 dark:border-neutral-800 animate-slide-in-right overflow-hidden">
         {/* Top Bar */}
         <div className="p-6 border-b border-neutral-150 dark:border-neutral-800 flex items-center justify-between">
           <div>

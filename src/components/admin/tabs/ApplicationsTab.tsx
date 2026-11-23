@@ -260,7 +260,7 @@ export default function ApplicationsTab({
                         className="text-xs gap-1"
                       >
                         <Eye className="h-3.5 w-3.5" />
-                        <span>Inspect Cashflow &amp; KYC</span>
+                        <span>Open full Cashflow &amp; KYC review</span>
                       </Button>
 
                       {!isApproved && (

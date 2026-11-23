@@ -208,7 +208,7 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
                             onClick={() => onOpenDetailDrawer(loan)}
                             className="text-xs font-semibold"
                           >
-                            Statement
+                            Open full repayment &amp; escrow
                           </Button>
                           <button
                             type="button"

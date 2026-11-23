@@ -42,21 +42,22 @@ export const GET = withAuth(async (_req: NextRequest, ctx: ApiContext) => {
   ]);
   const storedAccountNumber = user?.bankAccountNumber;
   const decryptedAccountNumber = storedAccountNumber ? decryptField(storedAccountNumber) : null;
-  const connectedAccountLast4 = decryptedAccountNumber && assessment?.monoAccountId === user?.monoAccountId
+  const assessmentMatchesConnection = Boolean(user?.monoAccountId && assessment?.monoAccountId === user.monoAccountId);
+  const connectedAccountLast4 = decryptedAccountNumber && assessmentMatchesConnection
     ? decryptedAccountNumber.slice(-4) || null : null;
   const pendingReference = latestConnection && Date.now() - latestConnection.createdAt.getTime() < 24 * 60 * 60 * 1000
     ? latestConnection.resourceId : null;
   return NextResponse.json({
     success: true,
     data: assessment ? {
-      ...assessment,
+      ...(assessmentMatchesConnection ? assessment : { source: null, underwritingDecision: null, statementMonthsAnalysed: null, verifiedMonthlyInflow: null, updatedAt: null, decisionReasons: [] }),
       monoAccountId: user?.monoAccountId || assessment.monoAccountId,
       connectedAccountLast4,
       accountNumber: decryptedAccountNumber,
       bankName: user?.bankName,
       accountName: user?.bankAccountName,
-      pendingReference: connectedAccountLast4 ? null : pendingReference,
-      needsAssessment: !assessment || !assessment.statementMonthsAnalysed,
+      pendingReference: assessmentMatchesConnection ? null : pendingReference,
+      needsAssessment: !assessmentMatchesConnection || !assessment.statementMonthsAnalysed,
     } : { pendingReference, monoAccountId: user?.monoAccountId || null, needsAssessment: true },
   });
 });

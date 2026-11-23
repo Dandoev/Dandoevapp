@@ -24,6 +24,7 @@ import {
   isMonoProductConfigured,
   submitMonoWatchlistScreening,
   type DeductionInterval,
+  type MonoCreditReport,
 } from "@/lib/mono";
 import { encryptField, decryptField } from "@/lib/encryption";
 import { notifyKycStatusChanged } from "@/lib/notifications";
@@ -244,12 +245,13 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         log.warn({ error }, "Mono Connect identity details unavailable; facial verification remains authoritative");
         return null;
       });
-    if (action === "complete_linked" && accountDetails.connectionReference !== reference)
+    if (action === "complete_linked" && accountDetails.connectionReference && accountDetails.connectionReference !== reference)
       return NextResponse.json({ success: true, pending: true, message: "Waiting for Mono to confirm this bank connection" }, { status: 202 });
-    if (!(["AVAILABLE", "PARTIAL"].includes(String(accountDetails.dataStatus).toUpperCase())) ||
-        (action === "complete_linked" && !accountDetails.retrievedData?.includes("transactions")))
-      return NextResponse.json({ success: true, pending: true, message: "Mono is still preparing your bank statement. Refresh in a moment." }, { status: 202 });
-    if (accountNumber && accountDetails.accountNumber !== String(accountNumber).replace(/\D/g, "")) {
+    if (String(accountDetails.dataStatus).toUpperCase() === "FAILED")
+      return NextResponse.json({ error: "Mono reported that the bank connection failed. Please reconnect your bank." }, { status: 400 });
+    const userClean = String(accountNumber || "").replace(/\D/g, "");
+    const monoClean = String(accountDetails.accountNumber || "").replace(/\D/g, "");
+    if (userClean && monoClean && userClean !== monoClean && !monoClean.endsWith(userClean) && !userClean.endsWith(monoClean)) {
       return NextResponse.json({ error: "The connected bank account does not match the account number entered. Connect the selected repayment account." }, { status: 409 });
     }
 
@@ -275,9 +277,9 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       "Analyzing 6-month bank statement turnover & credit history",
     );
     let creditReportAvailable = isMonoProductConfigured("lookup") && /^\d{11}$/.test(creditBvn || "");
-    const unavailableCreditReport = {
+    const unavailableCreditReport: MonoCreditReport = {
       creditScore: 0,
-      rating: "POOR" as const,
+      rating: "POOR",
       activeLoansCount: 0,
       totalActiveDebt: 0,
       totalOverdueAmount: 0,
@@ -285,14 +287,23 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       dishonoredDirectDebitsCount: 0,
       summary: "Credit bureau report unavailable; staff credit review required.",
     };
-    const [statement, creditReport] = await Promise.all([
-      getMonoStatement(accountId, 6),
-      creditReportAvailable ? getMonoCreditHistory(creditBvn!).catch((error) => {
-        if (!(error instanceof MonoFeatureUnavailableError)) throw error;
-        creditReportAvailable = false;
-        return unavailableCreditReport;
-      }) : Promise.resolve(unavailableCreditReport),
-    ]);
+    let statement: any;
+    let creditReport: MonoCreditReport = unavailableCreditReport;
+    try {
+      [statement, creditReport] = await Promise.all([
+        getMonoStatement(accountId, 6),
+        creditReportAvailable ? getMonoCreditHistory(creditBvn!).catch((error) => {
+          if (!(error instanceof MonoFeatureUnavailableError)) throw error;
+          creditReportAvailable = false;
+          return unavailableCreditReport;
+        }) : Promise.resolve(unavailableCreditReport),
+      ]);
+    } catch (statementErr: any) {
+      if (action === "complete_linked" && /still being retrieved|preparing|syncing|processing|pending|not ready/i.test(statementErr.message || "")) {
+        return NextResponse.json({ success: true, pending: true, message: "Mono is still preparing your bank statement. Refresh in a moment." }, { status: 202 });
+      }
+      throw statementErr;
+    }
 
     await prisma.auditLog.create({
       data: { userId, action: creditReportAvailable ? "MONO_CREDIT_HISTORY_COMPLETED" : "MONO_CREDIT_HISTORY_FAILED", resource: "mono_lookup", details: JSON.stringify(creditReport) },
@@ -408,10 +419,10 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
           monoBankCode: accountDetails.bankCode,
           monoMandateId: mandateOrder?.id || undefined,
           monoMandateStatus: mandateOrder?.status || undefined,
-          bankName: accountDetails.bankName,
+          bankName: accountDetails.bankName || bankName,
           bankAccountNumber: accountDetails.accountNumber
             ? encryptField(accountDetails.accountNumber)
-            : undefined,
+            : (accountNumber ? encryptField(accountNumber) : undefined),
           bankAccountName: accountDetails.accountName,
           bvn: identity?.bvn ? encryptField(identity.bvn) : undefined,
           address: identity?.addressLine1 || undefined,

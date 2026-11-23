@@ -248,16 +248,47 @@ model VehicleAsset {
   imei            String?             @unique
   bleMac          String?             @unique
   firmwareVersion String?
+  rfidVerified    Boolean             @default(false)
   status          String              @default("inventory")
+  unlockBlockedAt DateTime?
+  unlockBlockReason String?
   assignments     VehicleAssignment[]
   positions       VehiclePosition[]
   telemetry       VehicleTelemetry[]
   commands        VehicleCommand[]
+  cardEvents      VehicleCardEvent[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   @@index([bikeId, status])
   @@map("vehicle_assets")
+}
+
+model VehicleCard {
+  id          String   @id @default(uuid())
+  cardHash    String   @unique
+  riderId     String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+
+  @@index([riderId, active])
+  @@map("vehicle_cards")
+}
+
+model VehicleCardEvent {
+  id         String       @id @default(uuid())
+  assetId    String?
+  asset      VehicleAsset? @relation(fields: [assetId], references: [id])
+  cardHash   String
+  decision   String
+  reason     String
+  observedAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([cardHash, createdAt(sort: Desc)])
+  @@index([assetId, createdAt(sort: Desc)])
+  @@map("vehicle_card_events")
 }
 
 model VehicleAssignment {
@@ -852,4 +883,68 @@ model OrderAccessory {
   accessory Accessory @relation(fields: [accessoryId], references: [id])
 
   @@map("order_accessories")
+}
+
+model SwapCabinet {
+  id String @id @default(uuid())
+  deviceCode String @unique
+  name String
+  address String @default("")
+  hours String @default("")
+  latitude Float?
+  longitude Float?
+  enabled Boolean @default(false)
+  categoryId Int?
+  priceKobo Int?
+  onlineStatus Int @default(0)
+  available Int @default(0)
+  ports Json?
+  syncedAt DateTime?
+  orders SwapPurchase[]
+  tiers SwapPriceTier[]
+  @@map("swap_cabinets")
+}
+
+model SwapPriceTier {
+  id String @id @default(uuid())
+  cabinetId String
+  cabinet SwapCabinet @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  categoryId Int
+  minSoc Int
+  maxSoc Int
+  priceKobo Int
+  enabled Boolean @default(true)
+  @@unique([cabinetId, categoryId, minSoc, maxSoc])
+  @@index([cabinetId, categoryId, enabled])
+  @@map("swap_price_tiers")
+}
+
+model SwapPurchase {
+  id String @id @default(uuid())
+  userId String
+  cabinetId String
+  cabinet SwapCabinet @relation(fields: [cabinetId], references: [id])
+  requestKey String
+  amountKobo Int
+  categoryId Int
+  batterySn String
+  batterySoc Int?
+  phone String
+  paymentStatus String @default("initializing")
+  paymentMethod String @default("mono")
+  paymentUrl String?
+  status String @default("awaiting_payment")
+  recordId String? @unique
+  result Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, requestKey])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("swap_purchases")
+}
+
+model SwapProviderGate {
+  id String @id
+  availableAt DateTime
+  @@map("swap_provider_gates")
 }

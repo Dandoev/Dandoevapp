@@ -13,7 +13,7 @@ async function main() {
 
   const superAdmin = await prisma.user.upsert({
     where: { email: 'admin@dandoev.com' },
-    update: {},
+    update: {passwordHash: adminPasswordHash},
     create: {
       email: 'admin@dandoev.com',
       firstName: 'Super',
@@ -28,7 +28,7 @@ async function main() {
 
   const financeAdmin = await prisma.user.upsert({
     where: { email: 'finance@dandoev.com' },
-    update: {},
+    update: {passwordHash: adminPasswordHash},
     create: {
       email: 'finance@dandoev.com',
       firstName: 'Finance',
@@ -43,7 +43,7 @@ async function main() {
 
   const opsAdmin = await prisma.user.upsert({
     where: { email: 'ops@dandoev.com' },
-    update: {},
+    update: {passwordHash: adminPasswordHash},
     create: {
       email: 'ops@dandoev.com',
       firstName: 'Operations',

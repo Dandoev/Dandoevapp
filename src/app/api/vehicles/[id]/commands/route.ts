@@ -8,8 +8,9 @@ export const POST=withAuth(async(req:NextRequest,ctx:ApiContext)=>{
  let body:unknown;try{body=await req.json();}catch{return NextResponse.json({error:'Invalid JSON'},{status:400});}
  if(!body||typeof body!=='object'||(body as {operation?:unknown}).operation!=='unlock')return NextResponse.json({error:'Only verified unlock requests are supported'},{status:400});
  if(process.env.OMNI_REMOTE_UNLOCK_ENABLED!=='true')return NextResponse.json({error:'Remote unlock is disabled'},{status:503});
- const assignment=await prisma.vehicleAssignment.findFirst({where:{assetId:id,riderId:ctx.user.sub,endedAt:null},include:{asset:{select:{imei:true,firmwareVersion:true,status:true}}}});
+ const assignment=await prisma.vehicleAssignment.findFirst({where:{assetId:id,riderId:ctx.user.sub,endedAt:null},include:{asset:{select:{imei:true,firmwareVersion:true,status:true,unlockBlockedAt:true}}}});
  if(!assignment||!assignment.asset.imei)return NextResponse.json({error:'Bike not found'},{status:404});
+ if(assignment.asset.unlockBlockedAt)return NextResponse.json({error:'Bike access is blocked by an administrator'},{status:403});
  if(!assignment.asset.firmwareVersion||assignment.asset.status!=='active')return NextResponse.json({error:'Bike is not eligible for remote commands'},{status:409});
  const heartbeat=await prisma.vehicleTelemetry.findFirst({where:{assetId:id},orderBy:{observedAt:'desc'},select:{observedAt:true}});
  if(!heartbeat||Date.now()-heartbeat.observedAt.getTime()>120000)return NextResponse.json({error:'Bike connection is stale'},{status:409});

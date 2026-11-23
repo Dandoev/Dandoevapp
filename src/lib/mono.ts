@@ -1575,6 +1575,7 @@ export async function verifyMonoPayment(reference: string): Promise<{
   status: "successful" | "pending" | "failed";
   amount: number;
   reference: string;
+  currency?: string;
 }> {
   logger.info({ reference }, "Verifying Mono payment");
 
@@ -1617,6 +1618,7 @@ export async function verifyMonoPayment(reference: string): Promise<{
           : "failed",
     amount: res.data.amount / 100,
     reference: res.data.reference,
+    currency: res.data.currency,
   };
 }
 

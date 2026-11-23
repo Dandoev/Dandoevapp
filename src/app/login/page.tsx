@@ -19,7 +19,7 @@ function AdminLoginForm() {
   const redirectParam = searchParams.get('redirect');
   // Only allow redirects back into the admin area (prevents open redirects)
   const destination =
-    redirectParam && redirectParam.startsWith('/admin') && !redirectParam.startsWith('//')
+    redirectParam && (redirectParam.startsWith('/admin') || redirectParam === '/swap-admin' || redirectParam.startsWith('/swap-admin/')) && !redirectParam.startsWith('//')
       ? redirectParam
       : '/admin';
 

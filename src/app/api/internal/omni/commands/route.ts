@@ -8,8 +8,8 @@ export async function GET(req:NextRequest){
  if(!authorized(req,''))return NextResponse.json({error:'Unauthorized'},{status:401});
  await prisma.vehicleCommand.updateMany({where:{status:{in:['requested','queued','dispatched','acknowledged']},expiresAt:{lte:new Date()}},data:{status:'unknown',resultMessage:'Command expired without confirmed device state'}});
  const imeis=(req.nextUrl.searchParams.get('imeis')||'').split(',').filter(x=>/^\d{15}$/.test(x)).slice(0,1000);if(!imeis.length)return NextResponse.json({data:[]});
- const candidates=await prisma.vehicleCommand.findMany({where:{status:'requested',expiresAt:{gt:new Date()},asset:{imei:{in:imeis}}},include:{asset:{select:{imei:true}}},orderBy:{requestedAt:'asc'},take:20});
- const data=[];for(const c of candidates){const claimed=await prisma.vehicleCommand.updateMany({where:{id:c.id,status:'requested'},data:{status:'queued'}});if(claimed.count)data.push({id:c.id,imei:c.asset.imei,operation:c.operation,actor:c.actor,sequence:c.sequence,expiresAt:c.expiresAt.getTime()});}
+ const candidates=await prisma.vehicleCommand.findMany({where:{status:'requested',expiresAt:{gt:new Date()},asset:{imei:{in:imeis},unlockBlockedAt:null,status:'active'}},include:{asset:{select:{imei:true}}},orderBy:{requestedAt:'asc'},take:20});
+ const data=[];for(const c of candidates){const claimed=await prisma.vehicleCommand.updateMany({where:{id:c.id,status:'requested'},data:{status:'queued'}});if(claimed.count)data.push({id:c.id,imei:c.asset.imei,operation:c.operation,source:c.reason==='rfid_card'?'rfid':'app',actor:c.actor,sequence:c.sequence,expiresAt:c.expiresAt.getTime()});}
  return NextResponse.json({data});
 }
 export async function POST(req:NextRequest){

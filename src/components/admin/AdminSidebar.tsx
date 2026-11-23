@@ -194,7 +194,7 @@ export default function AdminSidebar({
           </div>
 
           {/* Grouped Navigation Links */}
-          <nav className="flex-1 overflow-y-auto px-3.5 py-5 space-y-5">
+          <nav aria-label="Admin workspace navigation" className="flex-1 overflow-y-auto px-3.5 py-5 space-y-5">
             {sections.map((sec) => {
               const items = menuItems.filter((m) => m.section === sec.key);
               return (
@@ -217,6 +217,8 @@ export default function AdminSidebar({
                           }
                         }}
                         disabled={isRestricted}
+                        aria-current={isActive ? 'page' : undefined}
+                        title={isRestricted ? 'Available to Super Admins only' : undefined}
                         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer ${
                           isActive
                             ? 'bg-[#36B9EF] text-[#071B48] shadow-md ring-1 ring-[#8EE0FF]/50'
@@ -249,8 +251,9 @@ export default function AdminSidebar({
                     );
                   })}
                   {sec.key === 'operations' && (userRole === 'super_admin' || userRole === 'operations_admin') && (
-                    <Link href="/admin/ebike" onClick={onCloseMobile} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300/85 hover:bg-white/8 hover:text-white">
-                      <Activity className="h-4 w-4 shrink-0 text-[#8FB5D0]" /> Fleet control & stations
+                    <Link href="/admin/ebike" onClick={onCloseMobile} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300/85 hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#36B9EF]">
+                      <Activity className="h-4 w-4 shrink-0 text-[#8FB5D0]" />
+                      <span>Fleet control & stations</span>
                     </Link>
                   )}
                 </div>

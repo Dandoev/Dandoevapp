@@ -30,7 +30,10 @@ export async function uploadFile(
   const contentType = getMimeType(buffer);
   const finalFileName = fileName || `file_${Date.now()}`;
   
-  const hasSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const hasSupabase = !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
+  );
 
   if (hasSupabase) {
     const bucketName = 'dandoev-docs';

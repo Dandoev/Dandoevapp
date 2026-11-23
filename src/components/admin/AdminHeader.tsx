@@ -15,6 +15,7 @@ import { formatNaira } from '@/lib/utils';
 
 interface AdminHeaderProps {
   currentRole: string;
+  activeTab?: string;
   onOpenMobileInfo: () => void;
   onOpenMobileMenu?: () => void;
   searchQuery: string;
@@ -28,6 +29,7 @@ interface AdminHeaderProps {
 
 export default function AdminHeader({
   currentRole,
+  activeTab = 'overview',
   onOpenMobileInfo,
   onOpenMobileMenu,
   searchQuery,
@@ -79,6 +81,11 @@ export default function AdminHeader({
   ];
 
   const activeRoleObj = roles.find((r) => r.id === currentRole) || roles[0];
+  const pageLabels: Record<string, string> = {
+    overview: 'Admin overview', applications: 'Underwriting queue', bikes: 'Fleet & battery stock',
+    payments: 'Repayments & escrow', defaults: 'Delinquency & recovery', reconciliation: 'Gateway reconciliation',
+    compliance: 'KYC & NDPR compliance', users: 'Staff & RBAC', activity: 'Security audit trail', settings: 'System parameters',
+  };
 
   const handleLogout = () => {
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
@@ -130,13 +137,13 @@ export default function AdminHeader({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-base sm:text-lg font-extrabold text-[#0A1B46] tracking-tight">
-              Admin overview
+              {pageLabels[activeTab] || 'Admin workspace'}
             </h1>
             <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full bg-[#E8F7FF] border border-[#C9EBFA] text-[#1685BD] text-[10px] font-extrabold uppercase">
               Staff only
             </span>
           </div>
-          <div className="hidden sm:flex items-center text-slate-400 text-xs gap-1.5 font-medium">
+          <div className="hidden sm:flex items-center text-slate-400 text-xs gap-1.5 font-medium" aria-live="polite">
             <span>{activeRoleObj.desc}</span>
             <span>·</span>
             <span>{formattedDate}</span>
@@ -219,6 +226,7 @@ export default function AdminHeader({
                               key={loan.id}
                               onClick={() => {
                                 setSearchFocused(false);
+                                onNavigateTab?.('applications');
                                 onSelectLoanResult?.(loan);
                               }}
                               className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 text-left text-xs transition-colors"

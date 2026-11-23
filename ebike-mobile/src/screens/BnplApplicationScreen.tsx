@@ -247,11 +247,22 @@ export default function BnplApplicationScreen({
   const refreshConnectStatus = async () => {
     let result = await MobileApi.getMonoFinancial(token);
     if (result.data?.pendingReference && accountNumber.length === 10 && bankName) {
-      const completion = await MobileApi.completeMonoLinkedAccount(result.data.pendingReference, token, {
-        accountNumber, bankName, tenureMonths: tenure, deductionFrequency: "weekly", proposedMonthlyRepayment: monthly,
-      });
-      if (completion.pending) setConnectMessage(completion.message || "Mono is preparing your bank statement. Refresh shortly.");
-      else { setConnectMessage(""); result = await MobileApi.getMonoFinancial(token); }
+      try {
+        const completion = await MobileApi.completeMonoLinkedAccount(result.data.pendingReference, token, {
+          accountNumber, bankName, tenureMonths: tenure, deductionFrequency: "weekly", proposedMonthlyRepayment: monthly,
+        });
+        if (completion.pending) {
+          setConnectMessage(completion.message || "Mono is preparing your bank statement. Tap Refresh connection status again in a moment.");
+        } else {
+          setConnectMessage("");
+          result = await MobileApi.getMonoFinancial(token);
+        }
+      } catch (completionErr) {
+        // The heavy pipeline (statement + underwriting) may time out or fail
+        // while Mono is still syncing. Show a user-friendly retry message
+        // instead of a network error.
+        setConnectMessage("Mono is still processing your bank data. Tap Refresh connection status again in a moment.");
+      }
     }
     setConnectedAssessment(result.data || null);
     if (result.data?.connectedAccountLast4 && result.data.connectedAccountLast4 === accountNumber.slice(-4) && result.data.accountName) {
@@ -282,8 +293,29 @@ export default function BnplApplicationScreen({
       if (!url || !/^https:\/\//i.test(url)) throw new Error("Mono did not return a valid bank connection link. Please retry.");
       setConnectReference(session.data?.reference || null);
       if (Platform.OS === "web") {
-        window.open(url, "_blank", "noopener,noreferrer");
-        setConnectMessage("Mono opened in a secure browser tab. Complete your bank connection there, then return here and tap Refresh connection status.");
+        const monoWindow = window.open(url, "_blank", "noreferrer");
+        setConnectMessage("Mono opened in a secure browser tab. Complete your bank connection there, then return here.");
+        // Auto-poll: when the Mono tab closes or focus returns, try refreshing.
+        const pollId = setInterval(async () => {
+          try {
+            if (monoWindow && monoWindow.closed) {
+              clearInterval(pollId);
+              setConnectMessage("Checking your bank connection…");
+              // Give the webhook a moment to arrive and set monoAccountId
+              await new Promise((r) => setTimeout(r, 3000));
+              await refreshConnectStatus().catch(() => {});
+              // Retry once more after a short delay if still pending
+              await new Promise((r) => setTimeout(r, 5000));
+              const finalResult = await refreshConnectStatus().catch(() => null);
+              if (!finalResult?.monoAccountId) {
+                setConnectMessage("Mono is confirming your bank connection. Tap Refresh connection status if this takes more than a minute.");
+              }
+              return;
+            }
+          } catch { /* ignore polling errors */ }
+        }, 2000);
+        // Stop polling after 10 minutes to avoid leaks
+        setTimeout(() => clearInterval(pollId), 10 * 60 * 1000);
         return;
       }
       setConnectUrl(url);
@@ -305,28 +337,34 @@ export default function BnplApplicationScreen({
       setError("Mono could not connect your bank. Check your bank login and try again.");
       return;
     }
-    if (code) {
-      await MobileApi.completeMonoFinancial(code, token, {
-        accountNumber,
-        bankName,
-        tenureMonths: tenure,
-        deductionFrequency: "weekly",
-        proposedMonthlyRepayment: monthly,
-      });
-    } else if (reference) {
-      const completion = await MobileApi.completeMonoLinkedAccount(reference, token, {
-        accountNumber,
-        bankName,
-        tenureMonths: tenure,
-        deductionFrequency: "weekly",
-        proposedMonthlyRepayment: monthly,
-      });
-      if (completion.pending) {
-        setConnectMessage(completion.message || "Mono is preparing your bank statement. Refresh shortly.");
+    try {
+      if (code) {
+        await MobileApi.completeMonoFinancial(code, token, {
+          accountNumber,
+          bankName,
+          tenureMonths: tenure,
+          deductionFrequency: "weekly",
+          proposedMonthlyRepayment: monthly,
+        });
+      } else if (reference) {
+        const completion = await MobileApi.completeMonoLinkedAccount(reference, token, {
+          accountNumber,
+          bankName,
+          tenureMonths: tenure,
+          deductionFrequency: "weekly",
+          proposedMonthlyRepayment: monthly,
+        });
+        if (completion.pending) {
+          setConnectMessage(completion.message || "Mono is preparing your bank statement. Tap Refresh connection status again in a moment.");
+        }
       }
+    } catch {
+      // The heavy pipeline can fail on initial callback; the user can retry
+      // with the Refresh button once Mono finishes syncing.
+      setConnectMessage("Mono is still processing your bank data. Tap Refresh connection status again in a moment.");
     }
-    const assessment = await refreshConnectStatus();
-    if (!assessment?.monoAccountId) setConnectMessage("Mono is confirming your bank and preparing its statement. Tap Refresh connection status shortly.");
+    const assessment = await refreshConnectStatus().catch(() => null);
+    if (!assessment?.monoAccountId) setConnectMessage("Mono is confirming your bank and preparing its statement. Tap Refresh connection status again in a moment.");
   };
 
   const draftKey = `@dandoev_bnpl_draft_${product.id}`;
@@ -580,11 +618,23 @@ export default function BnplApplicationScreen({
     if (!bankName.trim() || !accountNumber.trim() || accountNumber.length !== 10) {
       return "Please select your bank and enter a valid 10-digit NUBAN account number.";
     }
-    if (!connectedAssessment?.monoAccountId || connectedAssessment.connectedAccountLast4 !== accountNumber.slice(-4))
+    if (!connectedAssessment?.monoAccountId || (connectedAssessment.connectedAccountLast4 && connectedAssessment.connectedAccountLast4 !== accountNumber.slice(-4)))
       return "Connect this repayment account with Mono so we can assess your bank statement.";
-    if (connectedAssessment.bankName && connectedAssessment.bankName !== bankName)
+    const assessmentBank = (connectedAssessment.bankName || "").trim().toLowerCase();
+    const selectedBank = bankName.trim().toLowerCase();
+    const bankMatches =
+      !assessmentBank ||
+      assessmentBank === selectedBank ||
+      assessmentBank.includes(selectedBank) ||
+      selectedBank.includes(assessmentBank) ||
+      assessmentBank.split(/[\s()]+/)[0] === selectedBank.split(/[\s()]+/)[0];
+    if (connectedAssessment.bankName && !bankMatches)
       return "Reconnect your selected repayment bank with Mono before continuing.";
-    if (!accountName) return "Refresh your Mono connection to confirm the account holder's name.";
+    if (!accountName && connectedAssessment.accountName) {
+      setAccountName(connectedAssessment.accountName);
+    } else if (!accountName) {
+      return "Refresh your Mono connection to confirm the account holder's name.";
+    }
     return null;
   };
 
@@ -1356,8 +1406,22 @@ export default function BnplApplicationScreen({
                 {connectBusy ? <ActivityIndicator color="#0A154F" /> : <Building size={18} color="#0A154F" />}
                 <Text style={styles.primaryBtnText}>{connectBusy ? "Connecting bank…" : connectedAssessment?.monoAccountId ? "Reconnect bank with Mono" : "Connect bank with Mono"}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => void refreshConnectStatus().catch((cause) => setError(cause instanceof Error ? cause.message : "Could not refresh bank status."))}>
-                <Text style={styles.helperText}>Refresh connection status</Text>
+              <TouchableOpacity
+                style={{ paddingVertical: 12, alignItems: "center" }}
+                onPress={async () => {
+                  setError("");
+                  setConnectMessage("Refreshing connection status…");
+                  try {
+                    const data = await refreshConnectStatus();
+                    if (data?.monoAccountId) {
+                      setConnectMessage("");
+                    }
+                  } catch {
+                    setConnectMessage("Could not refresh connection. Please check your internet and tap to try again.");
+                  }
+                }}
+              >
+                <Text style={[styles.helperText, { color: "#2E3192", fontWeight: "600" }]}>↻ Refresh connection status</Text>
               </TouchableOpacity>
             </View>
 

@@ -362,6 +362,7 @@ export default function AdminDashboard() {
         {/* Global Executive Header */}
         <AdminHeader
           currentRole={currentRole}
+          activeTab={activeTab}
           onOpenMobileInfo={() => setMobileInfoOpen(true)}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
           searchQuery={globalSearch}

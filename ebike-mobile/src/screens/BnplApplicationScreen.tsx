@@ -246,9 +246,11 @@ export default function BnplApplicationScreen({
 
   const refreshConnectStatus = async () => {
     let result = await MobileApi.getMonoFinancial(token);
-    if (result.data?.pendingReference && accountNumber.length === 10 && bankName) {
+    const retryReference = result.data?.pendingReference || connectReference;
+    const needsAssessment = Boolean((result.data as any)?.needsAssessment);
+    if (retryReference && needsAssessment && accountNumber.length === 10 && bankName) {
       try {
-        const completion = await MobileApi.completeMonoLinkedAccount(result.data.pendingReference, token, {
+        const completion = await MobileApi.completeMonoLinkedAccount(retryReference, token, {
           accountNumber, bankName, tenureMonths: tenure, deductionFrequency: "weekly", proposedMonthlyRepayment: monthly,
         });
         if (completion.pending) {
@@ -310,7 +312,7 @@ export default function BnplApplicationScreen({
               // Retry once more after a short delay if still pending
               await new Promise((r) => setTimeout(r, 5000));
               const finalResult = await refreshConnectStatus().catch(() => null);
-              if (!finalResult?.monoAccountId) {
+              if (!finalResult?.monoAccountId || (finalResult as any)?.needsAssessment) {
                 setConnectMessage("Mono is confirming your bank connection. Tap Refresh connection status if this takes more than a minute.");
               }
               return;

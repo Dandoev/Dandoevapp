@@ -50,12 +50,14 @@ export const GET = withAuth(async (_req: NextRequest, ctx: ApiContext) => {
     success: true,
     data: assessment ? {
       ...assessment,
+      monoAccountId: user?.monoAccountId || assessment.monoAccountId,
       connectedAccountLast4,
       accountNumber: decryptedAccountNumber,
       bankName: user?.bankName,
       accountName: user?.bankAccountName,
       pendingReference: connectedAccountLast4 ? null : pendingReference,
-    } : { pendingReference },
+      needsAssessment: !assessment || !assessment.statementMonthsAnalysed,
+    } : { pendingReference, monoAccountId: user?.monoAccountId || null, needsAssessment: true },
   });
 });
 
@@ -217,11 +219,23 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
 
     // Step 1: Exchange code for Mono Account ID
     let accountId: string;
+    let resolvedReference: string | undefined;
     if (action === "complete_linked") {
-      if (typeof reference !== "string" || !reference.startsWith("CONNECT-"))
-        return NextResponse.json({ error: "Valid Mono connection reference required" }, { status: 400 });
-      const started = await prisma.auditLog.findFirst({ where: { userId, action: "MONO_CONNECT_STARTED", resourceId: reference }, select: { createdAt: true } });
-      if (!started) return NextResponse.json({ error: "Bank connection session not found" }, { status: 404 });
+      resolvedReference = typeof reference === "string" && reference.startsWith("CONNECT-")
+        ? reference
+        : undefined;
+      const started = await prisma.auditLog.findFirst({
+        where: {
+          userId,
+          action: "MONO_CONNECT_STARTED",
+          ...(resolvedReference ? { resourceId: resolvedReference } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        select: { resourceId: true, createdAt: true },
+      });
+      if (!resolvedReference) resolvedReference = started?.resourceId || undefined;
+      if (!resolvedReference || !started)
+        return NextResponse.json({ error: "Bank connection session not found. Connect your bank again." }, { status: 404 });
       if (Date.now() - started.createdAt.getTime() > 24 * 60 * 60 * 1000)
         return NextResponse.json({ error: "Bank connection session expired. Connect your bank again." }, { status: 410 });
       const linked = await prisma.user.findUnique({ where: { id: userId }, select: { monoAccountId: true } });
@@ -256,7 +270,7 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
         log.warn({ error }, "Mono Connect identity details unavailable; facial verification remains authoritative");
         return null;
       });
-    if (action === "complete_linked" && accountDetails.connectionReference && accountDetails.connectionReference !== reference)
+    if (action === "complete_linked" && accountDetails.connectionReference && accountDetails.connectionReference !== reference && accountDetails.connectionReference !== resolvedReference)
       return NextResponse.json({ success: true, pending: true, message: "Waiting for Mono to confirm this bank connection" }, { status: 202 });
     if (String(accountDetails.dataStatus).toUpperCase() === "FAILED")
       return NextResponse.json({ error: "Mono reported that the bank connection failed. Please reconnect your bank." }, { status: 400 });

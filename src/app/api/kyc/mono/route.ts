@@ -41,11 +41,22 @@ export const GET = withAuth(async (_req: NextRequest, ctx: ApiContext) => {
     prisma.auditLog.findFirst({ where: { userId: ctx.user.sub, action: "MONO_CONNECT_STARTED" }, orderBy: { createdAt: "desc" }, select: { resourceId: true, createdAt: true } }),
   ]);
   const storedAccountNumber = user?.bankAccountNumber;
-  const connectedAccountLast4 = storedAccountNumber && assessment?.monoAccountId === user?.monoAccountId
-    ? decryptField(storedAccountNumber)?.slice(-4) || null : null;
+  const decryptedAccountNumber = storedAccountNumber ? decryptField(storedAccountNumber) : null;
+  const connectedAccountLast4 = decryptedAccountNumber && assessment?.monoAccountId === user?.monoAccountId
+    ? decryptedAccountNumber.slice(-4) || null : null;
   const pendingReference = latestConnection && Date.now() - latestConnection.createdAt.getTime() < 24 * 60 * 60 * 1000
     ? latestConnection.resourceId : null;
-  return NextResponse.json({ success: true, data: assessment ? { ...assessment, connectedAccountLast4, bankName: user?.bankName, accountName: user?.bankAccountName, pendingReference: connectedAccountLast4 ? null : pendingReference } : { pendingReference } });
+  return NextResponse.json({
+    success: true,
+    data: assessment ? {
+      ...assessment,
+      connectedAccountLast4,
+      accountNumber: decryptedAccountNumber,
+      bankName: user?.bankName,
+      accountName: user?.bankAccountName,
+      pendingReference: connectedAccountLast4 ? null : pendingReference,
+    } : { pendingReference },
+  });
 });
 
 async function resolveOptionalUser(req: NextRequest) {
@@ -252,7 +263,10 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     const userClean = String(accountNumber || "").replace(/\D/g, "");
     const monoClean = String(accountDetails.accountNumber || "").replace(/\D/g, "");
     if (userClean && monoClean && userClean !== monoClean && !monoClean.endsWith(userClean) && !userClean.endsWith(monoClean)) {
-      return NextResponse.json({ error: "The connected bank account does not match the account number entered. Connect the selected repayment account." }, { status: 409 });
+      log.info(
+        { userClean, monoClean, accountId },
+        "Applicant input account number differed from Mono connected account; adopting verified Mono account number",
+      );
     }
 
     // Step 3: Cross-validate KYC Identity (BVN, NIN, Legal Name match)
@@ -483,6 +497,10 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
       data: {
         accountId,
         verifiedName: accountDetails.accountName,
+        accountName: accountDetails.accountName,
+        accountNumber: accountDetails.accountNumber,
+        bankName: accountDetails.bankName || bankName,
+        connectedAccountLast4: accountDetails.accountNumber ? accountDetails.accountNumber.slice(-4) : undefined,
         kycStatus: "verified",
         statementAnalyzed: true,
         monthlyIncomeEstimate: underwriting.verifiedMonthlyInflow,

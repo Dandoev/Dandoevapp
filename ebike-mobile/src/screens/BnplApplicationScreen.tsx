@@ -265,9 +265,12 @@ export default function BnplApplicationScreen({
       }
     }
     setConnectedAssessment(result.data || null);
-    if (result.data?.connectedAccountLast4 && result.data.connectedAccountLast4 === accountNumber.slice(-4) && result.data.accountName) {
-      setAccountName(result.data.accountName);
-      setAccountVerified(true);
+    if (result.data?.connectedAccountLast4) {
+      if ((result.data as any).accountNumber) setAccountNumber((result.data as any).accountNumber);
+      if (result.data.accountName) {
+        setAccountName(result.data.accountName);
+        setAccountVerified(true);
+      }
       if (result.data.bankName) setBankName(result.data.bankName);
     }
     return result.data;
@@ -618,8 +621,13 @@ export default function BnplApplicationScreen({
     if (!bankName.trim() || !accountNumber.trim() || accountNumber.length !== 10) {
       return "Please select your bank and enter a valid 10-digit NUBAN account number.";
     }
-    if (!connectedAssessment?.monoAccountId || (connectedAssessment.connectedAccountLast4 && connectedAssessment.connectedAccountLast4 !== accountNumber.slice(-4)))
+    if (!connectedAssessment?.monoAccountId)
       return "Connect this repayment account with Mono so we can assess your bank statement.";
+    if (connectedAssessment.connectedAccountLast4 && accountNumber.slice(-4) !== connectedAssessment.connectedAccountLast4) {
+      if ((connectedAssessment as any).accountNumber) {
+        setAccountNumber((connectedAssessment as any).accountNumber);
+      }
+    }
     const assessmentBank = (connectedAssessment.bankName || "").trim().toLowerCase();
     const selectedBank = bankName.trim().toLowerCase();
     const bankMatches =
@@ -1395,9 +1403,9 @@ export default function BnplApplicationScreen({
                 </View>
               </View>
               <Text style={styles.bodyText}>Connect the repayment account above. Mono shares its transaction history with DandoEv so we can assess affordability. This step does not authorize repayment debits.</Text>
-              {connectedAssessment?.monoAccountId && connectedAssessment.connectedAccountLast4 === accountNumber.slice(-4) ? (
+              {connectedAssessment?.monoAccountId ? (
                 <View style={styles.repaymentSummaryBox}>
-                  <Text style={styles.verifyAccountText}>Bank connected · Account ending {connectedAssessment.connectedAccountLast4}</Text>
+                  <Text style={styles.verifyAccountText}>Bank connected · Account ending {connectedAssessment.connectedAccountLast4 || accountNumber.slice(-4)}</Text>
                   <Text style={styles.helperText}>{connectedAssessment.statementMonthsAnalysed} months assessed · {connectedAssessment.underwritingDecision === "MANUAL_REVIEW" ? "Staff credit review required" : connectedAssessment.underwritingDecision?.replace(/_/g, " ") || "Assessment pending"}</Text>
                 </View>
               ) : <Text style={styles.helperText}>Bank statement not connected yet.</Text>}

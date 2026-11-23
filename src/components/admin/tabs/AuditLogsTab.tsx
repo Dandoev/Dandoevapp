@@ -111,36 +111,38 @@ export default function AuditLogsTab({ auditLogs }: AuditLogsTabProps) {
       {/* Audit Trail Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Staff Officer</TableHead>
-                <TableHead>Administrative Action</TableHead>
-                <TableHead>Transaction Event Details</TableHead>
-                <TableHead>Client IP</TableHead>
-                <TableHead className="text-right">Timestamp</TableHead>
+                <TableHead className="w-[17%]">Staff Officer</TableHead>
+                <TableHead className="w-[19%]">Administrative Action</TableHead>
+                <TableHead className="w-[36%]">Transaction Event Details</TableHead>
+                <TableHead className="w-[14%]">Client IP</TableHead>
+                <TableHead className="w-[14%] text-right">Timestamp</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredLogs.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell>
-                    <div className="font-bold text-slate-900">
+                  <TableCell className="align-top">
+                    <div className="font-bold text-slate-900 break-words">
                       {getActorName(log)}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="primary" className="text-[10px] font-mono">
+                  <TableCell className="align-top">
+                    <Badge variant="primary" className="max-w-full whitespace-normal break-words text-left text-[10px] font-mono leading-4">
                       {log.action.replace(/_/g, ' ')}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-700 max-w-md">
-                    {log.details}
+                  <TableCell className="align-top text-xs text-slate-700">
+                    <div className="max-h-24 overflow-y-auto whitespace-pre-wrap break-words leading-5" title={log.details || ''}>
+                      {log.details || 'No details recorded'}
+                    </div>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-400 font-mono">
+                  <TableCell className="align-top text-xs text-slate-400 font-mono break-all">
                     {log.ipAddress || '102.89.23.14'}
                   </TableCell>
-                  <TableCell className="text-right text-xs text-slate-500 font-mono whitespace-nowrap">
+                  <TableCell className="align-top text-right text-xs text-slate-500 font-mono whitespace-normal break-words">
                     {timeAgo(log.createdAt)}
                   </TableCell>
                 </TableRow>

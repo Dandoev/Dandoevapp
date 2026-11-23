@@ -496,6 +496,9 @@ class DbService {
           updatedAt: u.updatedAt ? u.updatedAt.toISOString() : undefined,
         }));
       }
+      // A successful empty production query is real empty state, not a reason
+      // to load presentation/demo staff records.
+      if (staffDbUsers) return [];
     } catch {
       if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
@@ -593,6 +596,7 @@ class DbService {
           updatedAt: b.updatedAt.toISOString(),
         }));
       }
+      if (dbBikes) return [];
     } catch {
       if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
@@ -920,6 +924,7 @@ class DbService {
           documents: l.documents || [],
         }));
       }
+      if (dbLoans) return [];
     } catch {
       if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
@@ -1430,6 +1435,7 @@ class DbService {
           uploadedAt: d.uploadedAt.toISOString(),
         }));
       }
+      if (dbDocs) return [];
     } catch {
       // Fallback
     }
@@ -1553,6 +1559,7 @@ class DbService {
           createdAt: l.createdAt.toISOString(),
         }));
       }
+      if (dbLogs) return [];
     } catch {
       // Fallback
     }

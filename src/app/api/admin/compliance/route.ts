@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withRoles, withSecurityHeaders } from '@/lib/api-handler';
 import dbService from '@/lib/db-service';
 import logger from '@/lib/logger';
+import prisma from '@/lib/prisma';
 
 const ADMIN_ROLES = ['super_admin', 'compliance_officer'];
 
@@ -10,7 +11,10 @@ export const GET = withSecurityHeaders(
     try {
       const kycDocs = await dbService.getKycDocuments();
       const auditLogs = await dbService.getAuditLogs();
-      const staffUsers = await dbService.getStaffUsers();
+      const [staffUsers, totalUsers] = await Promise.all([
+        dbService.getStaffUsers(),
+        prisma.user.count(),
+      ]);
 
       const complianceLogs = auditLogs.filter((a) =>
         ['APPROVED_KYC_DOC', 'REJECTED_KYC_DOC', 'CREATED_STAFF_USER', 'UPDATED_STAFF_USER'].includes(a.action)
@@ -23,7 +27,7 @@ export const GET = withSecurityHeaders(
         success: true,
         data: {
           stats: {
-            totalUsers: 142,
+            totalUsers,
             verifiedKyc,
             pendingKyc,
             suspendedUsers: staffUsers.filter((u) => u.status === 'suspended').length,

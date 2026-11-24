@@ -166,6 +166,14 @@ export const MobileApi = {
     return apiRequest<{ success: boolean; data: any }>("/auth/me", { token, timeout: 60000 });
   },
 
+  async getMyVehicles(token: string) {
+    return apiRequest<{ data: any[] }>('/vehicles/mine', { token });
+  },
+
+  async reportBikeFault(assetId: string, data: { title: string; description: string }, token: string) {
+    return apiRequest<{ data: { id: string; status: string; createdAt: string } }>(`/vehicles/${assetId}/faults`, { method: 'POST', body: data, token });
+  },
+
   async sendPhoneOtp(phone: string, purpose: 'signup' | 'login' = 'signup') {
     return apiRequest<{ success: boolean; message?: string }>('/auth/phone/send', { method: 'POST', body: { phone, purpose }, timeout: 30000 });
   },

@@ -242,15 +242,23 @@ export async function POST(req: NextRequest) {
               select: { userId: true },
             });
             if (started) {
-              await prisma.user.update({
+              const current = await prisma.user.findUnique({
                 where: { id: started.userId },
-                data: { monoAccountId: accountId, monoStatus: "linked" },
+                select: { monoAccountId: true, monoStatus: true },
+              });
+              if (current) await prisma.user.update({
+                where: { id: started.userId },
+                data: {
+                  monoAccountId: accountId,
+                  monoStatus: current.monoAccountId === accountId && current.monoStatus === "statement_fetched"
+                    ? "statement_fetched" : "linked",
+                },
               });
             }
           }
           await prisma.user
             .updateMany({
-              where: { monoAccountId: accountId },
+              where: { monoAccountId: accountId, monoStatus: { not: "statement_fetched" } },
               data: {
                 monoStatus: "linked",
               },

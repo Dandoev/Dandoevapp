@@ -257,6 +257,7 @@ model VehicleAsset {
   telemetry       VehicleTelemetry[]
   commands        VehicleCommand[]
   cardEvents      VehicleCardEvent[]
+  maintenanceCases VehicleMaintenanceCase[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -360,6 +361,24 @@ model VehicleCommand {
   @@index([assetId, status, requestedAt])
   @@index([riderId, requestedAt(sort: Desc)])
   @@map("vehicle_commands")
+}
+
+model VehicleMaintenanceCase {
+  id          String       @id @default(uuid())
+  assetId     String
+  asset       VehicleAsset @relation(fields: [assetId], references: [id])
+  title       String
+  description String
+  status      String       @default("open")
+  resolution  String?
+  createdBy   String
+  closedBy    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  closedAt    DateTime?
+
+  @@index([assetId, status, createdAt(sort: Desc)])
+  @@map("vehicle_maintenance_cases")
 }
 
 model SwapStation {

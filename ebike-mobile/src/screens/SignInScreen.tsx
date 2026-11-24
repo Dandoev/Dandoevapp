@@ -9,7 +9,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from "lucide-react-native";
+import { Eye, EyeOff, Lock, Mail, Smartphone, AlertCircle } from "lucide-react-native";
 import { supabase } from "../lib/supabase";
 import { demoStore } from "../lib/demo-data";
 import { MobileApi } from "../lib/api";
@@ -186,19 +186,19 @@ export default function SignInScreen({
             </View>
           )}
 
-          {/* Email or Phone Input */}
-          <Text style={styles.label}>Email or Phone Number</Text>
+          {/* Rider can authenticate with the phone used during signup or with email. */}
+          <Text style={styles.label}>Phone Number or Email</Text>
           <View style={styles.inputContainer}>
-            <Mail size={18} color="#9CA3AF" />
+            {email.includes("@") ? <Mail size={18} color="#9CA3AF" /> : <Smartphone size={18} color="#9CA3AF" />}
             <TextInput
               style={styles.input}
               placeholder="you@example.com or 0803 123 4567"
               placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
+              keyboardType={email.includes("@") ? "email-address" : "phone-pad"}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="username"
-              accessibilityLabel="Email address or phone number"
+              accessibilityLabel="Phone number or email address"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);

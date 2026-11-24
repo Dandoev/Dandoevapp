@@ -39,10 +39,11 @@ interface ProfileScreenProps {
   onLogout: () => void;
   onNavigateToTerms: () => void;
   onNavigateToKyc?: () => void;
+  onNavigateToFault?: () => void;
 }
 
 export default function ProfileScreen(props: ProfileScreenProps) {
-  if (props.token && !props.token.startsWith('demo-')) return <RealProfileScreen token={props.token} onLogout={props.onLogout} onNavigateToKyc={props.onNavigateToKyc} onNavigateToTerms={props.onNavigateToTerms} />;
+  if (props.token && !props.token.startsWith('demo-')) return <RealProfileScreen token={props.token} onLogout={props.onLogout} onNavigateToKyc={props.onNavigateToKyc} onNavigateToFault={props.onNavigateToFault} onNavigateToTerms={props.onNavigateToTerms} />;
   return <DemoProfileScreen {...props} />;
 }
 

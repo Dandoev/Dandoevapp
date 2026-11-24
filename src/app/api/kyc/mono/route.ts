@@ -284,9 +284,10 @@ export const POST = withSecurityHeaders(async (req: NextRequest) => {
     const userClean = String(accountNumber || "").replace(/\D/g, "");
     const monoClean = String(accountDetails.accountNumber || "").replace(/\D/g, "");
     if (userClean && monoClean && userClean !== monoClean && !monoClean.endsWith(userClean) && !userClean.endsWith(monoClean)) {
-      log.info(
-        { userClean, monoClean, accountId },
-        "Applicant input account number differed from Mono connected account; adopting verified Mono account number",
+      log.warn({ accountId }, "Applicant account number did not match Mono connected account");
+      return NextResponse.json(
+        { error: "The connected bank account does not match the selected repayment account. Check the number or reconnect with Mono." },
+        { status: 422 },
       );
     }
 

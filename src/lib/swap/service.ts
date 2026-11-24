@@ -27,11 +27,15 @@ async function quoteFor(userId:string,cabinetId:string,batterySn:string){
  const ports=cabinet.ports as Array<{batteryTypeId:number;boxStatus:number;batterySn?:string;soc?:number}>|null;
  const port=ports?.find(p=>Number(p.batteryTypeId)===cabinet.categoryId&&Number(p.boxStatus)===2);
  if(!port)throw new Error('No fully charged compatible battery is reported');
- const soc=Number(port.soc); if(!Number.isInteger(soc)||soc<0||soc>100)throw new Error('Battery charge level is unavailable');
+ const bindings=providerRows(await yunku('selectUserBatteryBinding',{openId:userId,phone:user.phone}));
+ const binding=bindings.find(b=>b.batteryNum===batterySn&&Number(b.categoryId)===cabinet.categoryId);
+ if(!binding)throw new Error('This battery is not bound to your rider account and compatible category');
+ // Yunku's documented binding response has no SOC. Some deployments expose one
+ // as an extension; never price from the charged replacement battery in a port.
+ const soc=Number(binding.soc??binding.batterySoc??binding.batteryPower);
+ if(!Number.isInteger(soc)||soc<0||soc>100)throw new Error('Returned battery charge is unavailable from Yunku; tier pricing cannot be calculated safely');
  const tier=cabinet.tiers.find(t=>t.enabled&&t.categoryId===cabinet.categoryId&&t.minSoc<=soc&&t.maxSoc>=soc);
  if(!tier)throw new Error(`No admin price tier covers ${soc}% battery charge`);
- const bindings=providerRows(await yunku('selectUserBatteryBinding',{openId:userId,phone:user.phone}));
- if(!bindings.some(b=>b.batteryNum===batterySn&&Number(b.categoryId)===cabinet.categoryId))throw new Error('This battery is not bound to your rider account and compatible category');
  return {user,cabinet,categoryId:cabinet.categoryId,batterySoc:soc,priceKobo:tier.priceKobo};
 }
 
@@ -41,18 +45,24 @@ export async function quoteSwap(userId:string,cabinetId:string,batterySn:string)
 }
 
 export async function checkoutSwap(userId:string,cabinetId:string,batterySn:string,requestKey:string){
- const existing=await prisma.swapPurchase.findUnique({where:{userId_requestKey:{userId,requestKey}}});if(existing)return existing;
- const active=await prisma.swapPurchase.findFirst({where:{userId,status:{in:['awaiting_payment','dispatching','pending','unknown','attention_required']}}});
- if(active)throw new Error('Finish or reconcile your existing swap before paying for another');
  if(process.env.SWAP_PAYMENTS_ENABLED!=='true'||!isMonoProductConfigured('payments'))throw new Error('Swap payments are not enabled');
  if(process.env.YUNKU_OPERATIONS_ENABLED!=='true')throw new Error('Swap cabinet operations are not enabled');
  const origin=process.env.SWAP_PUBLIC_URL;if(!origin?.startsWith('https://'))throw new Error('Swap payment return URL is not configured');
  const [user,cabinet]=await Promise.all([prisma.user.findUnique({where:{id:userId}}),prisma.swapCabinet.findUnique({where:{id:cabinetId}})]);
  if(!user?.phone||!user.email)throw new Error('A verified rider profile with phone and email is required');
+ const phone=user.phone;
  const quote=await quoteFor(userId,cabinetId,batterySn);
  const synced=await yunku('getSyncUserStatus',{openId:userId,phone:user.phone});
  if(Number(synced.data?.status)!==1)throw new Error('Your swap account needs activation by support');
- const order=await prisma.swapPurchase.create({data:{userId,cabinetId,requestKey,amountKobo:quote.priceKobo,batterySoc:quote.batterySoc,categoryId:quote.categoryId,batterySn,phone:user.phone}});
+ const claim=await prisma.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`swap:${userId}`}))`;
+  const existing=await tx.swapPurchase.findUnique({where:{userId_requestKey:{userId,requestKey}}});if(existing)return {order:existing,created:false};
+  const active=await tx.swapPurchase.findFirst({where:{userId,status:{in:['awaiting_payment','dispatching','pending','unknown','attention_required']}}});
+  if(active)throw new Error('Finish or reconcile your existing swap before paying for another');
+  const order=await tx.swapPurchase.create({data:{userId,cabinetId,requestKey,amountKobo:quote.priceKobo,batterySoc:quote.batterySoc,categoryId:quote.categoryId,batterySn,phone}});
+  return {order,created:true};
+ });
+ const {order}=claim;if(!claim.created)return order;
  try{
   const payment=await initiateMonoPayment({amount:order.amountKobo/100,type:'onetime-debit',reference:order.id,description:`DandoEv battery swap at ${quote.cabinet.name}`,customer:{name:`${user.firstName} ${user.lastName}`,email:user.email},redirect_url:`${origin.replace(/\/$/,'')}/swap-payment-return`});
   if(!payment.payment_link.startsWith('https://'))throw new Error('Invalid Mono checkout URL');
@@ -61,16 +71,16 @@ export async function checkoutSwap(userId:string,cabinetId:string,batterySn:stri
 }
 
 export async function paySwapFromWallet(userId:string,cabinetId:string,batterySn:string,requestKey:string){
- const existing=await prisma.swapPurchase.findUnique({where:{userId_requestKey:{userId,requestKey}}});
- if(existing)return existing;
  if(process.env.YUNKU_OPERATIONS_ENABLED!=='true')throw new Error('Swap cabinet operations are not enabled');
- const active=await prisma.swapPurchase.findFirst({where:{userId,status:{in:['awaiting_payment','dispatching','pending','unknown','attention_required']}}});
- if(active)throw new Error('Finish or reconcile your existing swap before paying for another');
  const quote=await quoteFor(userId,cabinetId,batterySn);
   const synced=await yunku('getSyncUserStatus',{openId:userId,phone:quote.user.phone!});
  if(Number(synced.data?.status)!==1)throw new Error('Your swap account needs activation by support');
  const amount=quote.priceKobo/100;
  return prisma.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`swap:${userId}`}))`;
+  const existing=await tx.swapPurchase.findUnique({where:{userId_requestKey:{userId,requestKey}}});if(existing)return existing;
+  const active=await tx.swapPurchase.findFirst({where:{userId,status:{in:['awaiting_payment','dispatching','pending','unknown','attention_required']}}});
+  if(active)throw new Error('Finish or reconcile your existing swap before paying for another');
   const wallet=await tx.wallet.findUnique({where:{userId}});
   if(!wallet)throw new Error('Fund your wallet before paying for a swap');
   const debited=await tx.wallet.updateMany({where:{id:wallet.id,mainBalance:{gte:amount}},data:{mainBalance:{decrement:amount}}});
@@ -107,7 +117,17 @@ export async function executeSwap(id:string){
 }
 
 export async function reconcileSwap(id:string){
- const order=await prisma.swapPurchase.findUniqueOrThrow({where:{id}});if(!order.recordId)return order;
+ let order=await prisma.swapPurchase.findUniqueOrThrow({where:{id}});
+ if(!order.recordId&&order.status==='unknown'){
+  const format=(date:Date)=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lagos',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(date);const value=(type:string)=>parts.find(part=>part.type===type)?.value||'';return `${value('year')}-${value('month')}-${value('day')} ${value('hour')}:${value('minute')}:${value('second')}`;};
+  const response=await yunku('changeBatteryRecordList',{openId:order.userId,phone:order.phone,batterySn:order.batterySn,beginTime:format(new Date(order.createdAt.getTime()-300000)),endTime:format(new Date(Date.now()+60000)),pageNum:1,pageSize:20});
+  const cabinet=await prisma.swapCabinet.findUniqueOrThrow({where:{id:order.cabinetId},select:{deviceCode:true}});
+  const matches=providerRows(response).filter(result=>Number(result.type)===2&&String(result.openId)===order.userId&&String(result.phone)===order.phone&&String(result.emptyBattery)===order.batterySn&&String(result.emptyDeviceCode)===cabinet.deviceCode&&Number(result.categoryId)===order.categoryId);
+  if(matches.length!==1)return order;
+  const recordId=String(matches[0].id||'');if(!recordId)throw new Error('Recovered swap record has no ID');
+  order=await prisma.swapPurchase.update({where:{id},data:{recordId}});
+ }
+ if(!order.recordId)return order;
  const response=await yunku('getChangeBatteryRecord',{id:order.recordId}),result=response.data??response;
  if(String(result.id)!==order.recordId)throw new Error('Swap record mismatch');
  if(Number(result.type)!==2||result.emptyDeviceCode==null)throw new Error('Unexpected swap record');

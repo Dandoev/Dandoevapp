@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 
 const modules = [
-  { href: '/admin/fleet-control', title: 'Fleet control', description: 'Physical assets, rider assignments, BNPL context and recovery queue.', icon: Bike, status: 'Available' },
-  { href: '/admin/fleet-control#stations', title: 'Swap stations', description: 'Create stations, manage availability and publish rider destinations.', icon: BatteryCharging, status: 'Available' },
-  { href: '/admin/fleet-control#tracking', title: 'Live tracking', description: 'OMNI device positions, freshness and connectivity status.', icon: MapPinned, status: 'Gateway pending' },
-  { href: '/admin/fleet-control#security', title: 'Security controls', description: 'Alerts, lock policy, theft workflow and command audit trail.', icon: ShieldCheck, status: 'Hardware validation pending' },
-  { href: '/admin/fleet-control#maintenance', title: 'Maintenance', description: 'Faults, mileage reminders, service records and workshop operations.', icon: Wrench, status: 'Planned' },
-  { href: '/admin/fleet-control#telemetry', title: 'Telemetry', description: 'Speed, battery, ride sessions and fleet utilization analytics.', icon: Activity, status: 'Gateway pending' },
+  { href: '/fleet/live', title: 'Live tracking & telemetry', description: 'Current device location, battery, lock state and command history.', icon: MapPinned, status: 'Available' },
+  { href: '/fleet/control', title: 'Fleet control', description: 'Physical assets, rider assignments, BNPL context and recovery queue.', icon: Bike, status: 'Available' },
+  { href: '/fleet/swap', title: 'Battery swaps', description: 'Cabinets, tier prices and swap payments.', icon: BatteryCharging, status: 'Available' },
+  { href: '/fleet/control#tracking', title: 'Live tracking', description: 'OMNI device positions, freshness and connectivity status.', icon: MapPinned, status: 'Gateway pending' },
+  { href: '/fleet/control#security', title: 'Security controls', description: 'Alerts, lock policy, theft workflow and command audit trail.', icon: ShieldCheck, status: 'Hardware validation pending' },
+  { href: '/fleet/maintenance', title: 'Maintenance', description: 'Open service cases, track work and record resolutions.', icon: Wrench, status: 'Available' },
+  { href: '/fleet/control#telemetry', title: 'Telemetry', description: 'Speed, battery, ride sessions and fleet utilization analytics.', icon: Activity, status: 'Gateway pending' },
 ];
 
 export default function EbikeOperationsDashboard() {

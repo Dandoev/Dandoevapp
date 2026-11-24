@@ -32,6 +32,7 @@ import ProductDetailScreen from "./src/screens/ProductDetailScreen";
 import KycScreen from "./src/screens/KycScreen";
 import FundWalletScreen from "./src/screens/FundWalletScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
+import ReportFaultScreen from "./src/screens/ReportFaultScreen";
 import BnplApplicationScreen from "./src/screens/BnplApplicationScreen";
 import BottomNavBar, { TabType } from "./src/components/BottomNavBar";
 import AppErrorBoundary from "./src/components/AppErrorBoundary";
@@ -60,6 +61,7 @@ export type ScreenType =
   | "Kyc"
   | "FundWallet"
   | "Notifications"
+  | "ReportFault"
   | "BnplApplication";
 
 function App() {
@@ -244,6 +246,7 @@ function App() {
             onLogout={handleLogout}
             onNavigateToTerms={() => setCurrentScreen("Terms")}
             onNavigateToKyc={() => setCurrentScreen("Kyc")}
+            onNavigateToFault={() => setCurrentScreen("ReportFault")}
           />
         );
       default:
@@ -375,6 +378,10 @@ function App() {
               token={token}
               onBack={() => setCurrentScreen("Dashboard")}
             />
+          )}
+
+          {currentScreen === "ReportFault" && token && (
+            <ReportFaultScreen token={token} onBack={() => setCurrentScreen("Dashboard")} />
           )}
 
           {/* Authenticated Dashboard Shell with Docked Bottom Navbar */}

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import { LayoutDashboard, ShoppingBag, CreditCard, User, WalletCards } from 'lucide-react-native';
 
 export type TabType = 'home' | 'bikes' | 'loans' | 'wallet' | 'profile';
@@ -11,6 +11,23 @@ interface BottomNavBarProps {
 }
 
 export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: BottomNavBarProps) {
+  const progress = useRef<Record<TabType, Animated.Value>>({
+    home: new Animated.Value(currentTab === 'home' ? 1 : 0),
+    bikes: new Animated.Value(currentTab === 'bikes' ? 1 : 0),
+    loans: new Animated.Value(currentTab === 'loans' ? 1 : 0),
+    wallet: new Animated.Value(currentTab === 'wallet' ? 1 : 0),
+    profile: new Animated.Value(currentTab === 'profile' ? 1 : 0),
+  }).current;
+  useEffect(() => {
+    (Object.keys(progress) as TabType[]).forEach((key) => {
+      Animated.timing(progress[key], {
+        toValue: key === currentTab ? 1 : 0,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [currentTab, progress]);
   const tabs: { key: TabType; label: string; icon: any }[] = [
     { key: 'home', label: 'Overview', icon: LayoutDashboard },
     { key: 'bikes', label: 'Shop', icon: ShoppingBag },
@@ -28,25 +45,22 @@ export default function BottomNavBar({ currentTab, onSelectTab, badgeCount }: Bo
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tabButton, isActive && styles.tabButtonActive]}
+              style={styles.tabButton}
               onPress={() => onSelectTab(tab.key)}
               activeOpacity={0.7}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={tab.label}
             >
-              <View style={styles.iconContainer}>
-                <IconComponent
-                  size={22}
-                  color={isActive ? '#FFFFFF' : '#B6C6DC'}
-                  strokeWidth={isActive ? 2.3 : 1.9}
-                />
+              <Animated.View style={[styles.tabButtonBackground, { opacity: progress[tab.key] }]} />
+              <Animated.View style={[styles.iconContainer, { transform: [{ scale: progress[tab.key].interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] }]}>
+                <IconComponent size={22} color={isActive ? '#FFFFFF' : '#B6C6DC'} strokeWidth={isActive ? 2.3 : 1.9} />
                 {tab.key === 'loans' && badgeCount?.loans ? (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{badgeCount.loans}</Text>
                   </View>
                 ) : null}
-              </View>
+              </Animated.View>
               <Text style={[styles.label, isActive && styles.labelActive]}>
                 {tab.label}
               </Text>
@@ -84,6 +98,11 @@ const styles = StyleSheet.create({
   },
   tabButtonActive: {
     backgroundColor: '#2E3192',
+  },
+  tabButtonBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#2E3192',
+    borderRadius: 18,
   },
   iconContainer: {
     position: 'relative',

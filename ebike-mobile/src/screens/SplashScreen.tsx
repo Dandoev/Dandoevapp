@@ -1,38 +1,27 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Animated, SafeAreaView, Easing } from 'react-native';
 import BrandMark from '../components/BrandMark';
 
 export default function SplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 900,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 7,
-        tension: 40,
+        friction: 9,
+        tension: 55,
         useNativeDriver: true,
       }),
     ]).start();
-
-    // Subtle breathing pulse on the logo
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.04, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-      ])
-    );
-    pulseLoop.start();
-
-    return () => pulseLoop.stop();
-  }, [fadeAnim, scaleAnim, pulseAnim]);
+  }, [fadeAnim, scaleAnim]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,7 +30,7 @@ export default function SplashScreen() {
           styles.content,
           {
             opacity: fadeAnim,
-            transform: [{ scale: Animated.multiply(scaleAnim, pulseAnim) }],
+            transform: [{ scale: scaleAnim }],
           },
         ]}
       >

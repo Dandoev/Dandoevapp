@@ -52,7 +52,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // ---- Route Protection Logic ----
-  const ADMIN_ROUTES = ['/admin', '/swap-admin'];
+  const ADMIN_ROUTES = ['/admin', '/swap-admin', '/fleet'];
 
   const isAdmin = ADMIN_ROUTES.some(route => pathname.startsWith(route));
 
@@ -90,6 +90,9 @@ export async function proxy(request: NextRequest) {
 
         if (!adminRoles.includes(role)) {
           return NextResponse.redirect(new URL('/login', request.url));
+        }
+        if ((pathname === '/fleet' || pathname.startsWith('/fleet/')) && !['super_admin', 'operations_admin'].includes(role)) {
+          return NextResponse.redirect(new URL('/admin', request.url));
         }
       } catch {
         const url = new URL('/login', request.url);

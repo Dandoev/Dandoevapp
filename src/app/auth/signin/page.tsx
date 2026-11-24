@@ -251,7 +251,7 @@ function SignInForm() {
           <form onSubmit={handleManualSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                {portalMode === 'rider' ? 'Email or Phone Number' : 'Official Staff Email'}
+                {portalMode === 'rider' ? 'Phone Number or Email' : 'Official Staff Email'}
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -260,7 +260,7 @@ function SignInForm() {
                   required
                   placeholder={
                     portalMode === 'rider'
-                      ? 'you@example.com or 0803 123 4567'
+                      ? '0803 123 4567 or you@example.com'
                       : 'admin@dandoev.com'
                   }
                   value={form.email}

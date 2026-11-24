@@ -16,7 +16,7 @@ const input=z.discriminatedUnion('action',[
 ]);
 export const POST=withRoles(readers,async(req,ctx)=>{
  try{const parsed=input.safeParse(await req.json());if(!parsed.success)return NextResponse.json({error:'Invalid action or settings'},{status:400});const data=parsed.data;
- if(data.action!=='reconcile'&&!['super_admin','operations_admin'].includes(ctx.user.role))return NextResponse.json({error:'Operations role required'},{status:403});
+ if(!['reconcile','refund_wallet'].includes(data.action)&&!['super_admin','operations_admin'].includes(ctx.user.role))return NextResponse.json({error:'Operations role required'},{status:403});
  if(data.action==='sync')return NextResponse.json(await syncCabinets(data.page));
  if(data.action==='refund_wallet'){
   if(!['super_admin','finance_admin'].includes(ctx.user.role))return NextResponse.json({error:'Finance role required'},{status:403});

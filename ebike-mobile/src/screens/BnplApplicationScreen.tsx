@@ -625,10 +625,10 @@ export default function BnplApplicationScreen({
     }
     if (!connectedAssessment?.monoAccountId)
       return "Connect this repayment account with Mono so we can assess your bank statement.";
+    if ((connectedAssessment as any).needsAssessment || !connectedAssessment.statementMonthsAnalysed)
+      return "Mono is still preparing this account's statement. Refresh the connection before continuing.";
     if (connectedAssessment.connectedAccountLast4 && accountNumber.slice(-4) !== connectedAssessment.connectedAccountLast4) {
-      if ((connectedAssessment as any).accountNumber) {
-        setAccountNumber((connectedAssessment as any).accountNumber);
-      }
+      return "The selected account does not match the connected bank account. Check the number or reconnect with Mono.";
     }
     const assessmentBank = (connectedAssessment.bankName || "").trim().toLowerCase();
     const selectedBank = bankName.trim().toLowerCase();

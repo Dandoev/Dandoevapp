@@ -10,7 +10,7 @@ export const POST=withRoles(['super_admin','operations_admin'],async(req:NextReq
  const asset=await prisma.vehicleAsset.findUnique({where:{id},select:{id:true}});if(!asset)return NextResponse.json({error:'Bike not found'},{status:404});
  await prisma.$transaction(async tx=>{
   await tx.vehicleAsset.update({where:{id},data:{unlockBlockedAt:value.blocked?new Date():null,unlockBlockReason:value.blocked?(value.reason as string).trim():null}});
-  if(value.blocked)await tx.vehicleCommand.updateMany({where:{assetId:id,status:'requested'},data:{status:'failed',resultMessage:'Admin blocked bike access'}});
+  if(value.blocked)await tx.vehicleCommand.updateMany({where:{assetId:id,status:{in:['requested','queued']}},data:{status:'failed',resultMessage:'Admin blocked bike access before dispatch'}});
  });
  return NextResponse.json({blocked:value.blocked});
 });

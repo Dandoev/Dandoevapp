@@ -17,8 +17,10 @@ export async function POST(req:NextRequest){
  let value:unknown;try{value=JSON.parse(body);}catch{return NextResponse.json({error:'Invalid JSON'},{status:400});}
  const item=value as {id?:unknown;status?:unknown};if(typeof item?.id!=='string'||!['dispatched','acknowledged','applied','failed','expired','unknown'].includes(String(item.status)))return NextResponse.json({error:'Invalid status'},{status:400});
  const existing=await prisma.vehicleCommand.findUnique({where:{id:item.id}});if(!existing)return NextResponse.json({error:'Command not found'},{status:404});
- if(['applied','failed','expired','unknown'].includes(existing.status))return NextResponse.json({success:true});
+ if(['applied','failed','expired','unknown'].includes(existing.status))return NextResponse.json({success:true,accepted:false,status:existing.status});
  const allowed:Record<string,string[]>={queued:['dispatched','failed','expired','unknown'],dispatched:['acknowledged','applied','failed','unknown'],acknowledged:['applied','failed','unknown']};
  if(!allowed[existing.status]?.includes(String(item.status)))return NextResponse.json({error:'Invalid transition'},{status:409});
- await prisma.vehicleCommand.updateMany({where:{id:item.id,status:existing.status},data:{status:String(item.status)}});return NextResponse.json({success:true});
+ const changed=await prisma.vehicleCommand.updateMany({where:{id:item.id,status:existing.status,...(item.status==='dispatched'?{asset:{unlockBlockedAt:null,status:'active'}}:{})},data:{status:String(item.status)}});
+ if(!changed.count){const current=await prisma.vehicleCommand.findUnique({where:{id:item.id},select:{status:true}});return NextResponse.json({success:true,accepted:false,status:current?.status??'unknown'});}
+ return NextResponse.json({success:true,accepted:true,status:String(item.status)});
 }

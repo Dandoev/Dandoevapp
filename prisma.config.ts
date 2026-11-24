@@ -18,6 +18,9 @@ function getDbUrl() {
 
 export default defineConfig({
   schema: path.join(__dirname, 'prisma', 'schema.prisma'),
+  migrations: {
+    seed: 'node -r dotenv/config -r ts-node/register prisma/seed.ts',
+  },
   datasource: {
     url: getDbUrl(),
   },

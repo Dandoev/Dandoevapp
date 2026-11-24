@@ -24,11 +24,13 @@ export default function RealProfileScreen({
   token,
   onLogout,
   onNavigateToKyc,
+  onNavigateToFault,
   onNavigateToTerms,
 }: {
   token: string;
   onLogout: () => void;
   onNavigateToKyc?: () => void;
+  onNavigateToFault?: () => void;
   onNavigateToTerms: () => void;
 }) {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -173,6 +175,9 @@ export default function RealProfileScreen({
       )}
       <TouchableOpacity style={styles.action} onPress={onNavigateToTerms}>
         <Text style={styles.link}>Terms and agreements →</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.action} onPress={onNavigateToFault}>
+        <Text style={styles.link}>Report a bike fault →</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.action} onPress={onLogout}>
         <Text style={styles.logout}>Sign out</Text>

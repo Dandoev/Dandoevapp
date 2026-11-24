@@ -3,8 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-dandoev.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 // Supabase's newer secret key replaces the legacy service_role key. Prefer it
-// when present, but keep the legacy variable for existing deployments.
-const supabaseServerKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key';
+// when present, but keep the legacy variable for existing deployments, falling
+// back to the public anon key if service role is unconfigured in this environment.
+const supabaseServerKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-service-role-key';
 
 /**
  * Shared Supabase client for Client components and lightweight Server usage.

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase';
+import { supabase, supabaseAdmin } from './supabase';
 
 export interface UploadResult {
   url: string;
@@ -32,21 +32,22 @@ export async function uploadFile(
   
   const hasSupabase = !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
+    (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   );
 
   if (hasSupabase) {
     const bucketName = 'dandoev-docs';
     const safeName = finalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+    const client = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? supabaseAdmin : supabase;
     
     try {
-      const { data: bucket } = await supabaseAdmin.storage.getBucket(bucketName);
+      const { data: bucket } = await client.storage.getBucket(bucketName);
       if (!bucket) {
-        const { error: bucketError } = await supabaseAdmin.storage.createBucket(bucketName, { public: true, fileSizeLimit: '5MB', allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
+        const { error: bucketError } = await client.storage.createBucket(bucketName, { public: true, fileSizeLimit: '5MB', allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
         if (bucketError && !/already exists/i.test(bucketError.message)) throw bucketError;
       }
-      const { data, error } = await supabaseAdmin.storage
+      const { data, error } = await client.storage
         .from(bucketName)
         .upload(filePath, buffer, {
           upsert: true,
@@ -55,7 +56,7 @@ export async function uploadFile(
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabaseAdmin.storage
+      const { data: { publicUrl } } = client.storage
         .from(bucketName)
         .getPublicUrl(filePath);
 
@@ -66,6 +67,7 @@ export async function uploadFile(
       };
     } catch (error: any) {
       console.error('Supabase upload error:', error.message);
+      throw new Error(`Document upload failed: ${error.message || 'Supabase storage error'}`);
     }
   }
 

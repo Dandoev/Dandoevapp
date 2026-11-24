@@ -18,6 +18,7 @@ import ComplianceTab from '@/components/admin/tabs/ComplianceTab';
 import UsersAccessTab from '@/components/admin/tabs/UsersAccessTab';
 import AuditLogsTab from '@/components/admin/tabs/AuditLogsTab';
 import SettingsTab from '@/components/admin/tabs/SettingsTab';
+import EmailComposerTab from '@/components/admin/tabs/EmailComposerTab';
 
 // Operational Modals & Drawers
 import BikeModal from '@/components/admin/BikeModal';
@@ -451,6 +452,8 @@ export default function AdminDashboard() {
           {activeTab === 'activity' && (
             <AuditLogsTab auditLogs={auditLogs} />
           )}
+
+          {activeTab === 'communications' && <EmailComposerTab />}
 
           {activeTab === 'settings' && (
             <SettingsTab

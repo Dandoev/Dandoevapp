@@ -55,7 +55,9 @@ async function handleChargeSuccess(payload: any) {
     // 1. Update PaymentTransaction
     const transaction = await tx.paymentTransaction.update({
       where: { providerRef: reference },
-      data: { status: 'SUCCESS', updatedAt: new Date() },
+      // Prisma enums are lowercase; keep webhook reconciliation consistent
+      // with the synchronous payment verification path.
+      data: { status: 'success', updatedAt: new Date() },
     });
 
     if (!transaction) {
@@ -68,7 +70,7 @@ async function handleChargeSuccess(payload: any) {
       // It's a loan repayment
       await tx.repayment.update({
         where: { id: transaction.repaymentId },
-        data: { status: 'PAID', updatedAt: new Date() },
+        data: { status: 'paid', updatedAt: new Date() },
       });
 
       logger.info({ repaymentId: transaction.repaymentId }, 'Repayment marked as PAID');
@@ -78,7 +80,7 @@ async function handleChargeSuccess(payload: any) {
       // It's an order deposit / full purchase
       await tx.order.update({
         where: { id: transaction.orderId },
-        data: { status: 'CONFIRMED', updatedAt: new Date() },
+        data: { status: 'confirmed', updatedAt: new Date() },
       });
 
       logger.info({ orderId: transaction.orderId }, 'Order marked as CONFIRMED');

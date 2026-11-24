@@ -20,6 +20,8 @@ import {
   notifyOrderPaymentFailed,
 } from "@/lib/notifications";
 import { enqueueNotification } from "@/lib/queue";
+import { buildRepaymentSchedule } from "@/lib/bnpl-workflow";
+import { notifyBikeAssigned } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   const log = logger.child({ route: "webhooks/mono" });
@@ -325,6 +327,55 @@ export async function POST(req: NextRequest) {
               data: { monoMandateStatus: mandateStatus },
             })
             .catch(() => null);
+
+          // Activate the approved loan and create its repayment schedule as
+          // one idempotent transaction. This makes the webhook the source of
+          // truth when the applicant is not currently in the app. The
+          // approved -> active update is the claim; only the claimant creates
+          // the schedule, so retries cannot duplicate installments.
+          if (mandateStatus === "active") {
+            const activated = await prisma.$transaction(async (tx) => {
+              const loan = await tx.loan.findFirst({
+                where: { monoMandateId: mandateId },
+                include: { user: true, bike: true },
+              });
+              if (!loan || loan.status !== "approved") return null;
+              const claimed = await tx.loan.updateMany({
+                where: {
+                  id: loan.id,
+                  status: "approved",
+                  monoMandateId: mandateId,
+                },
+                data: { status: "active", monoMandateStatus: "active" },
+              });
+              if (claimed.count !== 1) return null;
+              const repayments = buildRepaymentSchedule({
+                loanId: loan.id,
+                userId: loan.userId,
+                totalRepayable: Number(loan.totalRepayable),
+                tenureMonths: loan.tenure,
+                frequency: loan.deductionFrequency as "daily" | "bidaily" | "weekly" | "monthly",
+                startDate: loan.mandateStartDate || new Date(),
+              });
+              if (repayments.length) await tx.repayment.createMany({ data: repayments });
+              await tx.user.update({
+                where: { id: loan.userId },
+                data: { customerStatus: "active_bnpl", monoMandateStatus: "active" },
+              });
+              return loan;
+            });
+            if (activated) {
+              await notifyBikeAssigned(activated.user, {
+                loanId: activated.id,
+                bikeName: activated.bike.name,
+                bikeSerialNumber: activated.bikeSerialNumber,
+                chassisNumber: activated.chassisNumber,
+                totalRepayable: Number(activated.totalRepayable),
+                tenureMonths: activated.tenure,
+                approvedAt: activated.approvedAt || new Date(),
+              }).catch((error) => log.warn({ error, loanId: activated.id }, "Bike assignment notification failed"));
+            }
+          }
         }
 
         await dbService

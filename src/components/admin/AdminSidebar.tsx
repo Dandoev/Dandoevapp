@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   LogOut,
   Activity,
+  Mail,
   X,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ export type AdminTab =
   | 'compliance'
   | 'users'
   | 'activity'
+  | 'communications'
   | 'settings';
 
 interface AdminSidebarProps {
@@ -120,6 +122,12 @@ export default function AdminSidebar({
       id: 'activity',
       label: 'Security Audit Trail',
       icon: Activity,
+      section: 'governance',
+    },
+    {
+      id: 'communications',
+      label: 'Email & Communications',
+      icon: Mail,
       section: 'governance',
     },
     {

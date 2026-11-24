@@ -183,7 +183,7 @@ export default function ProductDetailScreen({
           {
             amount: order.amount,
             orderId: order.id,
-            provider: "mono",
+            provider: "paystack",
             // Web browsers must return to the web verifier. Native builds
             // use the mobile relay, which forwards back to the app scheme.
             callbackUrl:

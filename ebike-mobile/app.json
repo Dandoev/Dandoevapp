@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 37,
+      "versionCode": 38,
       "intentFilters": [
         {
           "action": "VIEW",

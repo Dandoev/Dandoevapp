@@ -84,7 +84,7 @@ export default function AdminHeader({
   const pageLabels: Record<string, string> = {
     overview: 'Admin overview', applications: 'Underwriting queue', bikes: 'Fleet & battery stock',
     payments: 'Repayments & escrow', defaults: 'Delinquency & recovery', reconciliation: 'Gateway reconciliation',
-    compliance: 'KYC & NDPR compliance', users: 'Staff & RBAC', activity: 'Security audit trail', settings: 'System parameters',
+    compliance: 'KYC & NDPR compliance', users: 'Staff & RBAC', activity: 'Security audit trail', communications: 'Email & communications', settings: 'System parameters',
   };
 
   const handleLogout = () => {

@@ -19,6 +19,8 @@ services:
         value: https://dashboard.dandoev.com
       - key: DATABASE_URL
         sync: false
+      - key: REDIS_URL
+        sync: false
       - key: DIRECT_URL
         sync: false
       - key: JWT_SECRET

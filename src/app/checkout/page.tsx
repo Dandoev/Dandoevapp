@@ -201,14 +201,14 @@ function CheckoutContent() {
         email: buyer.email,
         amount: total,
         orderId: currentOrderId,
-        provider: 'mono',
+        provider: 'paystack',
         reference: `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         metadata: {
           orderId: currentOrderId,
           bikeId: bike ? bike.id : undefined,
           buyer,
           delivery,
-          provider: 'mono',
+          provider: 'paystack',
         },
       };
       const payRes = await fetch('/api/payments/initialize', {

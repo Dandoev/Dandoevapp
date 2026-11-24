@@ -460,7 +460,7 @@ export const MobileApi = {
       amount: number;
       orderId: string;
       callbackUrl: string;
-      provider?: "mono";
+      provider?: "mono" | "paystack";
     },
     token: string,
   ) {

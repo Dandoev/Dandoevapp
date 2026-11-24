@@ -4,6 +4,7 @@
 // ============================================================
 import { sendSms, sendWhatsApp } from './termii';
 import { sendEmail } from './resend';
+import { broadcastNotification } from './realtime';
 import prisma from './prisma';
 import logger from './logger';
 
@@ -15,16 +16,17 @@ export interface UserContactInfo {
 }
 
 /**
- * Internal helper to record an in-app notification in PostgreSQL.
+ * Helper to record an in-app notification in PostgreSQL, broadcast via Supabase Realtime,
+ * and dispatch an Expo push notification if registered.
  */
-async function createInAppNotification(
+export async function createInAppNotification(
   userId: string,
   title: string,
   message: string,
   type: string = 'system'
 ) {
   try {
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId,
         title,
@@ -34,6 +36,17 @@ async function createInAppNotification(
       },
     });
 
+    // Real-time broadcast to active sessions
+    broadcastNotification({
+      userId,
+      type,
+      title,
+      message,
+      data: { id: notification.id },
+    }).catch((err) =>
+      logger.warn({ error: err.message, userId }, 'Real-time broadcast failed in createInAppNotification')
+    );
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { pushToken: true },
@@ -41,12 +54,15 @@ async function createInAppNotification(
     if (user?.pushToken) {
       await sendExpoPushNotification(user.pushToken, title, message);
     }
+
+    return notification;
   } catch (err: any) {
     logger.warn({ err: err.message, userId }, 'Could not persist in-app notification');
+    return null;
   }
 }
 
-async function sendExpoPushNotification(to: string, title: string, body: string) {
+export async function sendExpoPushNotification(to: string, title: string, body: string) {
   if (!to.startsWith('ExponentPushToken[')) return;
   const response = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',

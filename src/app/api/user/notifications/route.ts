@@ -5,30 +5,43 @@ import logger from '@/lib/logger';
 
 /**
  * GET /api/user/notifications
- * Paginated list of user notifications.
+ * Paginated list of user notifications with unread count.
  */
 export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const userId = ctx.user.sub;
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '20');
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+  const unreadOnly = searchParams.get('unreadOnly') === 'true';
 
   const skip = (page - 1) * limit;
 
   try {
-    const [notifications, total] = await Promise.all([
+    const [notifications, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
-        where: { userId },
+        where: {
+          userId,
+          ...(unreadOnly ? { isRead: false } : {}),
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.notification.count({ where: { userId } }),
+      prisma.notification.count({
+        where: {
+          userId,
+          ...(unreadOnly ? { isRead: false } : {}),
+        },
+      }),
+      prisma.notification.count({
+        where: { userId, isRead: false },
+      }),
     ]);
 
     return NextResponse.json({
       success: true,
       data: notifications,
+      unreadCount,
       pagination: {
         total,
         page,
@@ -36,7 +49,6 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
         totalPages: Math.ceil(total / limit),
       },
     });
-
   } catch (error: any) {
     logger.error({ error: error.message, userId }, 'Failed to fetch user notifications');
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
@@ -44,31 +56,79 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
 });
 
 /**
- * PATCH /api/user/notifications/mark-read
+ * PATCH /api/user/notifications
  * Marks one or all notifications as read.
  */
 export const PATCH = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   const userId = ctx.user.sub;
 
   try {
-    const { id, all } = await req.json();
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body
+    }
 
-    if (all) {
+    const { id, all } = body;
+
+    if (id && typeof id === 'string') {
+      await prisma.notification.updateMany({
+        where: { id, userId },
+        data: { isRead: true },
+      });
+    } else {
       await prisma.notification.updateMany({
         where: { userId, isRead: false },
         data: { isRead: true },
       });
-    } else if (id) {
-        await prisma.notification.update({
-            where: { id, userId },
-            data: { isRead: true }
-        });
     }
 
-    return NextResponse.json({ success: true });
+    const unreadCount = await prisma.notification.count({
+      where: { userId, isRead: false },
+    });
 
+    return NextResponse.json({ success: true, unreadCount });
   } catch (error: any) {
     logger.error({ error: error.message, userId }, 'Failed to update notifications');
     return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
+  }
+});
+
+/**
+ * DELETE /api/user/notifications
+ * Deletes one or all notifications.
+ */
+export const DELETE = withAuth(async (req: NextRequest, ctx: ApiContext) => {
+  const userId = ctx.user.sub;
+
+  try {
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = body.id || searchParams.get('id');
+    const all = body.all === true || searchParams.get('all') === 'true';
+
+    if (id && typeof id === 'string') {
+      await prisma.notification.deleteMany({
+        where: { id, userId },
+      });
+    } else if (all) {
+      await prisma.notification.deleteMany({
+        where: { userId },
+      });
+    } else {
+      return NextResponse.json({ error: 'Provide notification id or all=true' }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    logger.error({ error: error.message, userId }, 'Failed to delete notifications');
+    return NextResponse.json({ error: 'Failed to delete notifications' }, { status: 500 });
   }
 });

@@ -23,43 +23,58 @@ export async function processNotificationJob(job: Job) {
       throw new Error(`User ${userId} not found`);
     }
 
-    // 2. Dispatch to channels
+    // 2. Dispatch to external channels with per-channel isolation
     for (const channel of channels) {
-      switch (channel) {
-        case 'email':
-          await sendEmail(user.email, title, message);
-          break;
-        case 'sms':
-          if (user.phone) await sendSms(user.phone, message);
-          break;
-        case 'push':
-          if ((user as any).pushToken) {
-            await sendPushNotification((user as any).pushToken, title, message);
-          } else {
-            logger.info({ userId }, 'Push notification triggered but no token found');
-          }
-          break;
-        case 'whatsapp':
-          if (user.phone) {
-            const { sendWhatsApp } = await import('../termii');
-            await sendWhatsApp(user.phone, message);
-          }
-          break;
-        default:
-          logger.warn({ channel }, 'Unsupported notification channel');
+      try {
+        switch (channel) {
+          case 'email':
+            await sendEmail(user.email, title, message);
+            break;
+          case 'sms':
+            if (user.phone) await sendSms(user.phone, message);
+            break;
+          case 'push':
+            if ((user as any).pushToken) {
+              await sendPushNotification((user as any).pushToken, title, message);
+            } else {
+              logger.info({ userId }, 'Push notification triggered but no token found');
+            }
+            break;
+          case 'whatsapp':
+            if (user.phone) {
+              const { sendWhatsApp } = await import('../termii');
+              await sendWhatsApp(user.phone, message);
+            }
+            break;
+          default:
+            logger.warn({ channel }, 'Unsupported notification channel');
+        }
+      } catch (channelErr: any) {
+        logger.warn({ channel, error: channelErr.message, userId }, 'Notification channel dispatch failed');
       }
     }
 
-    // 3. Save to in-app Notification table
-    await prisma.notification.create({
-      data: {
+    // 3. Ensure saved to in-app Notification table if not already created
+    const existing = await prisma.notification.findFirst({
+      where: {
         userId,
         title,
         message,
-        type,
-        createdAt: new Date(),
+        createdAt: { gte: new Date(Date.now() - 60000) },
       },
     });
+
+    if (!existing) {
+      await prisma.notification.create({
+        data: {
+          userId,
+          title,
+          message,
+          type,
+          createdAt: new Date(),
+        },
+      });
+    }
 
   } catch (error: any) {
     logger.error({ jobId: job.id, error: error.message }, 'Notification job failed');

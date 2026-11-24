@@ -182,15 +182,24 @@ export const MobileApi = {
   },
 
   async getNotifications(token: string) {
-    return apiRequest<{ success: boolean; data: any[] }>("/notifications", {
+    return apiRequest<{ success: boolean; data: any[]; unreadCount?: number }>("/notifications", {
       token,
     });
   },
 
-  async markNotificationsRead(token: string) {
-    return apiRequest<{ success: boolean }>("/notifications", {
+  async markNotificationsRead(token: string, id?: string) {
+    return apiRequest<{ success: boolean; unreadCount?: number }>("/notifications", {
       method: "PATCH",
       token,
+      body: id ? { id } : { all: true },
+    });
+  },
+
+  async deleteNotification(token: string, id?: string) {
+    return apiRequest<{ success: boolean }>("/notifications", {
+      method: "DELETE",
+      token,
+      body: id ? { id } : { all: true },
     });
   },
 

@@ -106,7 +106,11 @@ export default function RealDashboardScreen({
       setProfile(prof);
       if (loanResult.status === 'fulfilled') setLoans(loanResult.value.data ?? []);
       if (notificationResult.status === 'fulfilled') {
-        setUnreadCount((notificationResult.value.data ?? []).filter((item) => !item.isRead).length);
+        const nData = notificationResult.value;
+        const count = typeof nData.unreadCount === 'number'
+          ? nData.unreadCount
+          : (nData.data ?? []).filter((item: any) => !item.isRead).length;
+        setUnreadCount(count);
       }
       if (catalogResult.status === 'fulfilled') setProducts(catalogResult.value);
 
@@ -121,7 +125,28 @@ export default function RealDashboardScreen({
 
   useEffect(() => {
     void loadData(false);
-  }, [loadData]);
+
+    if (!token || token.startsWith('demo-')) return;
+
+    let channel: any = null;
+    supabase.auth.getSession().then(({ data }) => {
+      const userId = data.session?.user?.id;
+      if (userId) {
+        channel = supabase
+          .channel(`notifications:user:${userId}`)
+          .on('broadcast', { event: 'new_notification' }, () => {
+            setUnreadCount((prev) => prev + 1);
+          })
+          .subscribe();
+      }
+    });
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [loadData, token]);
 
   const assigned = loans.find((loan) => loan.status === 'active' && !!loan.bikeSerialNumber);
   const activeLoan = loans.find((loan) => loan.status === 'active');

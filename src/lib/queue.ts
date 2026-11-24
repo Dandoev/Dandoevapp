@@ -82,6 +82,7 @@ export async function enqueuePaymentJob(data: {
 }
 
 import { broadcastNotification } from './realtime';
+import { createInAppNotification } from './notifications';
 
 export async function enqueueNotification(data: {
   userId: string;
@@ -91,19 +92,15 @@ export async function enqueueNotification(data: {
   channels?: ('email' | 'sms' | 'push' | 'whatsapp')[];
   payload?: Record<string, any>; // Pass extra data
 }): Promise<string> {
-  // 1. Fire and forget real-time broadcast for active sessions
-  broadcastNotification({
-    userId: data.userId,
-    type: data.type,
-    title: data.title,
-    message: data.message,
-    data: data.payload,
-  }).catch(err => logger.error({ error: err.message }, 'Real-time broadcast failed in enqueueNotification'));
+  // 1. Immediately & reliably record in-app notification in DB, broadcast via Realtime & send Expo push
+  await createInAppNotification(data.userId, data.title, data.message, data.type).catch((err) =>
+    logger.warn({ error: err.message, userId: data.userId }, 'Failed to create in-app notification in enqueueNotification')
+  );
 
-  // 2. Add to background worker queue for delivery (Email, Push, SMS)
+  // 2. Add to background worker queue for delivery (Email, SMS, WhatsApp)
   if (!process.env.REDIS_URL) {
-    logger.warn({ userId: data.userId, type: data.type }, 'REDIS_URL not set; skipping BullMQ notification job');
-    return `mock-notif-${Date.now()}`;
+    logger.info({ userId: data.userId, type: data.type }, 'REDIS_URL not set; in-app notification recorded, skipping BullMQ channel queue');
+    return `inapp-notif-${Date.now()}`;
   }
   const queue = getQueue(QUEUE_NAMES.NOTIFICATION);
   const job = await queue.add('send-notification', data);

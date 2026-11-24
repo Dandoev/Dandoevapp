@@ -879,6 +879,16 @@ class DemoStore {
     this.notify();
   }
 
+  markNotificationAsRead(id: string) {
+    this.notifications = this.notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n));
+    this.notify();
+  }
+
+  deleteNotification(id: string) {
+    this.notifications = this.notifications.filter((n) => n.id !== id);
+    this.notify();
+  }
+
   addNotification(notif: Omit<DemoNotification, 'id' | 'timestamp' | 'isRead'>) {
     const newNotif: DemoNotification = {
       ...notif,

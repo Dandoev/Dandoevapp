@@ -5,9 +5,10 @@ import { Eye, Mail, Save, Send, Trash2 } from 'lucide-react';
 
 const DRAFT_KEY = 'dandoev_admin_email_draft_v1';
 const templates = {
-  application: { label: 'Application update', subject: 'Update on your DandoEv application', html: '<h2>Hello,</h2><p>We have an update on your DandoEv application.</p><p>Sign in to view the next step.</p><p>Regards,<br />DandoEv Team</p>' },
-  payment: { label: 'Payment reminder', subject: 'DandoEv payment reminder', html: '<h2>Payment reminder</h2><p>This is a friendly reminder about your upcoming DandoEv payment.</p><p>Please sign in to review your repayment schedule.</p>' },
-  announcement: { label: 'General announcement', subject: 'An update from DandoEv', html: '<h2>Hello from DandoEv</h2><p>We have an important update to share with you.</p>' },
+  application: { label: 'Application update', subject: 'Update on your DandoEv application', html: '<h2>Hello,</h2><p>We have an update on your DandoEv application.</p><p>Sign in to your account to view the next steps.</p><p>Regards,<br />DandoEv Operations Team</p>' },
+  payment: { label: 'Payment reminder', subject: 'DandoEv payment reminder', html: '<h2>Payment Reminder</h2><p>This is a friendly reminder regarding your upcoming DandoEv repayment.</p><p>Please sign in to review your repayment schedule and ensure your account is funded.</p><p>Thank you,<br />DandoEv Finance</p>' },
+  pickup: { label: 'E-Bike ready for pickup', subject: 'Your DandoEv E-Bike is ready for pickup!', html: '<h2>Good news!</h2><p>Your DandoEv electric bike has been prepared and is ready for collection at our hub.</p><p>Please bring a valid government ID and your application reference number.</p><p>Best regards,<br />DandoEv Hub Team</p>' },
+  announcement: { label: 'General announcement', subject: 'An update from DandoEv', html: '<h2>Hello from DandoEv,</h2><p>We have an important announcement to share with you.</p><p>Thank you for choosing clean, affordable electric mobility.</p>' },
 };
 
 export default function EmailComposerTab() {
@@ -40,7 +41,11 @@ export default function EmailComposerTab() {
       const response = await fetch('/api/admin/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipientMode: mode, recipients: recipientList, subject, html }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to send email.');
-      setNotice({ text: `Sent to ${data.sent} recipient${data.sent === 1 ? '' : 's'}${data.failed ? `; ${data.failed} failed` : ''}.` });
+      const failureNote = data.failed && data.failures?.[0]?.error ? ` (${data.failures[0].error})` : '';
+      setNotice({
+        text: `Sent to ${data.sent} recipient${data.sent === 1 ? '' : 's'}${data.failed ? `; ${data.failed} failed${failureNote}` : ''}.`,
+        error: data.sent === 0 && data.failed > 0,
+      });
       if (!data.failed) clearDraft();
     } catch (error) { setNotice({ text: error instanceof Error ? error.message : 'Unable to send email.', error: true }); }
     finally { setSending(false); }

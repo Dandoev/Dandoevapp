@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withRoles, type ApiContext } from '@/lib/api-handler';
 import { prisma } from '@/lib/prisma';
-import { sendEmail } from '@/lib/resend';
+import { sendBatchEmails } from '@/lib/resend';
 
 const schema = z.object({
   recipientMode: z.enum(['custom', 'all_customers', 'all_users']),
@@ -28,26 +28,49 @@ export const POST = withRoles(
       }
 
       recipients = [...new Set(recipients.map((email) => email.trim().toLowerCase()))];
-      if (!recipients.length) return NextResponse.json({ error: 'Add at least one recipient.' }, { status: 400 });
+      if (!recipients.length) {
+        return NextResponse.json({ error: 'Add at least one recipient.' }, { status: 400 });
+      }
 
-      const results = await Promise.allSettled(recipients.map((to) => sendEmail(to, input.subject, input.html)));
-      const failures = results.flatMap((result, index) => result.status === 'rejected'
-        ? [{ email: recipients[index], error: result.reason instanceof Error ? result.reason.message : 'Delivery failed' }]
-        : []);
+      const batchItems = recipients.map((to) => ({
+        to,
+        subject: input.subject,
+        html: input.html,
+      }));
+
+      const { sent, failed, failures } = await sendBatchEmails(batchItems);
 
       await prisma.auditLog.create({
         data: {
           userId: context.user.sub,
           action: 'ADMIN_EMAIL_SENT',
           resource: 'email',
-          details: JSON.stringify({ subject: input.subject, recipientMode: input.recipientMode, sent: results.length - failures.length, failed: failures.length }),
+          details: JSON.stringify({
+            subject: input.subject,
+            recipientMode: input.recipientMode,
+            sent,
+            failed,
+          }),
         },
       }).catch(() => {});
 
-      return NextResponse.json({ success: true, sent: results.length - failures.length, failed: failures.length, failures });
+      return NextResponse.json({
+        success: failed === 0,
+        sent,
+        failed,
+        failures,
+      });
     } catch (error) {
-      if (error instanceof z.ZodError) return NextResponse.json({ error: 'Invalid email content or recipients.', details: error.flatten() }, { status: 400 });
-      return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to send email.' }, { status: 500 });
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Invalid email content or recipients.', details: error.flatten() },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Unable to send email.' },
+        { status: 500 }
+      );
     }
   },
 );

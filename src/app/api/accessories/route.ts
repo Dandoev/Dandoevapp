@@ -10,7 +10,9 @@ export async function GET(req: NextRequest) {
   try {
     const accessories = await prisma.accessory.findMany({
       where: {
-        stockQuantity: { gt: 0 }
+        stockQuantity: { gt: 0 },
+        // Extra batteries are no longer offered for sale.
+        name: { not: { contains: 'Extra Battery' } },
       },
       orderBy: { createdAt: 'desc' },
     });

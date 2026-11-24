@@ -348,7 +348,7 @@ export const MobileApi = {
 
   // 4. BNPL Loans & Repayments
   async applyForLoan(loanData: any, token: string, idempotencyKey?: string) {
-    return apiRequest<{ success: boolean; loanId: string; message: string; data?: { mandate?: { authorizationUrl?: string; status?: string } } }>(
+    return apiRequest<{ success: boolean; loanId: string; message: string; data?: { mandate?: { authorizationUrl?: string; status?: string }; guarantorInvites?: string[] } }>(
       "/loans",
       {
         method: "POST",

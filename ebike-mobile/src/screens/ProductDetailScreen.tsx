@@ -11,9 +11,11 @@ import {
   Modal,
   TextInput,
   Linking,
+  Share,
   ActivityIndicator,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
+import * as Clipboard from "expo-clipboard";
 import {
   ArrowLeft,
   Share2,
@@ -100,23 +102,21 @@ export default function ProductDetailScreen({
     selectedTenure,
     deliveryType,
   );
-  const extraBattery = isBike
-    ? ALL_PRODUCTS.find((item) =>
-        item.type === "battery" &&
-        ((/x2/i.test(product.model || product.name) && item.id === "battery-36v-15ah") ||
-          (!/x2/i.test(product.model || product.name) && /x4|x5 lite/i.test(product.model || product.name) && item.id === "battery-48v-15ah")),
-      )
-    : undefined;
-  const extraBatteryPrice = includeExtraBattery ? Number(extraBattery?.price || 0) : 0;
-  const displayOutrightTotal = breakdown.totalOutright + extraBatteryPrice;
-  const batteryRequired = Boolean(extraBattery);
+  // Extra batteries are no longer sold or bundled with bikes.
+  const extraBattery: any = undefined;
+  const extraBatteryPrice = 0;
+  const displayOutrightTotal = breakdown.totalOutright;
+  const batteryRequired = false;
 
   const weeklyAmt = breakdown.weeklyDeduction || 0;
   const activeCadenceAmount = weeklyAmt;
   const activeCadenceSuffix = "/wk";
 
-  const handleShare = () => {
-    setShareToast(`Link for ${product.name} copied to clipboard!`);
+  const handleShare = async () => {
+    const link = `dandoev://bike/${product.id}`;
+    await Clipboard.setStringAsync(link);
+    await Share.share({ message: `${product.name}\n${link}` }).catch(() => {});
+    setShareToast("Product link copied and ready to share.");
     setTimeout(() => setShareToast(null), 3000);
   };
 

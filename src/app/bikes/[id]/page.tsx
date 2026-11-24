@@ -147,13 +147,8 @@ export default function BikeDetailPage() {
 
   const grossAssetPrice = Number(bike.price) + selectedAccessoriesPrice;
   const bikeModel = String(bike.model || bike.name || '').toLowerCase();
-  const requiresExtraBattery = /x2|x4|x5 lite/.test(bikeModel);
-  const requiredBattery = requiresExtraBattery
-    ? accessoriesList.find((acc) => {
-        const name = String(acc.name || '').toLowerCase();
-        return name.includes('extra battery') && ((bikeModel.includes('x2') && name.includes('36v')) || (!bikeModel.includes('x2') && name.includes('48v 15ah')));
-      })
-    : null;
+  const requiresExtraBattery = false;
+  const requiredBattery: any = null;
 
   const downPaymentAmount = Math.round((grossAssetPrice * downPaymentPercent) / 100);
   const financedPrincipal = grossAssetPrice - downPaymentAmount;

@@ -81,7 +81,7 @@ function CheckoutContent() {
           const res = await fetch('/api/accessories');
           const data = await res.json();
           if (data.success && Array.isArray(data.data)) {
-            const allAccs = data.data as CheckoutAccessory[];
+            const allAccs = (data.data as CheckoutAccessory[]).filter((a) => !String(a.name || '').toLowerCase().includes('extra battery'));
             const matchedAccs = accessoryIds
               .map((id) => {
                 const found = allAccs.find((a) => a.id === id);
@@ -89,13 +89,6 @@ function CheckoutContent() {
               })
               .filter((accessory): accessory is CheckoutAccessory => accessory !== null);
             const model = String(loadedBike?.name || '').toLowerCase();
-            if (loadedBike && /x2|x4|x5 lite/.test(model)) {
-              const required = allAccs.find((a) => {
-                const name = String(a.name || '').toLowerCase();
-                return name.includes('extra battery') && ((model.includes('x2') && name.includes('36v')) || (!model.includes('x2') && name.includes('48v 15ah')));
-              });
-              if (required && !matchedAccs.some((a) => a.id === required.id)) matchedAccs.push({ ...required, quantity: 1 });
-            }
             setCheckoutAccessories(matchedAccs);
           }
         }
@@ -188,8 +181,8 @@ function CheckoutContent() {
             paymentMethod,
             deliveryType: deliveryType === 'pickup' ? 'pickup' :
               delivery.state === 'Lagos' ? 'delivery_lagos' : 'delivery_outside',
-            deliveryAddress: deliveryType === 'home' ? delivery.address : 'Pickup Hub (Ikeja)',
-            deliveryCity: deliveryType === 'home' ? delivery.city : 'Ikeja',
+            deliveryAddress: deliveryType === 'home' ? delivery.address : 'Plot 770 Festac Link Rd, Amuwo Odofin',
+            deliveryCity: deliveryType === 'home' ? delivery.city : 'Amuwo Odofin',
             deliveryState: deliveryType === 'home' ? delivery.state : 'Lagos',
             deliveryPhone: buyer.phone,
             accessories: checkoutAccessories.map((a) => ({ id: a.id, quantity: a.quantity })),
@@ -339,10 +332,10 @@ function CheckoutContent() {
                       <Building2 className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
                       <div>
                         <div className="font-bold text-xs text-slate-900">
-                          Lagos Hub Pickup (Free)
+                          DandoEv Office Collection (Free)
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          Collect ready-to-ride from Ikeja Hub
+                          Plot 770 Festac Link Rd, Amuwo Odofin, Lagos
                         </div>
                       </div>
                     </button>
@@ -572,7 +565,7 @@ function CheckoutContent() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">
-                    Delivery ({deliveryType === 'pickup' ? 'Ikeja Hub Pickup' : delivery.state})
+                    Delivery ({deliveryType === 'pickup' ? 'DandoEv Office Collection' : delivery.state})
                   </span>
                   <span className="font-bold text-slate-800 tabular-nums">
                     {deliveryFee === 0 ? 'Free' : formatNaira(deliveryFee)}

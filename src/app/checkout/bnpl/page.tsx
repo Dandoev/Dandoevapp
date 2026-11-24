@@ -151,23 +151,7 @@ function BnplCheckoutContent() {
 
   useEffect(() => {
     const model = `${bike.name} ${bike.id}`.toLowerCase();
-    if (!/x2|x4|x5 lite/.test(model)) {
-      setRequiredBatteryId(null);
-      return;
-    }
-    fetch('/api/accessories')
-      .then((response) => response.json())
-      .then((result) => {
-        const items = Array.isArray(result.data) ? result.data : [];
-        const required = items.find((item: any) => {
-          const name = String(item.name || '').toLowerCase();
-          return name.includes('extra battery') &&
-            ((model.includes('x2') && name.includes('36v')) ||
-              (!model.includes('x2') && name.includes('48v 15ah')));
-        });
-        setRequiredBatteryId(required?.id || null);
-      })
-      .catch(() => setRequiredBatteryId(null));
+    setRequiredBatteryId(null);
   }, [bike.id, bike.name]);
 
   const accessoriesTotal = accessories.reduce(

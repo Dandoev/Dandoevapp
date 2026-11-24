@@ -13,8 +13,10 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
+  Share,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import * as Clipboard from "expo-clipboard";
 import { WebView } from "react-native-webview";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -41,6 +43,7 @@ import {
   CreditCard,
   IdCard,
   Lock,
+  Share2,
 } from "lucide-react-native";
 import { DemoProduct } from "../lib/demo-data";
 import { MobileApi } from "../lib/api";
@@ -64,6 +67,7 @@ type SubmittedLoanInfo = {
   deliveryType: string;
   mandateStatus?: string;
   mandateUrl?: string;
+  guarantorInvites: string[];
 };
 
 const EMPLOYMENT_STATUS_OPTIONS = [
@@ -726,8 +730,8 @@ export default function BnplApplicationScreen({
           address,
           city,
           state,
-          deliveryAddress: "DandoEv Office, Ikeja, Lagos",
-          deliveryCity: "Ikeja",
+          deliveryAddress: "Plot 770 Festac Link Rd, Amuwo Odofin",
+          deliveryCity: "Amuwo Odofin",
           deliveryState: "Lagos",
           ...(idNumber ? { ninNumber: idNumber } : {}),
           ...(bvn ? { bvn } : {}),
@@ -756,6 +760,7 @@ export default function BnplApplicationScreen({
         deliveryType,
         mandateStatus: res.data?.mandate?.status || "pending",
         mandateUrl,
+        guarantorInvites: res.data?.guarantorInvites || [],
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to submit your application. Please check your network and try again.");
@@ -815,6 +820,18 @@ export default function BnplApplicationScreen({
                   <Clock size={11} color="#D97706" />
                   <Text style={styles.invitedBadgeText}>Invited</Text>
                 </View>
+                {!!submittedLoan.guarantorInvites[idx] && <TouchableOpacity
+                  style={styles.shareInviteButton}
+                  onPress={async () => {
+                    const invite = submittedLoan.guarantorInvites[idx];
+                    await Clipboard.setStringAsync(invite);
+                    await Share.share({ message: `DandoEv guarantor verification link for ${g.fullName}: ${invite}` }).catch(() => {});
+                  }}
+                  accessibilityLabel={`Copy and share ${g.fullName}'s invitation link`}
+                >
+                  <Share2 size={14} color="#2E3192" />
+                  <Text style={styles.shareInviteText}>Copy / Share</Text>
+                </TouchableOpacity>}
               </View>
             ))}
           </View>
@@ -2296,6 +2313,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   invitedBadgeText: { color: "#92400E", fontSize: 12, fontWeight: "700" },
+  shareInviteButton: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 8, paddingVertical: 7, paddingHorizontal: 8, borderRadius: 8, backgroundColor: "#EEF2FF" },
+  shareInviteText: { color: "#2E3192", fontSize: 11, fontWeight: "800" },
 
   // Timeline
   timelineList: { marginTop: 4 },

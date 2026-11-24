@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E3192',
   },
   tabButtonBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#2E3192',
     borderRadius: 18,
   },

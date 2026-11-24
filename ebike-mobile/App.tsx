@@ -202,7 +202,7 @@ function App() {
   if (isSplashVisible || sessionRestoring) {
     return (
       <>
-        <StatusBar barStyle="light-content" backgroundColor="#0A154F" />
+        <StatusBar barStyle="light-content" />
         <SplashScreen />
       </>
     );
@@ -272,11 +272,6 @@ function App() {
             ["Onboarding", "SignIn", "SignUp"].includes(currentScreen)
               ? "light-content"
               : "dark-content"
-          }
-          backgroundColor={
-            ["Onboarding", "SignIn", "SignUp"].includes(currentScreen)
-              ? "#0A154F"
-              : "#F6F7FC"
           }
         />
         <View

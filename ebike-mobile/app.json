@@ -3,15 +3,10 @@
     "name": "DandoEv",
     "slug": "ebike",
     "scheme": "dandoev",
-    "version": "1.0.22",
+    "version": "1.0.23",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A154F"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dandoev.mobile",
@@ -24,7 +19,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 35,
+      "versionCode": 37,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -79,7 +74,15 @@
     "plugins": [
       "expo-font",
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0A154F"
+        }
+      ]
     ],
     "owner": "dandoev-bike"
   }

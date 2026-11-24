@@ -390,6 +390,16 @@ export default function BnplApplicationScreen({
           // verification is a separate Mono Prove status.
           setFaceVerified(profile?.faceVerified === true);
           setLookupVerified(profile?.identityLookupVerified === true);
+          // Restore the server-side proof-of-address document as the source
+          // of truth. Local drafts can be cleared between sessions, but an
+          // uploaded document must not require the applicant to upload it
+          // again.
+          if (profile?.proofOfAddress?.fileUrl) {
+            setProofOfAddress({
+              name: profile.proofOfAddress.fileName || "proof-of-address",
+              url: profile.proofOfAddress.fileUrl,
+            });
+          }
           // Reuse the authenticated profile details so an email-only account
           // cannot reach submission with an empty applicant phone number.
           if (profile?.firstName && !firstName) setFirstName(profile.firstName);
@@ -1239,7 +1249,14 @@ export default function BnplApplicationScreen({
                 </View>
               </View>
 
-              <View style={styles.officeNotice}><MapPin size={18} color="#167E83" /><Text style={styles.officeNoticeText}>DandoEv Office · Ikeja, Lagos{`\n`}Collection is free. No delivery fee is added.</Text></View>
+              <View style={styles.officeNotice}>
+                <MapPin size={18} color="#167E83" />
+                <Text style={styles.officeNoticeText}>
+                  Office collection{`\n`}
+                  Plot 770 Festac Link Rd, Amuwo Odofin, Lagos.{`\n`}
+                  Collection is free. No delivery fee is added.
+                </Text>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -1963,8 +1980,8 @@ const styles = StyleSheet.create({
   uploadButton: { minHeight: 54, borderWidth: 1.5, borderColor: "#52CDB5", borderStyle: "dashed", borderRadius: 14, backgroundColor: "#F0FCF8", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, paddingHorizontal: 12 },
   uploadButtonText: { color: "#0A154F", fontSize: 16, fontWeight: "700", flexShrink: 1 },
   uploadSuccess: { color: "#087F67", fontSize: 14, fontWeight: "700", marginTop: 8 },
-  officeNotice: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#ECFBF7", borderRadius: 14, padding: 14 },
-  officeNoticeText: { color: "#145C62", fontSize: 16, lineHeight: 21, fontWeight: "600" },
+  officeNotice: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#ECFBF7", borderRadius: 14, padding: 14 },
+  officeNoticeText: { flex: 1, color: "#145C62", fontSize: 15, lineHeight: 21, fontWeight: "600" },
   verifyAccountButton: { marginTop: 10, minHeight: 46, borderRadius: 12, backgroundColor: "#DDF7EF", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   verifyAccountText: { color: "#0A154F", fontSize: 16, fontWeight: "800" },
   platformOption: { minHeight: 52, borderBottomWidth: 1, borderBottomColor: "#E6EEF2", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

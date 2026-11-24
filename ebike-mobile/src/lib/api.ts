@@ -4,7 +4,6 @@
 // ============================================================
 
 import { APP_CONFIG } from "./config";
-import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 import { selectUsableAccessToken, TOKEN_STORAGE_KEY } from "./auth-session";
@@ -248,7 +247,15 @@ export const MobileApi = {
   async uploadDocument(file: { uri: string; name: string; mimeType?: string }, token: string) {
     const form = new FormData();
     const safeName = file.name || file.uri.split(/[\\/]/).pop() || "document";
-    form.append("file", { uri: file.uri, name: safeName, type: file.mimeType || "application/octet-stream" } as any);
+    if (!file.uri) throw new Error("Could not read the selected document");
+    const blobResponse = await fetch(file.uri);
+    if (!blobResponse.ok) throw new Error("Could not read the selected document");
+    const blob = await blobResponse.blob();
+    const uploadType = file.mimeType || blob.type || "application/octet-stream";
+    const typedBlob = blob.type === uploadType ? blob : blob.slice(0, blob.size, uploadType);
+    // Expo SDK 58 / React Native rejects the legacy { uri, name, type }
+    // FormData object with "unsupported formdatapart implementation".
+    form.append("file", typedBlob, safeName);
     form.append("folder", "bnpl-earning-dashboards");
     const response = await fetch(`${APP_CONFIG.apiEndpoint}/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const payload = await response.json().catch(() => ({}));
@@ -269,18 +276,16 @@ export const MobileApi = {
     const rawType = file.mimeType?.toLowerCase().split(";")[0];
     const normalizedType = rawType === "image/jpg" ? "image/jpeg" : rawType === "application/octet-stream" ? inferredType : rawType;
     const uploadType = normalizedType || inferredType || "application/octet-stream";
-    if (Platform.OS === "web" && file.uri) {
-      const blobResponse = await fetch(file.uri);
-      if (!blobResponse.ok) throw new Error("Could not read the selected proof-of-address file");
-      const blob = await blobResponse.blob();
-      // File.name is read-only in browsers. React Native Web's multipart
-      // implementation may try to assign it, causing "name has only getter".
-      // Supply the filename as FormData metadata instead of constructing File.
-      const typedBlob = blob.type === uploadType ? blob : blob.slice(0, blob.size, uploadType);
-      form.append("file", typedBlob, safeName);
-    } else {
-      form.append("file", { uri: file.uri, name: safeName, type: uploadType } as any);
-    }
+    if (!file.uri) throw new Error("Could not read the selected proof-of-address file");
+    const blobResponse = await fetch(file.uri);
+    if (!blobResponse.ok) throw new Error("Could not read the selected proof-of-address file");
+    const blob = await blobResponse.blob();
+    // Use a Blob multipart part on every platform. Expo SDK 58 / React
+    // Native's fetch rejects the legacy { uri, name, type } object with
+    // "unsupported formdatapart implementation". The third argument keeps
+    // the original filename so the API can validate and store the document.
+    const typedBlob = blob.type === uploadType ? blob : blob.slice(0, blob.size, uploadType);
+    form.append("file", typedBlob, safeName);
     const response = await fetch(`${APP_CONFIG.apiEndpoint}/kyc/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Proof of address upload failed");

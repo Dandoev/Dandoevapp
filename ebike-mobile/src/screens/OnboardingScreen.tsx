@@ -61,7 +61,7 @@ export default function OnboardingScreen({ onComplete, onDemoLogin }: Props) {
       ]}
     >
       {/* Native SVG Linear Gradient for Android / iOS */}
-      <Svg style={StyleSheet.absoluteFillObject} width="100%" height="100%">
+      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
         <Defs>
           <LinearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
             <Stop offset="0%" stopColor="#7ECCFD" />

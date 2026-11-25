@@ -779,20 +779,27 @@ export async function notifyLoanSubmitted(loanId: string) {
       if (!guarantor.inviteUrl) continue;
       const message = `[DandoEv] ${customerName} listed you as a guarantor for ${bikeName}. Complete verification securely: ${guarantor.inviteUrl}`;
       let channel: string | null = null;
+      const deliveryErrors: string[] = [];
       try {
         if (!guarantor.phone) throw new Error('No guarantor phone number');
         await sendSms(guarantor.phone, message); channel = 'sms';
-      } catch {
+      } catch (err) {
+        deliveryErrors.push(`sms: ${err instanceof Error ? err.message : 'unknown error'}`);
         try {
           if (!guarantor.phone) throw new Error('No guarantor phone number');
           await sendWhatsApp(guarantor.phone, message); channel = 'whatsapp';
-        } catch {
+        } catch (whatsappError) {
+          deliveryErrors.push(`whatsapp: ${whatsappError instanceof Error ? whatsappError.message : 'unknown error'}`);
           if (guarantor.email) {
-            await sendEmail(guarantor.email, 'DandoEv guarantor verification required', `<p>${message}</p>`); channel = 'email';
+            try {
+              await sendEmail(guarantor.email, 'DandoEv guarantor verification required', `<p>${message}</p>`); channel = 'email';
+            } catch (emailError) {
+              deliveryErrors.push(`email: ${emailError instanceof Error ? emailError.message : 'unknown error'}`);
+            }
           }
         }
       }
-      await prisma.guarantor.update({ where: { id: guarantor.id }, data: channel ? { inviteDeliveryStatus: 'sent', inviteDeliveryChannel: channel, inviteSentAt: new Date() } : { inviteDeliveryStatus: 'failed', inviteFailedAt: new Date(), inviteFailureReason: 'SMS, WhatsApp and email delivery failed' } });
+      await prisma.guarantor.update({ where: { id: guarantor.id }, data: channel ? { inviteDeliveryStatus: 'sent', inviteDeliveryChannel: channel, inviteSentAt: new Date(), inviteFailedAt: null, inviteFailureReason: null } : { inviteDeliveryStatus: 'failed', inviteFailedAt: new Date(), inviteFailureReason: deliveryErrors.join('; ').slice(0, 1000) || 'SMS, WhatsApp and email delivery failed' } });
     }
 
     // 5. Admin / Underwriter Alert

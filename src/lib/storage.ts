@@ -30,16 +30,18 @@ export async function uploadFile(
   const contentType = getMimeType(buffer);
   const finalFileName = fileName || `file_${Date.now()}`;
   
-  const hasSupabase = !!(
+  const hasSupabaseServerConfig = !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
   );
 
-  if (hasSupabase) {
+  // Document uploads run on the authenticated server route. Never use the
+  // public anon client here: Storage RLS is expected to reject that client.
+  if (hasSupabaseServerConfig) {
     const bucketName = 'dandoev-docs';
     const safeName = finalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
-    const client = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? supabaseAdmin : supabase;
+    const client = supabaseAdmin;
     
     try {
       const { data: bucket } = await client.storage.getBucket(bucketName);
@@ -71,5 +73,5 @@ export async function uploadFile(
     }
   }
 
-  throw new Error('Supabase Storage is not configured. Document was not saved.');
+  throw new Error('Supabase Storage server credentials are not configured. Set SUPABASE_SECRET_KEY (preferred) or SUPABASE_SERVICE_ROLE_KEY on Render.');
 }

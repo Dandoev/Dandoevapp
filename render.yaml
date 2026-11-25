@@ -20,7 +20,10 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
-        sync: false
+        fromService:
+          type: keyvalue
+          name: dandoev-redis
+          property: connectionString
       - key: DIRECT_URL
         sync: false
       - key: JWT_SECRET
@@ -61,6 +64,12 @@ services:
         sync: false
       - key: CRON_SECRET
         generateValue: true
+  - type: keyvalue
+    name: dandoev-redis
+    region: frankfurt
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
   - type: cron
     name: dandoev-daily-collections
     runtime: node

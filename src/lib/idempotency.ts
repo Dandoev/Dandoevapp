@@ -32,6 +32,13 @@ export async function checkIdempotencyKey(
 
     if (existing && existing.userId === userId && existing.endpoint === endpoint) {
       if (new Date() < existing.expiresAt) {
+        // Validation and server failures must never become sticky. A user may
+        // correct the form and retry with the same client-side key; only a
+        // completed mutation should be replayed for duplicate protection.
+        if (existing.responseCode >= 400) {
+          await prisma.idempotencyKey.delete({ where: { id: existing.id } });
+          return { isDuplicate: false };
+        }
         return {
           isDuplicate: true,
           cachedResponseCode: existing.responseCode,

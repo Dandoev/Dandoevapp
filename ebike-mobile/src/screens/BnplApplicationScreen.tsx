@@ -467,6 +467,11 @@ export default function BnplApplicationScreen({
           if (draft.proofOfAddress?.url) setProofOfAddress(draft.proofOfAddress);
           if (draft.tenure) setTenure(draft.tenure);
           setFrequency("weekly");
+          // Resume at the last locally saved step rather than always
+          // restarting at identity after returning from KYC.
+          if (Number.isInteger(draft.step) && draft.step >= 0 && draft.step <= 4) {
+            setStep(Math.max(1, draft.step));
+          }
         } catch {
           /* ignore corrupt draft */
         }
@@ -480,6 +485,7 @@ export default function BnplApplicationScreen({
     AsyncStorage.setItem(
       draftKey,
       JSON.stringify({
+        step,
         firstName,
         lastName,
         phone,
@@ -503,6 +509,7 @@ export default function BnplApplicationScreen({
     ).catch(() => {});
   }, [
     draftKey,
+    step,
     firstName,
     lastName,
     phone,
@@ -876,7 +883,7 @@ export default function BnplApplicationScreen({
                 </View>
                 <View style={styles.timelineBody}>
                   <Text style={styles.timelineTitle}>4. Vehicle Handover & Keys</Text>
-                  <Text style={styles.timelineSub}>Pick up at Ikeja Central Hub or receive doorstep delivery.</Text>
+                  <Text style={styles.timelineSub}>Pick up at Plot 770 Festac Link Rd, Amuwo Odofin, Lagos.</Text>
                 </View>
               </View>
             </View>
@@ -1648,7 +1655,7 @@ export default function BnplApplicationScreen({
               <View style={styles.reviewItem}>
           <Text style={styles.reviewItemLabel}>Collection:</Text>
                 <Text style={styles.reviewItemVal}>
-                  "DandoEv Office, Ikeja (Free)"
+                  "DandoEv Office, Plot 770 Festac Link Rd, Amuwo Odofin, Lagos (Free)"
                 </Text>
               </View>
               <View style={[styles.reviewItem, { borderBottomWidth: 0 }]}>

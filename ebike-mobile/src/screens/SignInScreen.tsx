@@ -194,7 +194,11 @@ export default function SignInScreen({
               style={styles.input}
               placeholder="you@example.com or 0803 123 4567"
               placeholderTextColor="#9CA3AF"
-              keyboardType={email.includes("@") ? "email-address" : "phone-pad"}
+              // This is a combined identifier field. Starting with phone-pad
+              // prevents users from entering an email because the keyboard
+              // cannot be switched by typing the first character. The email
+              // keyboard still accepts digits, while also exposing @ and .
+              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="username"

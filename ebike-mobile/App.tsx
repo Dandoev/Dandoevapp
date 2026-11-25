@@ -354,7 +354,15 @@ function App() {
                 setCurrentScreen("Kyc");
               }}
               onBack={() => setCurrentScreen("Dashboard")}
-              onComplete={() => setCurrentScreen("Dashboard")}
+              onComplete={() => {
+                // The application has been submitted. Clear the in-progress
+                // product/KYC context so later KYC actions cannot reopen the
+                // completed BNPL form or show "Continue to BNPL application".
+                setSelectedProduct(null);
+                setBnplResumeStep(null);
+                setBnplIdentity({ nin: "", bvn: "", phone: "" });
+                setCurrentScreen("Dashboard");
+              }}
             />
           )}
 

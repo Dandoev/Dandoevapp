@@ -157,13 +157,17 @@ export function withIdempotency<C extends ApiContext = ApiContext>(
 
     // Store the response for future duplicate requests
     const responseBody = await response.clone().json().catch(() => null);
-    await storeIdempotencyResponse(
-      idempotencyKey,
-      ctx.user.sub,
-      endpoint,
-      response.status,
-      responseBody
-    );
+    // Cache only successful mutations. Caching a 4xx/5xx response makes a
+    // corrected retry return an old validation or transient server error.
+    if (response.status < 400) {
+      await storeIdempotencyResponse(
+        idempotencyKey,
+        ctx.user.sub,
+        endpoint,
+        response.status,
+        responseBody
+      );
+    }
 
     return response;
   };

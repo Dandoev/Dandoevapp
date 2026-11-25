@@ -257,10 +257,10 @@ export const POST = withAuth(
                 agreementUserAgent: req.headers.get("user-agent"),
                 deliveryAddress:
                   deliveryType === "pickup"
-                    ? "Lagos Central Pickup Hub"
+                    ? "Plot 770 Festac Link Rd, Amuwo Odofin, Lagos"
                     : data.deliveryAddress,
                 deliveryCity:
-                  deliveryType === "pickup" ? "Ikeja" : data.deliveryCity,
+                  deliveryType === "pickup" ? "Amuwo Odofin" : data.deliveryCity,
                 deliveryState:
                   deliveryType === "pickup" ? "Lagos" : data.deliveryState,
               },

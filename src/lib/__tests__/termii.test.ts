@@ -38,4 +38,25 @@ describe('Termii phone OTP delivery', () => {
     const { sendPhoneOtp } = await import('../termii');
     await expect(sendPhoneOtp('08031234567')).rejects.toThrow('Sender ID rejected');
   });
+
+  it('normalizes guarantor numbers before sending an SMS', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: 'ok', message_id: 'invite-123' }), { status: 200 })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { sendSms } = await import('../termii');
+    await sendSms('0803 123 4567', 'Complete your guarantor form');
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      to: '2348031234567',
+      channel: 'generic',
+    });
+  });
+
+  it('fails instead of reporting a delivery when Termii is not configured', async () => {
+    vi.stubEnv('TERMII_API_KEY', '');
+    const { sendSms } = await import('../termii');
+    await expect(sendSms('08031234567', 'Test message')).rejects.toThrow('TERMII_API_KEY is missing');
+  });
 });

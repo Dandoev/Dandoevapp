@@ -1,14 +1,23 @@
 import { normalizeNigerianPhone } from '@/lib/phone';
-import logger from './logger';
 
 const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'DandoEv';
 
+function termiiPhoneNumber(to: string) {
+  const normalized = normalizeNigerianPhone(to);
+  if (!normalized) throw new Error('Enter a valid Nigerian phone number');
+  return normalized.replace(/^\+/, '');
+}
+
+function termiiBaseUrl() {
+  return (process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/$/, '');
+}
+
 export async function sendSms(to: string, message: string) {
   const apiKey = process.env.TERMII_API_KEY;
-  if (!apiKey) { logger.warn({ to }, 'Termii API key missing, skipping SMS'); return; }
-  const response = await fetch(`${(process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/$/, '')}/api/sms/send`, {
+  if (!apiKey) throw new Error('Termii is not configured: TERMII_API_KEY is missing');
+  const response = await fetch(`${termiiBaseUrl()}/api/sms/send`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: to.replace(/^\+/, ''), from: TERMII_SENDER_ID, sms: message, type: 'plain', channel: 'generic', api_key: apiKey }),
+    body: JSON.stringify({ to: termiiPhoneNumber(to), from: TERMII_SENDER_ID, sms: message, type: 'plain', channel: 'generic', api_key: apiKey }),
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || (data?.code && data.code !== 'ok')) throw new Error(data?.message || 'Failed to send SMS via Termii');
@@ -17,10 +26,10 @@ export async function sendSms(to: string, message: string) {
 
 export async function sendWhatsApp(to: string, message: string) {
   const apiKey = process.env.TERMII_API_KEY;
-  if (!apiKey) { logger.warn({ to }, 'Termii API key missing, skipping WhatsApp'); return; }
-  const response = await fetch(`${(process.env.TERMII_BASE_URL || 'https://v4.api.termii.com').replace(/\/$/, '')}/api/sms/send`, {
+  if (!apiKey) throw new Error('Termii is not configured: TERMII_API_KEY is missing');
+  const response = await fetch(`${termiiBaseUrl()}/api/sms/send`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: to.replace(/^\+/, ''), from: TERMII_SENDER_ID, sms: message, type: 'plain', channel: 'whatsapp', api_key: apiKey }),
+    body: JSON.stringify({ to: termiiPhoneNumber(to), from: TERMII_SENDER_ID, sms: message, type: 'plain', channel: 'whatsapp', api_key: apiKey }),
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || (data?.code && data.code !== 'ok')) throw new Error(data?.message || 'Failed to send WhatsApp via Termii');

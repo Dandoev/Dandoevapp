@@ -3,14 +3,14 @@
     "name": "DandoEv",
     "slug": "ebike",
     "scheme": "dandoev",
-    "version": "1.0.24",
+    "version": "1.0.26",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dandoev.mobile",
-      "buildNumber": "41",
+      "buildNumber": "44",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "DandoEv requires camera access to capture KYC identity documents and selfie verification.",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 40,
+      "versionCode": 43,
       "intentFilters": [
         {
           "action": "VIEW",

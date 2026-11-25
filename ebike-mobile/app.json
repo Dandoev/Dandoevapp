@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dandoev.mobile",
-      "buildNumber": "44",
+      "buildNumber": "46",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "DandoEv requires camera access to capture KYC identity documents and selfie verification.",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.dandoev.mobile",
-      "versionCode": 43,
+      "versionCode": 45,
       "intentFilters": [
         {
           "action": "VIEW",

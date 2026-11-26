@@ -221,6 +221,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let resolvedRole = authUser.app_metadata?.role || "customer";
     if (!String(authSession.access_token).startsWith("demo-token")) {
       let profile = await prisma.user.findUnique({
         where: { id: authUser.id },
@@ -263,6 +264,15 @@ export async function POST(req: NextRequest) {
           data: { lastLoginAt: new Date() },
         });
       }
+
+      // The database role is authoritative for admin access. Keep Supabase
+      // metadata synchronized when an Auth user is recreated or provisioned.
+      resolvedRole = profile.role;
+      if (profile.role !== authUser.app_metadata?.role) {
+        await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+          app_metadata: { ...(authUser.app_metadata || {}), role: profile.role },
+        });
+      }
     }
 
     log.info({ userId: authUser.id }, "User signed in successfully");
@@ -275,7 +285,7 @@ export async function POST(req: NextRequest) {
         email: authUser.email,
         firstName: authUser.user_metadata?.firstName,
         lastName: authUser.user_metadata?.lastName,
-        role: authUser.app_metadata?.role || "customer",
+        role: resolvedRole,
       },
       accessToken: authSession.access_token,
       session: {

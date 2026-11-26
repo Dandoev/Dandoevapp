@@ -26,7 +26,7 @@ interface ApplicationsTabProps {
   loans: any[];
   onOpenApprovalModal: (loan: any) => void;
   onOpenRejectionModal: (loan: any) => void;
-  onOpenDetailDrawer: (loan: any) => void;
+  onOpenDetailDrawer: (loan: any, tab?: 'cashflow' | 'kyc' | 'vehicle' | 'mandate' | 'documents') => void;
   searchQuery: string;
 }
 
@@ -256,7 +256,7 @@ export default function ApplicationsTab({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onOpenDetailDrawer(loan)}
+                        onClick={() => onOpenDetailDrawer(loan, 'cashflow')}
                         className="text-xs gap-1"
                       >
                         <Eye className="h-3.5 w-3.5" />

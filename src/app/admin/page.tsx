@@ -58,6 +58,7 @@ export default function AdminDashboard() {
   const [selectedLoanForApproval, setSelectedLoanForApproval] = useState<any | null>(null);
   const [selectedLoanForRejection, setSelectedLoanForRejection] = useState<any | null>(null);
   const [selectedLoanForDetail, setSelectedLoanForDetail] = useState<any | null>(null);
+  const [detailInitialTab, setDetailInitialTab] = useState<'cashflow' | 'kyc' | 'vehicle' | 'mandate' | 'documents'>('cashflow');
 
   // Enterprise Toast & Confirmation Dialog State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -400,7 +401,10 @@ export default function AdminDashboard() {
               loans={loans}
               onOpenApprovalModal={(loan) => setSelectedLoanForApproval(loan)}
               onOpenRejectionModal={(loan) => setSelectedLoanForRejection(loan)}
-              onOpenDetailDrawer={(loan) => setSelectedLoanForDetail(loan)}
+              onOpenDetailDrawer={(loan, tab) => {
+                setDetailInitialTab(tab || 'cashflow');
+                setSelectedLoanForDetail(loan);
+              }}
               searchQuery={globalSearch}
             />
           )}
@@ -424,7 +428,10 @@ export default function AdminDashboard() {
           {activeTab === 'payments' && (
             <RepaymentsTab
               loans={loans}
-              onOpenDetailDrawer={(loan) => setSelectedLoanForDetail(loan)}
+              onOpenDetailDrawer={(loan, tab) => {
+                setDetailInitialTab(tab || 'mandate');
+                setSelectedLoanForDetail(loan);
+              }}
             />
           )}
 
@@ -549,6 +556,7 @@ export default function AdminDashboard() {
           isOpen={Boolean(selectedLoanForDetail)}
           onClose={() => setSelectedLoanForDetail(null)}
           loan={selectedLoanForDetail}
+          initialTab={detailInitialTab}
           onApproveClick={(l) => {
             setSelectedLoanForDetail(null);
             setSelectedLoanForApproval(l);

@@ -21,7 +21,7 @@ import { formatNaira, formatDate, capitalize, getStatusColor } from '@/lib/utils
 
 interface RepaymentsTabProps {
   loans: any[];
-  onOpenDetailDrawer: (loan: any) => void;
+  onOpenDetailDrawer: (loan: any, tab?: 'cashflow' | 'kyc' | 'vehicle' | 'mandate' | 'documents') => void;
 }
 
 export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsTabProps) {
@@ -205,15 +205,15 @@ export default function RepaymentsTab({ loans, onOpenDetailDrawer }: RepaymentsT
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onOpenDetailDrawer(loan)}
+                            onClick={() => onOpenDetailDrawer(loan, 'mandate')}
                             className="text-xs font-semibold"
                           >
                             Open full repayment &amp; escrow
                           </Button>
                           <button
                             type="button"
-                            onClick={() => onOpenDetailDrawer(loan)}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#021064] hover:underline px-2 py-1"
+                            onClick={() => onOpenDetailDrawer(loan, 'vehicle')}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#021064] hover:underline px-2 py-1 cursor-pointer"
                           >
                             <FileText className="h-3.5 w-3.5" />
                             Loan details

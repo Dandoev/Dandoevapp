@@ -54,12 +54,14 @@ export default function RealDashboardScreen({
   onNavigateToNotifications,
   onNavigateToKyc,
   onSelectProduct,
+  onResumeApplication,
 }: {
   token: string;
   onSwitchTab: (tab: TabType) => void;
   onNavigateToNotifications?: () => void;
   onNavigateToKyc?: () => void;
   onSelectProduct?: (product: DemoProduct) => void;
+  onResumeApplication?: (product: DemoProduct) => void;
 }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -349,7 +351,15 @@ export default function RealDashboardScreen({
           ) : application ? (
             <TouchableOpacity
               style={styles.statusCard}
-              onPress={() => onSwitchTab('loans')}
+              onPress={() => {
+                const applicationName = `${application.bike?.name || ''} ${application.bike?.model || ''}`.toLowerCase().trim();
+                const product = products.find((item) => {
+                  const productName = `${item.name} ${item.model}`.toLowerCase();
+                  return productName.includes(applicationName) || applicationName.includes(productName);
+                });
+                if (product && onResumeApplication) onResumeApplication(product);
+                else onSwitchTab('loans');
+              }}
               activeOpacity={0.85}
             >
               <View style={styles.statusIconWrap}>
@@ -364,7 +374,7 @@ export default function RealDashboardScreen({
                       ? 'Approved — Awaiting Assignment'
                       : 'Pending Submission'}
                 </Text>
-                <Text style={styles.statusSub}>Tap to view application progress and next steps.</Text>
+                <Text style={styles.statusSub}>Tap to continue your application from where you stopped.</Text>
               </View>
               <ChevronRight size={18} color="#66728A" />
             </TouchableOpacity>

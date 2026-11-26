@@ -220,6 +220,12 @@ function App() {
             onNavigateToFundWallet={() => setCurrentScreen("FundWallet")}
             onNavigateToKyc={() => setCurrentScreen("Kyc")}
             onSelectProduct={handleOpenProductDetail}
+            onResumeApplication={(product) => {
+              setSelectedProduct(product);
+              setBnplIdentity({ nin: "", bvn: "", phone: "" });
+              setBnplResumeStep(null);
+              setCurrentScreen("BnplApplication");
+            }}
           />
         );
       case "bikes":

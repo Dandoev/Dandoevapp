@@ -44,6 +44,7 @@ interface DashboardScreenProps {
   onNavigateToFundWallet?: () => void;
   onNavigateToKyc?: () => void;
   onSelectProduct?: (product: DemoProduct) => void;
+  onResumeApplication?: (product: DemoProduct) => void;
 }
 
 export default function DashboardScreen({
@@ -53,9 +54,10 @@ export default function DashboardScreen({
   onNavigateToFundWallet,
   onNavigateToKyc,
   onSelectProduct,
+  onResumeApplication,
 }: DashboardScreenProps) {
   if (token && !token.startsWith('demo-')) {
-    return <RealDashboardScreen token={token} onSwitchTab={onSwitchTab} onNavigateToNotifications={onNavigateToNotifications} onNavigateToKyc={onNavigateToKyc} onSelectProduct={onSelectProduct} />;
+    return <RealDashboardScreen token={token} onSwitchTab={onSwitchTab} onNavigateToNotifications={onNavigateToNotifications} onNavigateToKyc={onNavigateToKyc} onSelectProduct={onSelectProduct} onResumeApplication={onResumeApplication} />;
   }
   return <DemoDashboardScreen onSwitchTab={onSwitchTab} token={token} onNavigateToNotifications={onNavigateToNotifications} onNavigateToFundWallet={onNavigateToFundWallet} onNavigateToKyc={onNavigateToKyc} onSelectProduct={onSelectProduct} />;
 }

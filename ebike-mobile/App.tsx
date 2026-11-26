@@ -42,6 +42,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./src/lib/supabase";
 import { MobileApi } from "./src/lib/api";
 import { TOKEN_STORAGE_KEY } from "./src/lib/auth-session";
+import { getLiveBikes } from "./src/lib/catalog";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 Sentry.init({
@@ -50,6 +51,8 @@ Sentry.init({
   sendDefaultPii: false,
   tracesSampleRate: 0.1,
 });
+
+const ACTIVE_BNPL_PRODUCT_KEY = "@dandoev_bnpl_active_product";
 
 export type ScreenType =
   | "Onboarding"
@@ -222,6 +225,7 @@ function App() {
             onSelectProduct={handleOpenProductDetail}
             onResumeApplication={(product) => {
               setSelectedProduct(product);
+              AsyncStorage.setItem(ACTIVE_BNPL_PRODUCT_KEY, product.id).catch(() => {});
               setBnplIdentity({ nin: "", bvn: "", phone: "" });
               setBnplResumeStep(null);
               setCurrentScreen("BnplApplication");
@@ -320,6 +324,7 @@ function App() {
               onBack={() => setCurrentScreen(prevScreenBeforeDetail)}
               onApplyBNPL={(prod, _tenure) => {
                 setSelectedProduct(prod);
+                AsyncStorage.setItem(ACTIVE_BNPL_PRODUCT_KEY, prod.id).catch(() => {});
                 setBnplIdentity({ nin: "", bvn: "", phone: "" });
                 setBnplResumeStep(0);
                 setCurrentScreen("BnplApplication");
@@ -337,11 +342,25 @@ function App() {
                   ? setCurrentScreen("BnplApplication")
                   : setCurrentScreen("Dashboard")
               }
-              onKycComplete={() => {
+              onKycComplete={async () => {
                 if (selectedProduct) {
                   setBnplResumeStep(1);
                   setCurrentScreen("BnplApplication");
                 } else {
+                  // Product context can be lost when the app is updated or
+                  // restarted while KYC is still in progress. Restore it
+                  // before routing back to the application form.
+                  try {
+                    const productId = await AsyncStorage.getItem(ACTIVE_BNPL_PRODUCT_KEY);
+                    const products = await getLiveBikes();
+                    const product = products.find((item) => item.id === productId);
+                    if (product) {
+                      setSelectedProduct(product);
+                      setBnplResumeStep(1);
+                      setCurrentScreen("BnplApplication");
+                      return;
+                    }
+                  } catch {}
                   setCurrentScreen("Dashboard");
                 }
               }}

@@ -136,7 +136,9 @@ export default function AdminDashboard() {
 
   const fetchKycDocs = async () => {
     try {
-      const r = await fetch('/api/admin/kyc?status=pending');
+      // Load the full KYC queue so completed and rejected records remain
+      // visible to compliance staff for audit and applicant history.
+      const r = await fetch('/api/admin/kyc');
       if (r.ok) {
         const d = await r.json();
         setKycDocs(d.data || []);

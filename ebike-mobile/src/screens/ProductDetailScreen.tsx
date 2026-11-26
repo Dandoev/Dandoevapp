@@ -146,8 +146,11 @@ export default function ProductDetailScreen({
     setPurchaseError(null);
     setPaymentNotice(null);
     try {
-      let payment = pendingPayment;
+      // Paystack checkout URLs are single-use and expire. Confirm & Pay must
+      // always create a fresh session instead of reopening an old URL.
+      let payment: { reference: string; authorizationUrl: string } | null = null;
       let order = pendingOrder;
+      setPendingPayment(null);
       if (!payment) {
         if (!order) {
           const created = await MobileApi.createOrder(
@@ -219,7 +222,7 @@ export default function ProductDetailScreen({
         "dandoev://payment-callback",
       );
       if (browserResult.type !== "success") {
-        // Mono payment references are single-use. Keep the order so retrying
+        // Paystack payment references are single-use. Keep the order so retrying
         // does not duplicate it, but discard the old session so the next
         // attempt receives a fresh reference from DirectPay.
         setPendingPayment(null);
@@ -235,9 +238,9 @@ export default function ProductDetailScreen({
       if (verification.data.status !== "success") {
         if (verification.data.status === "failed") {
           setPendingPayment(null);
-          setPaymentNotice("Mono reported that payment failed. Tap Confirm & Pay to start a new secure session.");
+          setPaymentNotice("Paystack reported that payment failed. Tap Confirm & Pay to start a new secure session.");
         } else {
-          setPaymentNotice("Mono is still confirming your payment. Use Check payment status shortly.");
+          setPaymentNotice("Paystack is still confirming your payment. Use Check payment status shortly.");
         }
         return;
       }
@@ -265,7 +268,7 @@ export default function ProductDetailScreen({
       setPaymentNotice(null);
       setOutrightSuccess(true);
     } catch (error) {
-      // A failed Mono initialization/session must never be retried with the
+      // A failed Paystack initialization/session must never be retried with the
       // same single-use reference. The existing order remains reusable.
       setPendingPayment(null);
       setPurchaseError(
@@ -314,7 +317,7 @@ export default function ProductDetailScreen({
         setPaymentNotice(null);
         setPurchaseError(null);
       } else {
-        setPaymentNotice("Payment is still awaiting confirmation from Mono.");
+        setPaymentNotice("Payment is still awaiting confirmation from Paystack.");
       }
     } catch (error) {
       setPaymentNotice(
@@ -1347,7 +1350,7 @@ export default function ProductDetailScreen({
                 )}
 
                 <Text style={styles.paymentMethodNotice}>
-                  Your bank payment opens securely with Mono. Your order is
+                  Your bank payment opens securely with Paystack. Your order is
                   confirmed only after payment verification.
                 </Text>
 
@@ -1355,7 +1358,7 @@ export default function ProductDetailScreen({
                   <View style={styles.loadingBanner}>
                     <ActivityIndicator size="small" color="#2E3192" />
                     <Text style={styles.loadingBannerText}>
-                      Connecting to Mono DirectPay... Please keep this screen
+                      Connecting to Paystack... Please keep this screen
                       open.
                     </Text>
                   </View>
@@ -1417,8 +1420,6 @@ export default function ProductDetailScreen({
                   <Text style={styles.confirmBuyBtnText}>
                     {purchaseLoading
                       ? "Processing…"
-                      : pendingPayment
-                        ? "Return to secure payment"
                       : `Confirm & Pay ₦${displayOutrightTotal.toLocaleString()}`}
                   </Text>
                 </TouchableOpacity>

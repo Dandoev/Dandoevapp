@@ -448,7 +448,15 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === 'compliance' && (
-            <ComplianceTab kycDocs={kycDocs} />
+            <ComplianceTab
+              kycDocs={kycDocs}
+              loans={loans}
+              onOpenDetailDrawer={(loan, tab) => {
+                setDetailInitialTab(tab || 'cashflow');
+                setSelectedLoanForDetail(loan);
+              }}
+              onOpenApprovalModal={(loan) => setSelectedLoanForApproval(loan)}
+            />
           )}
 
           {activeTab === 'users' && (

@@ -1,6 +1,6 @@
 -- One-time production cleanup requested by operations.
 -- Removes demo/requested public user records and all dependent application data.
-CREATE TEMP TABLE "_purge_users" ON COMMIT DROP AS
+CREATE TEMP TABLE "_purge_users" AS
 SELECT "id" FROM "users"
 WHERE lower("email") LIKE '%@demo.com'
    OR lower("email") IN (
@@ -14,10 +14,10 @@ WHERE lower("email") LIKE '%@demo.com'
      'info@dandoev.com'
    );
 
-CREATE TEMP TABLE "_purge_loans" ON COMMIT DROP AS
+CREATE TEMP TABLE "_purge_loans" AS
 SELECT "id" FROM "loans" WHERE "userId" IN (SELECT "id" FROM "_purge_users");
 
-CREATE TEMP TABLE "_purge_orders" ON COMMIT DROP AS
+CREATE TEMP TABLE "_purge_orders" AS
 SELECT "id" FROM "orders" WHERE "userId" IN (SELECT "id" FROM "_purge_users");
 
 DELETE FROM "recovery_activities" WHERE "caseId" IN (SELECT "id" FROM "recovery_cases" WHERE "loanId" IN (SELECT "id" FROM "_purge_loans"));

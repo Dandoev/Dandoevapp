@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
 
 const ADMIN_ROLES = ['super_admin', 'finance_admin', 'credit_underwriter', 'fleet_manager', 'collections_agent', 'compliance_officer'];
+const EXCLUDED_EMAILS = ['kenechukwuigbokwe853@gmail.com', 'ifeomadunu@yahoo.com', 'kizitokelvin1@gmail.com', 'solomon@dandoev.com', 'ifeomavivien33@gmail.com', 'nwekepeace91@gmail.com', 'chinedu.okafor@example.com', 'info@dandoev.com'];
 const monthKey = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 
 /** GET /api/admin/stats — live operational aggregates for the admin overview. */
@@ -11,16 +12,22 @@ export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiCon
   try {
     const now = new Date();
     const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+    const liveUsers = await prisma.user.findMany({
+      where: { email: { notIn: EXCLUDED_EMAILS, not: { endsWith: '@demo.com' } } },
+      select: { id: true },
+    });
+    const liveUserIds = liveUsers.map((user) => user.id);
+    const liveUserWhere = { userId: { in: liveUserIds } };
     const [totalUsers, totalOrders, loanGroups, portfolio, transactions, repayments, escrow, recentTransactions, bikes, outrightMetrics, outrightBuyers] = await Promise.all([
-      prisma.user.count(),
-      prisma.order.count(),
-      prisma.loan.groupBy({ by: ['status'], _count: { _all: true } }),
-      prisma.loan.aggregate({ where: { status: { in: ['approved', 'active', 'completed'] } }, _sum: { totalRepayable: true } }),
-      prisma.paymentTransaction.findMany({ where: { status: 'success', createdAt: { gte: sixMonthsAgo } }, select: { amount: true, createdAt: true, provider: true } }),
-      prisma.repayment.findMany({ where: { status: { in: ['paid', 'overdue', 'failed', 'partial'] } }, select: { status: true, paidDate: true, dueDate: true } }),
-      prisma.dailySaving.aggregate({ where: { status: 'collected' }, _sum: { amount: true } }),
+      Promise.resolve(liveUserIds.length),
+      prisma.order.count({ where: liveUserWhere }),
+      prisma.loan.groupBy({ by: ['status'], where: liveUserWhere, _count: { _all: true } }),
+      prisma.loan.aggregate({ where: { ...liveUserWhere, status: { in: ['approved', 'active', 'completed'] } }, _sum: { totalRepayable: true } }),
+      prisma.paymentTransaction.findMany({ where: { ...liveUserWhere, status: 'success', createdAt: { gte: sixMonthsAgo } }, select: { amount: true, createdAt: true, provider: true } }),
+      prisma.repayment.findMany({ where: { ...liveUserWhere, status: { in: ['paid', 'overdue', 'failed', 'partial'] } }, select: { status: true, paidDate: true, dueDate: true } }),
+      prisma.dailySaving.aggregate({ where: { ...liveUserWhere, status: 'collected' }, _sum: { amount: true } }),
       prisma.paymentTransaction.findMany({
-        orderBy: { createdAt: 'desc' }, take: 20,
+        where: liveUserWhere, orderBy: { createdAt: 'desc' }, take: 20,
         include: {
           user: { select: { firstName: true, lastName: true, email: true } },
           loan: { include: { bike: { select: { name: true } } } },
@@ -28,8 +35,8 @@ export const GET = withRoles(ADMIN_ROLES, async (_req: NextRequest, _ctx: ApiCon
         },
       }),
       prisma.bike.findMany({ orderBy: { stockQuantity: 'desc' }, select: { name: true, stockQuantity: true }, take: 5 }),
-      prisma.paymentTransaction.aggregate({ where: { status: 'success', orderId: { not: null } }, _sum: { amount: true }, _count: { _all: true } }),
-      prisma.order.groupBy({ by: ['userId'], where: { status: { in: ['confirmed', 'processing', 'shipped', 'delivered'] } } }),
+      prisma.paymentTransaction.aggregate({ where: { ...liveUserWhere, status: 'success', orderId: { not: null } }, _sum: { amount: true }, _count: { _all: true } }),
+      prisma.order.groupBy({ by: ['userId'], where: { ...liveUserWhere, status: { in: ['confirmed', 'processing', 'shipped', 'delivered'] } } }),
     ]);
 
     const statusCounts = new Map(loanGroups.map((row) => [row.status, row._count._all]));

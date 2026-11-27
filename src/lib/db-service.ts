@@ -855,8 +855,26 @@ class DbService {
   // ============================================================
   async getLoans(statusFilter?: string): Promise<LoanEntity[]> {
     try {
+      const excludedEmails = [
+        'kenechukwuigbokwe853@gmail.com',
+        'ifeomadunu@yahoo.com',
+        'kizitokelvin1@gmail.com',
+        'solomon@dandoev.com',
+        'ifeomavivien33@gmail.com',
+        'nwekepeace91@gmail.com',
+        'chinedu.okafor@example.com',
+        'info@dandoev.com',
+      ];
       const dbLoans = await prisma.loan.findMany({
-        where: statusFilter ? { status: statusFilter as any } : {},
+        where: {
+          ...(statusFilter ? { status: statusFilter as any } : {}),
+          user: {
+            email: {
+              notIn: excludedEmails,
+              not: { endsWith: '@demo.com' },
+            },
+          },
+        },
         include: {
           bike: true,
           user: true,

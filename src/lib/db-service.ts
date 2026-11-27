@@ -929,12 +929,10 @@ class DbService {
       if (!isDemoAllowed()) throw new Error('Database unavailable');
     }
 
-    const db = await this.loadDb();
-    let loans = db.loans || [];
-    if (statusFilter) {
-      loans = loans.filter((l) => l.status === statusFilter);
-    }
-    return loans;
+    // Never present the JSON/demo store as an admin loan queue. If the live
+    // database is unavailable, surface the failure so operators do not make
+    // decisions using fabricated applicants, balances, or repayments.
+    throw new Error('Database unavailable');
   }
 
   async getLoanById(id: string): Promise<LoanEntity | undefined> {

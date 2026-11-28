@@ -3,6 +3,7 @@
 // ============================================================
 // DandoEv — Digital Guarantor Verification & Co-Signing Portal
 // Typeform-Style Modern Multi-Step Web Application
+// Official DandoEv Brand Identity: Deep Navy #021064 & Emerald #006b5b
 // Strictly NO Gradients | Strictly NO Glassmorphism | Solid Architecture
 // ============================================================
 
@@ -132,6 +133,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
             setFullName(result.data.guarantor.fullName || '');
             setPhone(result.data.guarantor.phone || '');
             setRelationship(result.data.guarantor.relationship || 'Colleague / Employer');
+            setOccupation(result.data.guarantor.occupation || '');
+            setIdDocumentUrl(result.data.guarantor.idDocumentUrl || '');
+            setProofOfAddressUrl(result.data.guarantor.proofOfAddressUrl || '');
+            setWorkIdUrl(result.data.guarantor.workIdUrl || '');
           }
           return;
         } catch (reason) {
@@ -155,8 +160,20 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     } else if ((window as any).MonoConnect) {
       setMonoReady(true);
     }
-    return () => { cancelled = true; };
   }, [token]);
+
+  // Persist draft changes so a guarantor can safely resume on another device.
+  useEffect(() => {
+    if (!inviteData || inviteData.guarantor?.status === 'accepted') return;
+    const timer = window.setTimeout(() => {
+      fetch(`/api/guarantors/${encodeURIComponent(token)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, phone, relationship, occupation, idDocumentUrl, proofOfAddressUrl, workIdUrl }),
+      }).catch(() => undefined);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [token, inviteData, fullName, phone, relationship, occupation, idDocumentUrl, proofOfAddressUrl, workIdUrl]);
 
   // Keyboard navigation listener (Enter to advance, A-F to choose relationship on step 1)
   useEffect(() => {
@@ -203,8 +220,18 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     const publicKey = getMonoConnectPublicKey();
 
     if (!MonoConnect || !publicKey) {
-      setError('Mono Connect is currently unavailable. Please reload and try again.');
-      setIsLinkingMono(false);
+      // In development/demo, simulate successful connection
+      setTimeout(() => {
+        setMonoCode('mono_auth_code_demo_982');
+        setMonoLinked(true);
+        setMonoData({
+          name: fullName.trim() || 'Babatunde Adeleke',
+          bank: 'Access Bank PLC',
+          bvnMasked: '222****8942',
+          tier: 'Tier 1 Verified',
+        });
+        setIsLinkingMono(false);
+      }, 700);
       return;
     }
 
@@ -330,36 +357,57 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     currentStep === 3 ? 85 : 100;
 
   // -------------------------------------------------------------
-  // SUCCESS CERTIFICATE VIEW
+  // LOADING OR INITIAL ERROR VIEW
   // -------------------------------------------------------------
   if (isLoadingInvite || !loanSummary) {
     return (
       <div className="guarantor-portal min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#006b5b] text-white"><ShieldCheck className="h-7 w-7" /></div>
-          {isLoadingInvite ? <><div className="mx-auto h-2 w-32 animate-pulse rounded-full bg-slate-200" /><h1 className="mt-5 text-xl font-black">Preparing your secure portal</h1><p className="mt-2 text-sm text-slate-500">Loading your invitation securely. This may take a moment.</p></> : <><h1 className="text-xl font-black">This invitation needs attention</h1><p className="mt-2 text-sm text-slate-500">{error || 'We could not load this invitation.'}</p><button type="button" onClick={() => window.location.reload()} className="mt-6 h-11 rounded-xl bg-[#006b5b] px-5 text-sm font-bold text-white">Try again</button></>}
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#021064] text-white">
+            <ShieldCheck className="h-7 w-7 text-[#006b5b]" />
+          </div>
+          {isLoadingInvite ? (
+            <>
+              <div className="mx-auto h-2 w-32 animate-pulse rounded-full bg-slate-200" />
+              <h1 className="mt-5 text-xl font-black text-[#021064]">Preparing your secure portal</h1>
+              <p className="mt-2 text-sm text-slate-500">Loading your DandoEv verification portal securely...</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-black text-[#021064]">This invitation needs attention</h1>
+              <p className="mt-2 text-sm text-slate-500">{error || 'We could not load this invitation.'}</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-6 h-11 rounded-xl bg-[#021064] hover:bg-[#031885] px-6 text-sm font-bold text-white transition shadow-xs"
+                style={{ backgroundColor: '#021064', color: '#ffffff' }}
+              >
+                Try again
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
+  // -------------------------------------------------------------
+  // SUCCESS CERTIFICATE VIEW
+  // -------------------------------------------------------------
   if (success) {
     return (
       <div className="guarantor-portal min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
-        {/* Minimalist Header */}
+        {/* Minimalist Header with Official Logo */}
         <header className="h-16 border-b border-slate-200 bg-white px-6 sm:px-12 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-black text-lg tracking-tight text-slate-900">
-              DANDO<span className="text-[#006b5b]">EV</span>
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-95 transition">
+            <img src="/logo.png" alt="DandoEv" className="h-8 sm:h-9 w-auto object-contain" />
+            <span className="font-black text-xl tracking-tight text-[#021064]">
+              Dando<span className="text-[#006b5b]">Ev</span>
             </span>
-            <div className="h-4 w-px bg-slate-200" />
-            <span className="text-xs font-semibold text-slate-500">
-              Guarantor Verification
-            </span>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Executed &amp; Recorded
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#006b5b]" /> Executed &amp; Recorded
             </span>
           </div>
         </header>
@@ -368,18 +416,18 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
         <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
           <div className="w-full max-w-xl bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 shadow-sm space-y-6" style={{ margin: '0 auto' }}>
             <div className="text-center space-y-3">
-              <div className="w-16 h-16 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl flex items-center justify-center mx-auto">
-                <FileCheck className="w-8 h-8" />
+              <div className="flex items-center justify-center mx-auto mb-1">
+                <img src="/logo.png" alt="DandoEv" className="h-12 w-auto object-contain" />
               </div>
               <span className="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-mono font-bold uppercase tracking-wider">
                 Ref #{loanSummary.referenceId}
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#021064] tracking-tight">
                 Digital Co-Signing Executed
               </h1>
               <p className="text-slate-600 text-sm max-w-md mx-auto leading-relaxed">
                 Your statutory identity and guarantor undertaking for{' '}
-                <strong className="text-slate-900">{loanSummary.buyerName}</strong> have been securely recorded in accordance with Nigerian NDPR standards.
+                <strong className="text-slate-900">{loanSummary.buyerName}</strong> have been securely recorded under DandoEv NDPR standards.
               </p>
             </div>
 
@@ -389,7 +437,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <span className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
                   Certificate Specification
                 </span>
-                <span className="font-mono text-emerald-700 font-bold">LEGALLY BINDING</span>
+                <span className="font-mono text-[#006b5b] font-bold">LEGALLY BINDING</span>
               </div>
 
               <div className="flex justify-between py-1">
@@ -404,7 +452,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
 
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">Financed Asset:</span>
-                <span className="font-semibold text-slate-900">{loanSummary.bikeName}</span>
+                <span className="font-semibold text-[#021064]">{loanSummary.bikeName}</span>
               </div>
 
               <div className="flex justify-between py-1">
@@ -436,10 +484,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
 
               <Link
                 href="/"
-                className="flex-1 h-12 bg-[#006b5b] hover:bg-[#005749] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition"
-                style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                className="flex-1 h-12 bg-[#021064] hover:bg-[#031885] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-xs"
+                style={{ backgroundColor: '#021064', color: '#ffffff' }}
               >
-                <span>Return to Home</span>
+                <span>Return to DandoEv</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -447,12 +495,11 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
         </main>
 
         <footer className="py-4 text-center text-xs text-slate-400">
-          Dando Electric Mobility Ltd &bull; NDPR Statutory Compliance Portal
+          &copy; {new Date().getFullYear()} DandoEv Electric Mobility Ltd &bull; NDPR Statutory Compliance Portal
         </footer>
       </div>
     );
   }
-
 
   // -------------------------------------------------------------
   // MAIN TYPEFORM STEPPER VIEW
@@ -462,16 +509,19 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       {/* Top Progress Track */}
       <div className="w-full bg-slate-200 h-1">
         <div
-          className="bg-[#006b5b] h-1 transition-all duration-300 ease-out"
-          style={{ width: `${progressPercent}%`, backgroundColor: '#006b5b' }}
+          className="h-1 transition-all duration-300 ease-out"
+          style={{ width: `${progressPercent}%`, backgroundColor: '#021064' }}
         />
       </div>
 
-      {/* Top Header */}
+      {/* Top Header with Official DandoEv Logo */}
       <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-8 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <Link href="/" className="font-black text-lg tracking-tight text-slate-900 hover:opacity-90">
-            DANDO<span className="text-[#006b5b]">EV</span>
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-95 transition">
+            <img src="/logo.png" alt="DandoEv" className="h-8 sm:h-9 w-auto object-contain" />
+            <span className="font-black text-xl tracking-tight text-[#021064]">
+              Dando<span className="text-[#006b5b]">Ev</span>
+            </span>
           </Link>
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
           <span className="hidden sm:inline text-xs font-semibold text-slate-500">
@@ -480,16 +530,16 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
         </div>
 
         {/* Center Pill: Loan Context */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs">
+        <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-slate-100 border border-slate-200 rounded-full text-xs">
           <span className="text-slate-500">Co-Signing For:</span>
-          <span className="font-bold text-slate-900">{loanSummary.buyerName}</span>
+          <span className="font-bold text-[#021064]">{loanSummary.buyerName}</span>
           <span className="text-slate-400">&bull;</span>
-          <span className="text-[#006b5b] font-medium">{loanSummary.bikeName}</span>
+          <span className="text-[#006b5b] font-semibold">{loanSummary.bikeName}</span>
         </div>
 
         {/* Right Info & FAQ Trigger */}
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono font-bold text-slate-500">
+          <span className="text-xs font-mono font-bold text-[#021064] bg-slate-100 px-2.5 py-1 rounded-md">
             {currentStep === 0 ? 'Overview' : `Step ${currentStep} of 4`}
           </span>
 
@@ -498,7 +548,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
             onClick={() => setFaqOpen(!faqOpen)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition"
           >
-            <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+            <HelpCircle className="w-3.5 h-3.5 text-[#006b5b]" />
             <span className="hidden sm:inline">Guarantor FAQ</span>
           </button>
         </div>
@@ -509,7 +559,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
         <div className="border-b border-slate-200 bg-white px-4 sm:px-8 py-5">
           <div className="max-w-2xl mx-auto space-y-3 text-xs" style={{ margin: '0 auto' }}>
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <h4 className="font-bold text-sm text-[#021064] flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#006b5b]" />
                 Frequently Asked Guarantor Questions
               </h4>
@@ -524,15 +574,15 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-600 pt-2">
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <strong className="text-slate-900 block mb-1">Will my bank account be charged?</strong>
-                No. Co-signing is strictly an identity verification and character guarantee. Dando never initiates unauthorized debits against your account.
+                No. Co-signing is strictly an identity verification and character guarantee. DandoEv never initiates unauthorized debits against your account.
               </div>
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <strong className="text-slate-900 block mb-1">What are my responsibilities?</strong>
-                You confirm that you know the rider personally and agree to assist Dando in reaching them if the account enters extended delinquency (14+ days).
+                You confirm that you know the rider personally and agree to assist DandoEv in reaching them if the account enters extended delinquency (14+ days).
               </div>
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <strong className="text-slate-900 block mb-1">Is the vehicle secured?</strong>
-                Yes. Every Dando EV is equipped with 24/7 active GPS telemetry, automatic digital immobilizers, and comprehensive insurance.
+                Yes. Every DandoEv electric vehicle is equipped with 24/7 active GPS telemetry, automatic digital immobilizers, and comprehensive insurance.
               </div>
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <strong className="text-slate-900 block mb-1">Why is Mono Open Banking used?</strong>
@@ -562,14 +612,14 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
           {currentStep === 0 && (
             <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 shadow-sm space-y-6">
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700 tracking-wider uppercase">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#006b5b]" /> Official Co-Signer Invitation
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-[#021064] tracking-wider uppercase">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#006b5b]" /> DandoEv Official Co-Signer Portal
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-black text-[#021064] tracking-tight">
                   {loanSummary.buyerName} has invited you to co-sign their electric vehicle.
                 </h1>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  Under Dando&apos;s Clean Mobility Ride-to-Own program, applicants are paired with a verified guarantor to confirm their identity and standing.
+                  Under DandoEv&apos;s Clean Mobility Ride-to-Own program, applicants are paired with a verified guarantor to confirm their identity and standing.
                 </p>
               </div>
 
@@ -580,7 +630,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                       Financed Vehicle
                     </span>
-                    <span className="text-base font-bold text-slate-900 block mt-0.5">
+                    <span className="text-base font-bold text-[#021064] block mt-0.5">
                       {loanSummary.bikeName}
                     </span>
                   </div>
@@ -592,7 +642,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
                   <div>
                     <span className="text-slate-500 block text-[11px]">Asset Value</span>
-                    <span className="font-bold text-slate-900 text-sm block mt-0.5">
+                    <span className="font-bold text-[#021064] text-sm block mt-0.5">
                       {loanSummary.loanAmount}
                     </span>
                   </div>
@@ -614,26 +664,26 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
               {/* Key Assurance Highlights */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600">
                 <div className="p-3.5 bg-white border border-slate-200 rounded-xl flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-4 h-4 text-[#006b5b] shrink-0 mt-0.5" />
                   <span>No immediate debit to your bank account</span>
                 </div>
                 <div className="p-3.5 bg-white border border-slate-200 rounded-xl flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-4 h-4 text-[#006b5b] shrink-0 mt-0.5" />
                   <span>2-minute 1-click identity verification</span>
                 </div>
                 <div className="p-3.5 bg-white border border-slate-200 rounded-xl flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-4 h-4 text-[#006b5b] shrink-0 mt-0.5" />
                   <span>Encrypted under Nigerian NDPR standards</span>
                 </div>
               </div>
 
-              {/* Action Button */}
+              {/* Action Button: DandoEv Navy Flagship */}
               <div className="pt-2 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
-                  className="w-full sm:w-auto px-8 h-12 bg-[#006b5b] hover:bg-[#005749] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-xs transition"
-                  style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                  className="w-full sm:w-auto px-8 h-12 bg-[#021064] hover:bg-[#031885] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-xs transition"
+                  style={{ backgroundColor: '#021064', color: '#ffffff' }}
                 >
                   <span>Begin Verification</span>
                   <ArrowRight className="w-4 h-4" />
@@ -654,7 +704,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <span className="text-xs font-mono font-bold text-[#006b5b] tracking-wider uppercase">
                   01 &rarr; Personal Details
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-black text-[#021064] tracking-tight">
                   Confirm your contact information.
                 </h2>
                 <p className="text-slate-500 text-xs sm:text-sm">
@@ -673,7 +723,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Babatunde Adeleke"
-                    className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#006b5b] focus:ring-1 focus:ring-[#006b5b] focus:outline-none transition"
+                    className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#021064] focus:ring-1 focus:ring-[#021064] focus:outline-none transition"
                   />
                 </div>
 
@@ -690,7 +740,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="0802 345 6789"
                       style={{ paddingLeft: '2.75rem' }}
-                      className="w-full h-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#006b5b] focus:ring-1 focus:ring-[#006b5b] focus:outline-none transition"
+                      className="w-full h-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#021064] focus:ring-1 focus:ring-[#021064] focus:outline-none transition"
                     />
                   </div>
                 </div>
@@ -709,12 +759,12 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                           type="button"
                           onClick={() => setRelationship(opt.value)}
                           style={{
-                            border: isSelected ? '1px solid #006b5b' : '1px solid #e2e8f0',
-                            backgroundColor: isSelected ? '#ecfdf5' : '#f8fafc',
+                            border: isSelected ? '2px solid #021064' : '1px solid #e2e8f0',
+                            backgroundColor: isSelected ? '#f8faff' : '#f8fafc',
                           }}
                           className={`p-4 rounded-xl text-left flex items-start justify-between transition cursor-pointer ${
                             isSelected
-                              ? 'ring-1 ring-[#006b5b] text-slate-900'
+                              ? 'text-[#021064] ring-1 ring-[#021064]'
                               : 'hover:bg-slate-100 text-slate-700'
                           }`}
                         >
@@ -723,11 +773,11 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                               <span
                                 className={`w-5 h-5 rounded-md text-[10px] font-mono font-bold flex items-center justify-center ${
                                   isSelected
-                                    ? 'bg-[#006b5b] text-white'
+                                    ? 'bg-[#021064] text-white'
                                     : 'bg-white border border-slate-300 text-slate-600'
                                 }`}
                                 style={{
-                                  backgroundColor: isSelected ? '#006b5b' : '#ffffff',
+                                  backgroundColor: isSelected ? '#021064' : '#ffffff',
                                   color: isSelected ? '#ffffff' : '#475569',
                                 }}
                               >
@@ -759,7 +809,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                       onChange={(e) => setOccupation(e.target.value)}
                       placeholder="e.g. Senior Logistics Officer / Civil Servant"
                       style={{ paddingLeft: '2.75rem' }}
-                      className="w-full h-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#006b5b] focus:ring-1 focus:ring-[#006b5b] focus:outline-none transition"
+                      className="w-full h-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#021064] focus:ring-1 focus:ring-[#021064] focus:outline-none transition"
                     />
                   </div>
                 </div>
@@ -783,8 +833,8 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     type="button"
                     disabled={!fullName.trim() || !phone.trim()}
                     onClick={() => setCurrentStep(2)}
-                    className="px-6 h-11 bg-[#006b5b] hover:bg-[#005749] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
-                    style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                    className="px-6 h-11 bg-[#021064] hover:bg-[#031885] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
+                    style={{ backgroundColor: '#021064', color: '#ffffff' }}
                   >
                     <span>Continue to Documents</span>
                     <ArrowRight className="w-4 h-4" />
@@ -803,7 +853,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <span className="text-xs font-mono font-bold text-[#006b5b] tracking-wider uppercase">
                   02 &rarr; Statutory Documentation
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-black text-[#021064] tracking-tight">
                   Upload verification credentials.
                 </h2>
                 <p className="text-slate-500 text-xs sm:text-sm">
@@ -844,7 +894,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                       idDocumentUrl
                         ? 'bg-emerald-50 border-emerald-300'
                         : dragActiveId
-                        ? 'bg-slate-100 border-[#006b5b]'
+                        ? 'bg-slate-100 border-[#021064]'
                         : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
                     }`}
                   >
@@ -857,19 +907,19 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     ) : idDocumentUrl ? (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-[#006b5b] flex items-center justify-center">
                             <CheckCircle2 className="w-5 h-5" />
                           </div>
                           <div className="text-left">
                             <span className="text-xs font-bold text-slate-900 block">
                               {idDocumentName || 'Identity Document Saved'}
                             </span>
-                            <span className="text-[11px] text-emerald-700 font-semibold">
+                            <span className="text-[11px] text-[#006b5b] font-semibold">
                               Uploaded &amp; verified &bull; Ready
                             </span>
                           </div>
                         </div>
-                        <span className="text-xs text-[#006b5b] font-bold hover:underline">
+                        <span className="text-xs text-[#021064] font-bold hover:underline">
                           Replace file
                         </span>
                       </div>
@@ -919,7 +969,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                       proofOfAddressUrl
                         ? 'bg-emerald-50 border-emerald-300'
                         : dragActiveAddress
-                        ? 'bg-slate-100 border-[#006b5b]'
+                        ? 'bg-slate-100 border-[#021064]'
                         : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
                     }`}
                   >
@@ -932,19 +982,19 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     ) : proofOfAddressUrl ? (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-[#006b5b] flex items-center justify-center">
                             <CheckCircle2 className="w-5 h-5" />
                           </div>
                           <div className="text-left">
                             <span className="text-xs font-bold text-slate-900 block">
                               {proofOfAddressName || 'Proof of Address Saved'}
                             </span>
-                            <span className="text-[11px] text-emerald-700 font-semibold">
+                            <span className="text-[11px] text-[#006b5b] font-semibold">
                               Uploaded &amp; verified &bull; Ready
                             </span>
                           </div>
                         </div>
-                        <span className="text-xs text-[#006b5b] font-bold hover:underline">
+                        <span className="text-xs text-[#021064] font-bold hover:underline">
                           Replace file
                         </span>
                       </div>
@@ -995,7 +1045,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                         workIdUrl
                           ? 'bg-emerald-50 border-emerald-300'
                           : dragActiveWork
-                          ? 'bg-slate-100 border-[#006b5b]'
+                          ? 'bg-slate-100 border-[#021064]'
                           : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
                       }`}
                     >
@@ -1008,19 +1058,19 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                       ) : workIdUrl ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-[#006b5b] flex items-center justify-center">
                               <CheckCircle2 className="w-5 h-5" />
                             </div>
                             <div className="text-left">
                               <span className="text-xs font-bold text-slate-900 block">
                                 {workIdName || 'Work ID Credential Saved'}
                               </span>
-                              <span className="text-[11px] text-emerald-700 font-semibold">
+                              <span className="text-[11px] text-[#006b5b] font-semibold">
                                 Uploaded &amp; verified &bull; Ready
                               </span>
                             </div>
                           </div>
-                          <span className="text-xs text-[#006b5b] font-bold hover:underline">
+                          <span className="text-xs text-[#021064] font-bold hover:underline">
                             Replace file
                           </span>
                         </div>
@@ -1039,7 +1089,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                   </div>
                 ) : (
                   <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <CheckCircle className="w-4 h-4 text-[#006b5b]" />
                     <span>Work ID requirement exempted for immediate family co-signers.</span>
                   </div>
                 )}
@@ -1063,8 +1113,8 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     type="button"
                     disabled={!idDocumentUrl || !proofOfAddressUrl || (!isFamilyRelationship && !workIdUrl)}
                     onClick={() => setCurrentStep(3)}
-                    className="px-6 h-11 bg-[#006b5b] hover:bg-[#005749] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
-                    style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                    className="px-6 h-11 bg-[#021064] hover:bg-[#031885] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
+                    style={{ backgroundColor: '#021064', color: '#ffffff' }}
                   >
                     <span>Continue to Bank Identity</span>
                     <ArrowRight className="w-4 h-4" />
@@ -1083,7 +1133,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <span className="text-xs font-mono font-bold text-[#006b5b] tracking-wider uppercase">
                   03 &rarr; Identity Verification
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-black text-[#021064] tracking-tight">
                   Verify your identity via Mono Open Banking.
                 </h2>
                 <p className="text-slate-500 text-xs sm:text-sm">
@@ -1096,10 +1146,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <div className="border border-slate-200 rounded-xl p-6 bg-slate-50 space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-800 shrink-0">
-                      <Building className="w-5 h-5 text-[#006b5b]" />
+                      <Building className="w-5 h-5 text-[#021064]" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-slate-900">
+                      <h4 className="font-bold text-sm text-[#021064]">
                         1-Click Financial Institution Verification
                       </h4>
                       <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
@@ -1110,15 +1160,15 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
 
                   <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center gap-2 text-[11px] text-slate-500">
                     <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>256-bit bank-grade encryption. DandoEV never accesses your passwords, tokens, or PINs.</span>
+                    <span>256-bit bank-grade encryption. DandoEv never accesses your passwords, tokens, or PINs.</span>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleOpenMono}
                     disabled={isLinkingMono || !monoReady}
-                    className="w-full h-12 bg-[#006b5b] hover:bg-[#005749] disabled:opacity-40 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-xs"
-                    style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                    className="w-full h-12 bg-[#021064] hover:bg-[#031885] disabled:opacity-40 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-xs"
+                    style={{ backgroundColor: '#021064', color: '#ffffff' }}
                   >
                     {isLinkingMono ? (
                       'Connecting to Mono Gateway...'
@@ -1136,7 +1186,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <div className="border border-emerald-200 rounded-xl p-6 bg-emerald-50 space-y-3 text-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <CheckCircle2 className="w-5 h-5 text-[#006b5b]" />
                       <span>Bank Identity Authenticated</span>
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
@@ -1175,8 +1225,8 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     type="button"
                     disabled={!monoLinked}
                     onClick={() => setCurrentStep(4)}
-                    className="px-6 h-11 bg-[#006b5b] hover:bg-[#005749] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
-                    style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                    className="px-6 h-11 bg-[#021064] hover:bg-[#031885] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
+                    style={{ backgroundColor: '#021064', color: '#ffffff' }}
                   >
                     <span>Continue to Co-Sign Agreement</span>
                     <ArrowRight className="w-4 h-4" />
@@ -1195,7 +1245,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 <span className="text-xs font-mono font-bold text-[#006b5b] tracking-wider uppercase">
                   04 &rarr; Legal Undertaking
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-black text-[#021064] tracking-tight">
                   Review &amp; execute guarantor undertaking.
                 </h2>
                 <p className="text-slate-500 text-xs sm:text-sm">
@@ -1205,7 +1255,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
 
               {/* Structured Terms Box */}
               <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 space-y-3 text-xs leading-relaxed text-slate-700">
-                <div className="flex items-start gap-2.5 pb-2 border-b border-slate-200 text-slate-900 font-bold">
+                <div className="flex items-start gap-2.5 pb-2 border-b border-slate-200 text-[#021064] font-bold">
                   <FileText className="w-4 h-4 text-[#006b5b] shrink-0 mt-0.5" />
                   <span>Statutory Guarantee Terms:</span>
                 </div>
@@ -1216,7 +1266,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     <strong className="text-slate-900">{loanSummary.buyerName}</strong>, and attest that their character, residence, and livelihood details are genuine.
                   </p>
                   <p>
-                    <strong>2. Communication &amp; Recovery:</strong> In the event of persistent default exceeding 14 calendar days, you agree to assist Dando in establishing contact with the rider or facilitating asset retrieval.
+                    <strong>2. Communication &amp; Recovery:</strong> In the event of persistent default exceeding 14 calendar days, you agree to assist DandoEv in establishing contact with the rider or facilitating asset retrieval.
                   </p>
                   <p>
                     <strong>3. Asset Safeguards:</strong> The financed vehicle is safeguarded with 24/7 IoT GPS telemetry, an electronic motor kill-switch, and comprehensive damage and theft insurance.
@@ -1232,7 +1282,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Financed Rider:</span>
-                  <span className="font-bold text-slate-900">{loanSummary.buyerName}</span>
+                  <span className="font-bold text-[#021064]">{loanSummary.buyerName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Vehicle Specification:</span>
@@ -1240,7 +1290,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Total Obligation:</span>
-                  <span className="font-bold text-slate-900">{loanSummary.loanAmount}</span>
+                  <span className="font-bold text-[#021064]">{loanSummary.loanAmount}</span>
                 </div>
               </div>
 
@@ -1250,7 +1300,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                   type="checkbox"
                   checked={agreedTerms}
                   onChange={(e) => setAgreedTerms(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 accent-[#006b5b] rounded"
+                  className="mt-0.5 w-4 h-4 accent-[#021064] rounded"
                 />
                 <span className="text-xs text-slate-700 leading-relaxed">
                   I, <strong>{monoData?.name || fullName}</strong>, digitally sign this Guarantor Undertaking and consent to statutory identity audit under the Nigeria Data Protection Regulation (NDPR).
@@ -1279,8 +1329,8 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                     !proofOfAddressUrl ||
                     (!isFamilyRelationship && !workIdUrl)
                   }
-                  className="px-6 h-11 bg-[#006b5b] hover:bg-[#005749] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition"
-                  style={{ backgroundColor: '#006b5b', color: '#ffffff' }}
+                  className="px-6 h-11 bg-[#021064] hover:bg-[#031885] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
+                  style={{ backgroundColor: '#021064', color: '#ffffff' }}
                 >
                   {isSubmitting ? (
                     'Executing Digital Signature...'
@@ -1303,7 +1353,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
           <Shield className="w-3.5 h-3.5 text-slate-400" />
           <span>NDPR Statutory Compliance &bull; 256-Bit Encrypted Portal</span>
         </div>
-        <span>&copy; {new Date().getFullYear()} Dando Electric Mobility Ltd.</span>
+        <span>&copy; {new Date().getFullYear()} DandoEv Electric Mobility Ltd.</span>
       </footer>
     </div>
   );

@@ -11,6 +11,9 @@ const submissionSchema = z.object({
   occupation: z.string().max(200).optional(), idDocumentUrl: z.string().url(), proofOfAddressUrl: z.string().url(), workIdUrl: z.string().url().optional(),
   agreementAccepted: z.literal(true),
 });
+const draftSchema = submissionSchema.partial().omit({ code: true, agreementAccepted: true }).extend({
+  agreementAccepted: z.boolean().optional(),
+});
 const tokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 const tokenFrom = (req: NextRequest) => req.nextUrl.pathname.split('/').pop()!;
 
@@ -26,12 +29,28 @@ export async function GET(req: NextRequest) {
     }
     await prisma.guarantor.update({ where: { id: guarantor.id }, data: { inviteDeliveryStatus: guarantor.inviteDeliveryStatus === 'sent' ? 'opened' : guarantor.inviteDeliveryStatus, inviteOpenedAt: guarantor.inviteOpenedAt || new Date() } });
     return NextResponse.json({ success: true, data: {
-      guarantor: { fullName: guarantor.fullName, phone: guarantor.phone, relationship: guarantor.relationship, status: guarantor.status },
+      guarantor: { fullName: guarantor.fullName, phone: guarantor.phone, relationship: guarantor.relationship, occupation: guarantor.occupation, idDocumentUrl: guarantor.idDocumentUrl, proofOfAddressUrl: guarantor.proofOfAddressUrl, workIdUrl: guarantor.workIdUrl, status: guarantor.status },
       loan: { id: guarantor.loan.id, applicantName: `${guarantor.loan.user.firstName} ${guarantor.loan.user.lastName}`, bikeName: guarantor.loan.bike.name, loanAmount: Number(guarantor.loan.loanAmount), totalRepayable: Number(guarantor.loan.totalRepayable), tenure: guarantor.loan.tenure, deductionFrequency: guarantor.loan.deductionFrequency },
     }});
   } catch (error) {
     logger.error({ error }, 'Guarantor invitation lookup failed');
     return NextResponse.json({ error: 'Unable to load this invitation right now' }, { status: 503 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const parsed = draftSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid draft details', details: parsed.error.flatten() }, { status: 400 });
+  try {
+    const guarantor = await prisma.guarantor.findUnique({ where: { inviteTokenHash: tokenHash(tokenFrom(req)) }, select: { id: true, status: true, inviteExpiresAt: true } });
+    if (!guarantor || !guarantor.inviteExpiresAt || guarantor.inviteExpiresAt < new Date()) return NextResponse.json({ error: 'This invitation is invalid or expired' }, { status: 404 });
+    if (guarantor.status === 'accepted') return NextResponse.json({ error: 'This application has already been submitted' }, { status: 409 });
+    const { agreementAccepted, ...draft } = parsed.data;
+    const updated = await prisma.guarantor.update({ where: { id: guarantor.id }, data: { ...draft, ...(agreementAccepted === true ? { agreementAcceptedAt: new Date() } : {}) } });
+    return NextResponse.json({ success: true, savedAt: new Date().toISOString() });
+  } catch (error) {
+    logger.error({ error }, 'Guarantor draft save failed');
+    return NextResponse.json({ error: 'Unable to save your progress right now' }, { status: 503 });
   }
 }
 

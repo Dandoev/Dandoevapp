@@ -41,6 +41,7 @@ type Document = {
 type Loan = {
   id: string;
   status: string;
+  rejectionReason?: string;
   bike?: { name?: string };
   totalRepayable?: string | number;
   tenure?: number;
@@ -148,6 +149,14 @@ export default function RealLoansScreen({ token }: { token: string }) {
               {Number(loan.totalRepayable || 0).toLocaleString()}
             </Text>
             <Text style={styles.body}>Term: {loan.tenure || "—"} months</Text>
+            {loan.status === "rejected" && (
+              <View style={styles.rejectedBox}>
+                <Text style={styles.title}>Application declined</Text>
+                <Text style={styles.body}>
+                  {loan.rejectionReason || "The application was not approved. Please contact support if you need clarification."}
+                </Text>
+              </View>
+            )}
             {loan.status === "approved" && (
               <View style={styles.summary}>
                 <Text style={styles.title}>Credit approved · Activate repayments</Text>
@@ -317,6 +326,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     marginBottom: 14,
+  },
+  rejectedBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#FFF1F2",
+    borderWidth: 1,
+    borderColor: "#FECDD3",
   },
   retry: { color: "#B42318", fontFamily: "Inter_600SemiBold", marginTop: 6 },
   timeline: { marginTop: 18 },

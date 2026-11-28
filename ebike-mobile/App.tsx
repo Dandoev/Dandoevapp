@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   StyleSheet,
   BackHandler,
@@ -84,8 +84,15 @@ function App() {
   const [isSplashVisible, setIsSplashVisible] = useState(true);
   const [sessionRestoring, setSessionRestoring] = useState(true);
 
-  // Initialize Push Notifications
-  usePushNotifications();
+  const handleNotificationTap = useCallback(() => {
+    if (token && !token.startsWith("demo-")) {
+      setCurrentScreen("Notifications");
+    }
+  }, [token]);
+
+  // Register the device for native push delivery and route notification taps
+  // into the same notification drawer used by the in-app bell.
+  usePushNotifications(handleNotificationTap);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,

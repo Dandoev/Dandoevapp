@@ -17,7 +17,7 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
   }
 
   try {
-    const [user, proofOfAddress, faceVerification, activeLoan, notifications] = await Promise.all([
+    const [user, proofOfAddress, faceVerification, activeLoan, latestApplication, notifications] = await Promise.all([
       // 1. User profile and wallet
       prisma.user.findUnique({
         where: { id: userId },
@@ -45,6 +45,22 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
             orderBy: { dueDate: 'asc' },
             take: 1,
           },
+        },
+      }),
+
+      // Keep the most recent decision visible even when it is rejected. The
+      // dashboard must not turn a real rejected application into an empty/demo
+      // state merely because it is no longer active.
+      prisma.loan.findFirst({
+        where: { userId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          rejectionReason: true,
+          createdAt: true,
+          updatedAt: true,
+          bike: { select: { name: true, model: true, images: true } },
         },
       }),
 
@@ -87,6 +103,7 @@ export const GET = withAuth(async (req: NextRequest, ctx: ApiContext) => {
         wallet: user.wallet,
       },
       loan: loanSummary,
+      application: latestApplication,
       notifications,
     });
 

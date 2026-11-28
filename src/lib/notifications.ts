@@ -77,9 +77,12 @@ export async function sendExpoPushNotification(to: string, title: string, body: 
       data: { screen: 'Notifications' },
     }),
   });
-  if (!response.ok) {
-    logger.warn({ status: response.status }, 'Expo push notification request failed');
+  const result = await response.json().catch(() => null) as { data?: { status?: string; message?: string; details?: unknown } } | null;
+  if (!response.ok || result?.data?.status === 'error') {
+    logger.warn({ status: response.status, result }, 'Expo push notification request failed');
+    throw new Error(result?.data?.message || `Expo push request failed with ${response.status}`);
   }
+  logger.info({ status: result?.data?.status || 'ok' }, 'Expo push notification accepted');
 }
 
 /**

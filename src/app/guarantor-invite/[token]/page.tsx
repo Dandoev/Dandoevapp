@@ -183,7 +183,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
           setCurrentStep(2);
         } else if (currentStep === 2 && idDocumentUrl && proofOfAddressUrl && (isFamilyRelationship || workIdUrl)) {
           e.preventDefault();
-          setCurrentStep(3);
+          setCurrentStep(4);
         } else if (currentStep === 3 && monoLinked) {
           e.preventDefault();
           setCurrentStep(4);
@@ -294,8 +294,8 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
 
   // Submit Co-Sign Agreement
   const handleAcceptCoSign = async () => {
-    if (!agreedTerms || !monoCode) {
-      setError(monoCode ? 'Please check the agreement box before completing.' : 'Connect your bank via Mono first.');
+    if (!agreedTerms) {
+      setError('Please check the agreement box before completing.');
       return;
     }
 
@@ -307,7 +307,6 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: monoCode,
           fullName: fullName.trim(),
           phone: phone.trim(),
           relationship,
@@ -1094,11 +1093,11 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                   <button
                     type="button"
                     disabled={!idDocumentUrl || !proofOfAddressUrl || (!isFamilyRelationship && !workIdUrl)}
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => setCurrentStep(4)}
                     className="px-6 h-11 bg-[#021064] hover:bg-[#031885] disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition"
                     style={{ backgroundColor: '#021064', color: '#ffffff' }}
                   >
-                    <span>Continue to Bank Identity</span>
+                    <span>Continue to Agreement</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -1293,7 +1292,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
               <div className="pt-2 flex items-center justify-between border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => setCurrentStep(2)}
                   disabled={isSubmitting}
                   className="px-4 h-11 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition"
                 >
@@ -1306,7 +1305,6 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                   disabled={
                     isSubmitting ||
                     !agreedTerms ||
-                    !monoLinked ||
                     !idDocumentUrl ||
                     !proofOfAddressUrl ||
                     (!isFamilyRelationship && !workIdUrl)

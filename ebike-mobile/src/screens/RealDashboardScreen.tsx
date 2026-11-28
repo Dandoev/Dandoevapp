@@ -34,6 +34,7 @@ type Repayment = { status: string; amount: string | number; dueDate: string };
 type Loan = {
   id: string;
   status: string;
+  rejectionReason?: string | null;
   bike?: { name?: string; model?: string };
   bikeSerialNumber?: string | null;
   chassisNumber?: string | null;
@@ -137,7 +138,10 @@ export default function RealDashboardScreen({
         channel = supabase
           .channel(`notifications:user:${userId}`)
           .on('broadcast', { event: 'new_notification' }, () => {
-            setUnreadCount((prev) => prev + 1);
+            // A rejection can happen while the app is open. Refresh the loan
+            // state as well as the notification badge so the decision is
+            // visible immediately without requiring an app restart.
+            void loadData(false);
           })
           .subscribe();
       }
@@ -152,7 +156,9 @@ export default function RealDashboardScreen({
 
   const assigned = loans.find((loan) => loan.status === 'active' && !!loan.bikeSerialNumber);
   const activeLoan = loans.find((loan) => loan.status === 'active');
-  const application = loans.find((loan) => ['pending', 'under_review', 'approved'].includes(loan.status));
+  // Keep the latest rejected application visible so the customer can see the
+  // decision and its reason instead of falling back to the empty-state card.
+  const application = loans.find((loan) => ['pending', 'under_review', 'approved', 'rejected'].includes(loan.status));
 
   const repayments = activeLoan?.repayments ?? [];
   const paidCount = repayments.filter((r) => r.status === 'paid').length;
@@ -368,13 +374,19 @@ export default function RealDashboardScreen({
               <View style={{ flex: 1 }}>
                 <Text style={styles.statusEyebrow}>BNPL APPLICATION</Text>
                 <Text style={styles.statusTitle}>
-                  {application.status === 'under_review'
+                  {application.status === 'rejected'
+                    ? 'Application declined'
+                    : application.status === 'under_review'
                     ? 'Under Review'
                     : application.status === 'approved'
                       ? 'Approved — Awaiting Assignment'
                       : 'Pending Submission'}
                 </Text>
-                <Text style={styles.statusSub}>Tap to continue your application from where you stopped.</Text>
+                <Text style={styles.statusSub}>
+                  {application.status === 'rejected'
+                    ? (application.rejectionReason || 'Your application was declined. Open Loans for details or contact support.')
+                    : 'Tap to continue your application from where you stopped.'}
+                </Text>
               </View>
               <ChevronRight size={18} color="#66728A" />
             </TouchableOpacity>

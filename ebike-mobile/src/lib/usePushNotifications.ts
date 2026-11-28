@@ -30,7 +30,7 @@ if (supportsRemoteNotifications) {
 /**
  * Hook to manage Expo Push Tokens and notification registration.
  */
-export function usePushNotifications() {
+export function usePushNotifications(onNotificationTap?: (data: Record<string, unknown>) => void) {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>(undefined);
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
@@ -68,7 +68,8 @@ export function usePushNotifications() {
       });
 
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('Tapped notification:', response);
+        const data = (response.notification.request.content.data || {}) as Record<string, unknown>;
+        onNotificationTap?.(data);
       });
     }
 
@@ -82,7 +83,7 @@ export function usePushNotifications() {
       }
       authSubscription.subscription.unsubscribe();
     };
-  }, []);
+  }, [onNotificationTap]);
 
   return { expoPushToken };
 }

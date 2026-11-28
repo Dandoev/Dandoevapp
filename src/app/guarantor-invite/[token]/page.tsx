@@ -400,10 +400,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
         {/* Minimalist Header with Official Logo */}
         <header className="h-16 border-b border-slate-200 bg-white px-6 sm:px-12 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-95 transition">
-            <img src="/logo.png" alt="DandoEv" className="h-8 sm:h-9 w-auto object-contain" />
-            <span className="font-black text-xl tracking-tight text-[#021064]">
-              Dando<span className="text-[#006b5b]">Ev</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
+              <img src="/logo.png" alt="DandoEv" className="max-h-8 max-w-9 w-auto object-contain" />
             </span>
+            <span className="font-black text-xl tracking-tight text-[#021064]">DandoEv</span>
           </Link>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800">
@@ -518,10 +518,10 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-8 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-95 transition">
-            <img src="/logo.png" alt="DandoEv" className="h-8 sm:h-9 w-auto object-contain" />
-            <span className="font-black text-xl tracking-tight text-[#021064]">
-              Dando<span className="text-[#006b5b]">Ev</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
+              <img src="/logo.png" alt="DandoEv" className="max-h-8 max-w-9 w-auto object-contain" />
             </span>
+            <span className="font-black text-xl tracking-tight text-[#021064]">DandoEv</span>
           </Link>
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
           <span className="hidden sm:inline text-xs font-semibold text-slate-500">

@@ -283,7 +283,7 @@ export default function BikeCatalogPage() {
                             : 'badge-danger'
                         }`}
                       >
-                        {capitalize(bike.availability || 'in_stock')}
+                        {bike.availability === 'pre_order' ? 'Pre-Order' : capitalize(bike.availability || 'in_stock')}
                       </span>
                     </div>
 

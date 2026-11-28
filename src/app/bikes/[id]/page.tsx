@@ -236,6 +236,9 @@ export default function BikeDetailPage() {
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-xs border border-slate-200 px-3 py-1 rounded-full text-xs font-bold text-primary uppercase">
                   {bike.category} · {bike.brand || 'DandoEv'}
                 </div>
+                <div className={`absolute bottom-4 left-4 rounded-full px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide shadow-sm ${bike.availability === 'pre_order' ? 'bg-amber-100 text-amber-900 border border-amber-200' : bike.availability === 'in_stock' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' : 'bg-rose-100 text-rose-900 border border-rose-200'}`}>
+                  {bike.availability === 'pre_order' ? 'Pre-Order' : bike.availability === 'in_stock' ? 'In Stock' : 'Out of Stock'}
+                </div>
               </div>
 
               {/* Thumbnail Strip & Color Swatches */}
@@ -498,7 +501,7 @@ export default function BikeDetailPage() {
                     }}
                     className="w-full py-4 rounded-xl bg-primary hover:bg-primary-light text-white font-extrabold text-sm transition-all flex items-center justify-center gap-2 shadow-md"
                   >
-                    <span>Proceed to Instant Cash Checkout</span>
+                    <span>{bike.availability === 'pre_order' ? 'Reserve Pre-Order' : 'Proceed to Instant Cash Checkout'}</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -663,7 +666,7 @@ export default function BikeDetailPage() {
                     onClick={handleProceedToBnpl}
                     className="w-full py-4 rounded-xl bg-accent hover:brightness-95 text-primary-dark font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg"
                   >
-                    <span>Start 3-Minute BNPL Checkout</span>
+                    <span>{bike.availability === 'pre_order' ? 'Start Pre-Order BNPL' : 'Start 3-Minute BNPL Checkout'}</span>
                     <ArrowRight size={18} />
                   </button>
                 </div>

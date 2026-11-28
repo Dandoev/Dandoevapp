@@ -5,12 +5,22 @@
 .admin-workspace,
 .admin-workspace *,
 .admin-workspace *::before,
-.admin-workspace *::after {
+.admin-workspace *::after,
+.admin-login,
+.admin-login *,
+.admin-login *::before,
+.admin-login *::after,
+.guarantor-portal,
+.guarantor-portal *,
+.guarantor-portal *::before,
+.guarantor-portal *::after {
   margin: revert-layer;
   padding: revert-layer;
 }
 
-.admin-workspace button {
+.admin-workspace button,
+.admin-login button,
+.guarantor-portal button {
   background: revert-layer;
   border: revert-layer;
   color: revert-layer;

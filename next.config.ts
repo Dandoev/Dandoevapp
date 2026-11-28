@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from '@sentry/nextjs';
 
 // ============================================================
 // Next.js Production Configuration — DandoEv
@@ -70,8 +69,12 @@ const nextConfig: NextConfig = {
 };
 
 // ---- Sentry — only wrap if DSN is configured ----
+// Keep Sentry optional for local builds and test environments. Loading the
+// SDK eagerly makes Next config fail when Sentry's optional conventions
+// package is not present; production still wraps the config whenever a DSN is
+// explicitly configured.
 const configuredNext = process.env.SENTRY_DSN
-  ? withSentryConfig(nextConfig, {
+  ? require('@sentry/nextjs').withSentryConfig(nextConfig, {
     org: process.env.SENTRY_ORG || 'dandoev',
     project: process.env.SENTRY_PROJECT || 'dandoev-web',
     silent: !process.env.CI,

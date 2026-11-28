@@ -15,18 +15,24 @@ const tokenHash = (token: string) => crypto.createHash('sha256').update(token).d
 const tokenFrom = (req: NextRequest) => req.nextUrl.pathname.split('/').pop()!;
 
 export async function GET(req: NextRequest) {
-  const guarantor = await prisma.guarantor.findUnique({
-    where: { inviteTokenHash: tokenHash(tokenFrom(req)) },
-    include: { loan: { include: { bike: true, user: { select: { firstName: true, lastName: true, phone: true } } } } },
-  });
-  if (!guarantor || !guarantor.inviteExpiresAt || guarantor.inviteExpiresAt < new Date()) {
-    return NextResponse.json({ error: 'This invitation is invalid or expired' }, { status: 404 });
+  const token = tokenFrom(req);
+  try {
+    const guarantor = await prisma.guarantor.findUnique({
+      where: { inviteTokenHash: tokenHash(token) },
+      include: { loan: { include: { bike: true, user: { select: { firstName: true, lastName: true, phone: true } } } } },
+    });
+    if (!guarantor || !guarantor.inviteExpiresAt || guarantor.inviteExpiresAt < new Date()) {
+      return NextResponse.json({ error: 'This invitation is invalid or expired' }, { status: 404 });
+    }
+    await prisma.guarantor.update({ where: { id: guarantor.id }, data: { inviteDeliveryStatus: guarantor.inviteDeliveryStatus === 'sent' ? 'opened' : guarantor.inviteDeliveryStatus, inviteOpenedAt: guarantor.inviteOpenedAt || new Date() } });
+    return NextResponse.json({ success: true, data: {
+      guarantor: { fullName: guarantor.fullName, phone: guarantor.phone, relationship: guarantor.relationship, status: guarantor.status },
+      loan: { id: guarantor.loan.id, applicantName: `${guarantor.loan.user.firstName} ${guarantor.loan.user.lastName}`, bikeName: guarantor.loan.bike.name, loanAmount: Number(guarantor.loan.loanAmount), totalRepayable: Number(guarantor.loan.totalRepayable), tenure: guarantor.loan.tenure, deductionFrequency: guarantor.loan.deductionFrequency },
+    }});
+  } catch (error) {
+    logger.error({ error }, 'Guarantor invitation lookup failed');
+    return NextResponse.json({ error: 'Unable to load this invitation right now' }, { status: 503 });
   }
-  await prisma.guarantor.update({ where: { id: guarantor.id }, data: { inviteDeliveryStatus: guarantor.inviteDeliveryStatus === 'sent' ? 'opened' : guarantor.inviteDeliveryStatus, inviteOpenedAt: guarantor.inviteOpenedAt || new Date() } });
-  return NextResponse.json({ success: true, data: {
-    guarantor: { fullName: guarantor.fullName, phone: guarantor.phone, relationship: guarantor.relationship, status: guarantor.status },
-    loan: { id: guarantor.loan.id, applicantName: `${guarantor.loan.user.firstName} ${guarantor.loan.user.lastName}`, bikeName: guarantor.loan.bike.name, loanAmount: Number(guarantor.loan.loanAmount), totalRepayable: Number(guarantor.loan.totalRepayable), tenure: guarantor.loan.tenure, deductionFrequency: guarantor.loan.deductionFrequency },
-  }});
 }
 
 export async function POST(req: NextRequest) {

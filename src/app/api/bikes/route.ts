@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
   try {
     const bikes = await prisma.bike.findMany({
       where: {
-        availability: { in: ['in_stock', 'pre_order'] },
+        OR: [
+          { availability: 'pre_order' },
+          { availability: 'in_stock', stockQuantity: { gt: 0 } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     });

@@ -19,7 +19,11 @@ const putHandler = withValidation(updateBikeSchema, async (req, ctx) => {
       ...(data.price !== undefined && { price: Number(data.price) }),
       ...(data.category !== undefined && { category: data.category }),
       ...(data.stockQuantity !== undefined && { stockQuantity: Number(data.stockQuantity) }),
-      ...(data.availability !== undefined && { availability: data.availability as 'in_stock' | 'out_of_stock' | 'pre_order' }),
+      ...(data.availability !== undefined
+        ? { availability: data.availability as 'in_stock' | 'out_of_stock' | 'pre_order' }
+        : data.stockQuantity !== undefined && Number(data.stockQuantity) === 0
+          ? { availability: 'out_of_stock' as const }
+          : {}),
       ...(data.bnplEligible !== undefined && { bnplEligible: data.bnplEligible }),
       ...(data.bnplMinDownPayment !== undefined && { bnplMinDownPayment: Number(data.bnplMinDownPayment) }),
       ...(data.features !== undefined && { features: data.features }),

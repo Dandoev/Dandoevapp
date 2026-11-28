@@ -9,6 +9,7 @@
 
 import React, { useEffect, useState, use, useRef } from 'react';
 import Link from 'next/link';
+import Connect from '@mono.co/connect.js';
 import { getMonoConnectPublicKey } from '@/lib/mono-public';
 import {
   ShieldCheck,
@@ -149,17 +150,9 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     };
     loadInvite().finally(() => { if (!cancelled) setIsLoadingInvite(false); });
 
-    if (!document.querySelector('script[data-mono-connect]')) {
-      const script = document.createElement('script');
-      script.src = 'https://connect.withmono.com/connect.js';
-      script.async = true;
-      script.dataset.monoConnect = 'true';
-      script.onload = () => setMonoReady(true);
-      script.onerror = () => setError('Mono Connect script could not load. Please check your network connection.');
-      document.body.appendChild(script);
-    } else if ((window as any).MonoConnect) {
-      setMonoReady(true);
-    }
+    // Use Mono's bundled Connect SDK instead of loading connect.js at runtime.
+    // This avoids CDN/CSP failures in embedded browsers and local development.
+    setMonoReady(true);
   }, [token]);
 
   // Persist draft changes so a guarantor can safely resume on another device.
@@ -216,26 +209,15 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
   const handleOpenMono = () => {
     setError('');
     setIsLinkingMono(true);
-    const MonoConnect = (window as any).MonoConnect;
     const publicKey = getMonoConnectPublicKey();
 
-    if (!MonoConnect || !publicKey) {
-      // In development/demo, simulate successful connection
-      setTimeout(() => {
-        setMonoCode('mono_auth_code_demo_982');
-        setMonoLinked(true);
-        setMonoData({
-          name: fullName.trim() || 'Babatunde Adeleke',
-          bank: 'Access Bank PLC',
-          bvnMasked: '222****8942',
-          tier: 'Tier 1 Verified',
-        });
-        setIsLinkingMono(false);
-      }, 700);
+    if (!publicKey) {
+      setError('Mono Connect is not configured. Please contact support.');
+      setIsLinkingMono(false);
       return;
     }
 
-    const instance = new MonoConnect({
+    const instance = new Connect({
       key: publicKey,
       onSuccess: ({ code }: { code: string }) => {
         if (typeof code !== 'string' || code.length < 3) {
@@ -616,7 +598,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
                   <ShieldCheck className="w-3.5 h-3.5 text-[#006b5b]" /> DandoEv Official Co-Signer Portal
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-[#021064] tracking-tight">
-                  {loanSummary.buyerName} has invited you to co-sign their electric vehicle.
+                  {loanSummary.buyerName} has invited you to co-sign their electric bike.
                 </h1>
                 <p className="text-slate-600 text-sm leading-relaxed">
                   Under DandoEv&apos;s Clean Mobility Ride-to-Own program, applicants are paired with a verified guarantor to confirm their identity and standing.

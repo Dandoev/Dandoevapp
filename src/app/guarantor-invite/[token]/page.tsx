@@ -54,6 +54,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [isLoadingInvite, setIsLoadingInvite] = useState(true);
   const [faqOpen, setFaqOpen] = useState(false);
 
   // Form State
@@ -108,38 +109,40 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     monthlyEquivalent: `₦${Math.round(Number(inviteData.loan.totalRepayable) / (inviteData.loan.tenure || 12)).toLocaleString()} / month`,
     tenure: `${inviteData.loan.tenure || 12} Months`,
     escrowProtected: '100% Returnable Security Deposit',
-  } : {
-    referenceId: `GUA-${(token || 'INV902').slice(0, 6).toUpperCase()}`,
-    buyerName: 'Solomon Dunu',
-    buyerPhone: '+234 803 •••• 921',
-    bikeName: 'Dando S-Series Commuter E-Bike',
-    loanAmount: '₦585,000',
-    biDailyInstallment: '₦3,250 / bi-daily',
-    monthlyEquivalent: '₦48,750 / month',
-    tenure: '12 Months',
-    escrowProtected: '100% Returnable Security Deposit',
-  };
+  } : null;
 
   // Initial Fetch & Mono Script Ingestion
   useEffect(() => {
-    fetch(`/api/guarantors/${encodeURIComponent(token)}`)
-      .then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Invitation unavailable');
-        return result.data;
-      })
-      .then((data) => {
-        setInviteData(data);
-        if (data.guarantor?.fullName) setFullName(data.guarantor.fullName);
-        if (data.guarantor?.phone) setPhone(data.guarantor.phone);
-        if (data.guarantor?.relationship) setRelationship(data.guarantor.relationship);
-      })
-      .catch((reason) => {
-        // If preview token or network failure in test, keep fallback data without blocking
-        if (token !== 'demo' && token !== 'preview') {
-          setError(reason instanceof Error ? reason.message : 'Invitation link unavailable or expired');
+    let cancelled = false;
+    const loadInvite = async () => {
+      setIsLoadingInvite(true);
+      setError('');
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const controller = new AbortController();
+          const timeout = window.setTimeout(() => controller.abort(), 15000);
+          const response = await fetch(`/api/guarantors/${encodeURIComponent(token)}`, { signal: controller.signal, cache: 'no-store' });
+          window.clearTimeout(timeout);
+          const result = await response.json().catch(() => null);
+          if (!response.ok) throw new Error(result?.error || 'Invitation unavailable');
+          if (!result?.data?.loan || !result?.data?.guarantor) throw new Error('Invitation data is incomplete');
+          if (!cancelled) {
+            setInviteData(result.data);
+            setFullName(result.data.guarantor.fullName || '');
+            setPhone(result.data.guarantor.phone || '');
+            setRelationship(result.data.guarantor.relationship || 'Colleague / Employer');
+          }
+          return;
+        } catch (reason) {
+          lastError = reason;
+          if (attempt < 2) await new Promise((resolve) => window.setTimeout(resolve, 700 * (attempt + 1)));
         }
-      });
+      }
+      if (!cancelled) setError(lastError instanceof Error ? lastError.message : 'Invitation link unavailable or expired');
+      if (!cancelled) setIsLoadingInvite(false);
+    };
+    loadInvite().finally(() => { if (!cancelled) setIsLoadingInvite(false); });
 
     if (!document.querySelector('script[data-mono-connect]')) {
       const script = document.createElement('script');
@@ -152,6 +155,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     } else if ((window as any).MonoConnect) {
       setMonoReady(true);
     }
+    return () => { cancelled = true; };
   }, [token]);
 
   // Keyboard navigation listener (Enter to advance, A-F to choose relationship on step 1)
@@ -199,18 +203,8 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
     const publicKey = getMonoConnectPublicKey();
 
     if (!MonoConnect || !publicKey) {
-      // In development/demo, simulate successful connection
-      setTimeout(() => {
-        setMonoCode('mono_auth_code_demo_982');
-        setMonoLinked(true);
-        setMonoData({
-          name: fullName.trim() || 'Babatunde Adeleke',
-          bank: 'Access Bank PLC',
-          bvnMasked: '222****8942',
-          tier: 'Tier 1 Verified',
-        });
-        setIsLinkingMono(false);
-      }, 700);
+      setError('Mono Connect is currently unavailable. Please reload and try again.');
+      setIsLinkingMono(false);
       return;
     }
 
@@ -338,6 +332,17 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
   // -------------------------------------------------------------
   // SUCCESS CERTIFICATE VIEW
   // -------------------------------------------------------------
+  if (isLoadingInvite || !loanSummary) {
+    return (
+      <div className="guarantor-portal min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#006b5b] text-white"><ShieldCheck className="h-7 w-7" /></div>
+          {isLoadingInvite ? <><div className="mx-auto h-2 w-32 animate-pulse rounded-full bg-slate-200" /><h1 className="mt-5 text-xl font-black">Preparing your secure portal</h1><p className="mt-2 text-sm text-slate-500">Loading your invitation securely. This may take a moment.</p></> : <><h1 className="text-xl font-black">This invitation needs attention</h1><p className="mt-2 text-sm text-slate-500">{error || 'We could not load this invitation.'}</p><button type="button" onClick={() => window.location.reload()} className="mt-6 h-11 rounded-xl bg-[#006b5b] px-5 text-sm font-bold text-white">Try again</button></>}
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="guarantor-portal min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
@@ -447,6 +452,7 @@ export default function GuarantorVerifyPage({ params }: { params: Promise<{ toke
       </div>
     );
   }
+
 
   // -------------------------------------------------------------
   // MAIN TYPEFORM STEPPER VIEW

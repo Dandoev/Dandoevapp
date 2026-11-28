@@ -39,6 +39,7 @@ function CheckoutContent() {
   const bikeId = searchParams.get('bikeId');
 
   const [bike, setBike] = useState<CheckoutBike | null>(null);
+  const [cartBikes, setCartBikes] = useState<Array<CheckoutBike & { quantity: number }>>([]);
   const [checkoutAccessories, setCheckoutAccessories] = useState<CheckoutAccessory[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState('');
@@ -54,9 +55,12 @@ function CheckoutContent() {
 
   useEffect(() => {
     const accessoriesParam = searchParams.get('accessories');
+    const cartParam = searchParams.get('cart');
     const accessoryIds = accessoriesParam ? accessoriesParam.split(',').filter(Boolean) : [];
+    let cartItems: Array<{ bikeId: string; quantity: number }> = [];
+    try { cartItems = cartParam ? JSON.parse(cartParam) : []; } catch { cartItems = []; }
 
-    if (!bikeId && accessoryIds.length === 0) {
+    if (!bikeId && cartItems.length === 0 && accessoryIds.length === 0) {
       setPageError('No items selected for checkout.');
       setPageLoading(false);
       return;
@@ -65,7 +69,19 @@ function CheckoutContent() {
     async function fetchData() {
       try {
         let loadedBike: CheckoutBike | null = null;
-        if (bikeId) {
+        const requestedBikes = cartItems.length ? cartItems : bikeId ? [{ bikeId, quantity: 1 }] : [];
+        if (requestedBikes.length) {
+          const loadedBikes: Array<CheckoutBike & { quantity: number }> = [];
+          for (const item of requestedBikes) {
+            const res = await fetch(`/api/bikes/${item.bikeId}`, { cache: 'no-store' });
+            const data = await res.json();
+            if (!data.success) throw new Error('One or more bikes could not be loaded');
+            loadedBikes.push({ ...data.data, quantity: item.quantity });
+          }
+          setCartBikes(loadedBikes);
+          loadedBike = loadedBikes[0];
+          setBike(loadedBike);
+        } else if (bikeId) {
           const res = await fetch(`/api/bikes/${bikeId}`);
           const data = await res.json();
           if (data.success) {
@@ -77,7 +93,7 @@ function CheckoutContent() {
           }
         }
 
-        if (accessoryIds.length > 0 || bikeId) {
+        if (accessoryIds.length > 0 || bikeId || cartItems.length > 0) {
           const res = await fetch('/api/accessories');
           const data = await res.json();
           if (data.success && Array.isArray(data.data)) {
@@ -131,7 +147,7 @@ function CheckoutContent() {
     );
   }
 
-  const bikePrice = bike ? Number(bike.price) : 0;
+  const bikePrice = cartBikes.length ? cartBikes.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0) : bike ? Number(bike.price) : 0;
   const accessoriesPrice = checkoutAccessories.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
@@ -176,7 +192,8 @@ function CheckoutContent() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            bikeId: bike ? bike.id : undefined,
+            bikeId: cartBikes.length === 1 ? cartBikes[0].id : bike ? bike.id : undefined,
+            items: cartBikes.length > 1 ? cartBikes.map((item) => ({ bikeId: item.id, quantity: item.quantity })) : undefined,
             quantity: 1,
             paymentMethod,
             deliveryType: deliveryType === 'pickup' ? 'pickup' :
@@ -511,8 +528,8 @@ function CheckoutContent() {
                     />
                   </div>
                   <div className="flex-1">
-                    <div className="font-extrabold text-sm text-primary">{bike.name}</div>
-                    <div className="text-xs text-slate-500">{bike.category}</div>
+                    <div className="font-extrabold text-sm text-primary">{cartBikes.length > 1 ? `${cartBikes.length} e-bikes selected` : bike.name}</div>
+                    <div className="text-xs text-slate-500">{cartBikes.length > 1 ? cartBikes.map((item) => `${item.name} × ${item.quantity}`).join(' · ') : bike.category}</div>
                     <div className="font-black text-sm text-secondary mt-1 tabular-nums">
                       {formatNaira(Number(bike.price))}
                     </div>

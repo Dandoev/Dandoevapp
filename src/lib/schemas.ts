@@ -52,6 +52,7 @@ export const signinSchema = z
 
 export const createOrderSchema = z.object({
   bikeId: z.string().min(1, 'Invalid bike ID').optional(),
+  items: z.array(z.object({ bikeId: z.string().min(1), quantity: z.number().int().min(1).max(10) })).min(1).optional(),
   quantity: z.number().int().min(1).max(10).default(1),
   paymentMethod: z.enum(['card', 'bank_transfer', 'wallet', 'bnpl']),
   deliveryType: z.enum(['pickup', 'delivery_lagos', 'delivery_outside']).default('pickup'),

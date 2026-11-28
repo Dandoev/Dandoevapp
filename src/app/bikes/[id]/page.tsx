@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import { formatNaira, calculateInstallment } from '@/lib/utils';
 import { BNPL_CONFIG } from '@/lib/constants';
+import { addToCart } from '@/lib/cart';
 import {
   Zap,
   Battery,
@@ -57,6 +58,7 @@ export default function BikeDetailPage() {
   const [downPaymentPercent, setDownPaymentPercent] = useState<number>(0);
   const cadenceView = 'weekly';
   const [paymentChoice, setPaymentChoice] = useState<'buy' | 'bnpl'>('bnpl');
+  const [cartAdded, setCartAdded] = useState(false);
   const [accessoriesList, setAccessoriesList] = useState<any[]>([]);
   const [selectedAccessories, setSelectedAccessories] = useState<Record<string, boolean>>({});
   const [showEscrowInfo, setShowEscrowInfo] = useState(false);
@@ -503,6 +505,17 @@ export default function BikeDetailPage() {
                   >
                     <span>{bike.availability === 'pre_order' ? 'Reserve Pre-Order' : 'Proceed to Instant Cash Checkout'}</span>
                     <ArrowRight size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addToCart({ bikeId: bike.id, name: bike.name, price: Number(bike.price), image: bike.images?.[0] });
+                      setCartAdded(true);
+                      window.setTimeout(() => setCartAdded(false), 2500);
+                    }}
+                    className="w-full rounded-xl border border-primary/20 bg-white py-3 text-sm font-extrabold text-primary transition hover:bg-slate-50"
+                  >
+                    {cartAdded ? 'Added to cart ✓' : 'Add to cart'}
                   </button>
                 </div>
               ) : (

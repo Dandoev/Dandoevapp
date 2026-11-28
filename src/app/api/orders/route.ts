@@ -21,7 +21,8 @@ export const GET = withAuth(
             include: {
               accessory: { select: { name: true, category: true, images: true } }
             }
-          }
+          },
+          items: { include: { bike: { select: { name: true, brand: true, images: true } } } }
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -47,37 +48,28 @@ export const POST = withAuth(
 
         try {
           let bike = null;
+          const bikeItems: Array<{ bike: any; quantity: number }> = [];
           let bikeUnitPrice = 0;
           let bikeTotal = 0;
 
           // ---- 1. Verify bike if provided ----
-          if (data.bikeId) {
-            bike = await prisma.bike.findUnique({
-              where: { id: data.bikeId },
-            });
-
-            if (!bike) {
-              const modelMatch = data.bikeId.replace(/^(bike|seed-bike)-/i, '');
-              bike = await prisma.bike.findFirst({
-                where: {
-                  OR: [
-                    { model: { equals: modelMatch, mode: 'insensitive' } },
-                    { name: { contains: modelMatch, mode: 'insensitive' } },
-                  ],
-                },
-              });
+          const requestedBikeItems = data.items?.length ? data.items : data.bikeId ? [{ bikeId: data.bikeId, quantity: data.quantity }] : [];
+          if (requestedBikeItems.length > 0) {
+            for (const requested of requestedBikeItems) {
+              let resolvedBike = await prisma.bike.findUnique({ where: { id: requested.bikeId } });
+              if (!resolvedBike) {
+                const modelMatch = requested.bikeId.replace(/^(bike|seed-bike)-/i, '');
+                resolvedBike = await prisma.bike.findFirst({ where: { OR: [{ model: { equals: modelMatch, mode: 'insensitive' } }, { name: { contains: modelMatch, mode: 'insensitive' } }] } });
+              }
+              if (!resolvedBike) return NextResponse.json({ error: 'Bike not found' }, { status: 404 });
+              if (resolvedBike.availability !== 'in_stock' || resolvedBike.stockQuantity < requested.quantity) {
+                return NextResponse.json({ error: `${resolvedBike.name} is not available in the requested quantity` }, { status: 409 });
+              }
+              bikeItems.push({ bike: resolvedBike, quantity: requested.quantity });
+              bikeTotal += Number(resolvedBike.price) * requested.quantity;
             }
-
-            if (!bike) {
-              return NextResponse.json({ error: 'Bike not found' }, { status: 404 });
-            }
-
-            if (bike.availability !== 'in_stock' || bike.stockQuantity < data.quantity) {
-              return NextResponse.json({ error: 'Bike is not available in the requested quantity' }, { status: 409 });
-            }
-
+            bike = bikeItems[0].bike;
             bikeUnitPrice = Number(bike.price);
-            bikeTotal = bikeUnitPrice * data.quantity;
           }
 
           // ---- 2. Verify accessories if provided ----
@@ -175,20 +167,10 @@ export const POST = withAuth(
           // ---- 3. Create order in a transaction ----
           const order = await prisma.$transaction(async (tx: TxClient) => {
             // Decrement bike stock if applicable with strict stock availability check
-            if (bike) {
-              const bikeUpdate = await tx.bike.updateMany({
-                where: {
-                  id: bike.id,
-                  stockQuantity: { gte: data.quantity },
-                },
-                data: { stockQuantity: { decrement: data.quantity } },
-              });
-
-              if (bikeUpdate.count === 0) {
-                throw new Error('Bike is no longer in stock in the requested quantity');
-              }
+            for (const item of bikeItems) {
+              const bikeUpdate = await tx.bike.updateMany({ where: { id: item.bike.id, stockQuantity: { gte: item.quantity } }, data: { stockQuantity: { decrement: item.quantity } } });
+              if (bikeUpdate.count === 0) throw new Error(`${item.bike.name} is no longer in stock in the requested quantity`);
             }
-
             // Create OrderAccessory items and decrement accessory stock
             if (resolvedAccessories.length > 0) {
               for (const item of resolvedAccessories) {
@@ -210,7 +192,7 @@ export const POST = withAuth(
               data: {
                 userId: ctx.user.sub,
                 bikeId: bike ? bike.id : null,
-                quantity: bike ? data.quantity : 0, // 0 if only accessories
+                quantity: bikeItems.reduce((sum, item) => sum + item.quantity, 0),
                 unitPrice: bikeUnitPrice,
                 totalAmount,
                 paymentMethod: data.paymentMethod,
@@ -227,6 +209,10 @@ export const POST = withAuth(
                 notes: data.notes || null,
               },
             });
+
+            for (const item of bikeItems) {
+              await tx.orderItem.create({ data: { bikeId: item.bike.id, quantity: item.quantity, unitPrice: Number(item.bike.price), orderId: newOrder.id } });
+            }
 
             if (resolvedAccessories.length > 0) {
               for (const item of resolvedAccessories) {

@@ -234,6 +234,7 @@ model Bike {
 
   // Relations
   orders        Order[]
+  orderItems    OrderItem[]
   loans         Loan[]
   vehicleAssets VehicleAsset[]
 
@@ -427,10 +428,27 @@ model Order {
   loan         Loan?                @relation(fields: [loanId], references: [id])
   transactions PaymentTransaction[]
   accessories  OrderAccessory[]
+  items        OrderItem[]
 
   @@index([userId])
   @@index([status])
   @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  bikeId     String?
+  quantity   Int      @default(1)
+  unitPrice  Decimal  @db.Decimal(15, 2)
+  createdAt  DateTime @default(now())
+
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bike       Bike?    @relation(fields: [bikeId], references: [id])
+
+  @@index([orderId])
+  @@index([bikeId])
+  @@map("order_items")
 }
 
 model Loan {
